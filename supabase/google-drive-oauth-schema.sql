@@ -23,3 +23,7 @@ revoke all on table public.google_drive_oauth_tokens from anon, authenticated;
 grant all on table public.google_drive_oauth_states to service_role;
 grant all on table public.google_drive_oauth_tokens to service_role;
 
+
+-- Persist the validated admin page origin for the OAuth completion redirect.
+alter table public.google_drive_oauth_states
+  add column if not exists return_to text;
