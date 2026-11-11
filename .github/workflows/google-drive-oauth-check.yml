@@ -1,6 +1,7 @@
 name: Google Drive OAuth Check
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - feature/private-admin-document-vault
