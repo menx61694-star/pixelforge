@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101d49">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Admin Login | PixelForge</title>
+  <link rel="stylesheet" href="admin.css">
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js" defer></script>
+  <script src="admin.js" defer></script>
+</head>
+<body>
+  <main class="admin-shell">
+    <a class="brand" href="index.html"><span class="brand-mark">P</span><span>PIXELFORGE</span></a>
+    <section class="login-card" aria-labelledby="page-title">
+      <p class="eyebrow">RESTRICTED AREA</p>
+      <h1 id="page-title">Admin sign in</h1>
+      <p class="intro">Sign in with the authorized PixelForge administrator account.</p>
+
+      <form id="login-form">
+        <label for="email">Email address</label>
+        <input id="email" name="email" type="email" autocomplete="username" required>
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <button id="login-button" type="submit">Sign in securely</button>
+      </form>
+
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+      <section id="admin-session" class="admin-session" hidden>
+        <div class="success-mark" aria-hidden="true">✓</div>
+        <h2>Admin identity verified</h2>
+        <p>Authentication succeeded for the authorized administrator.</p>
+        <p class="session-note">The management dashboard is the next implementation step.</p>
+        <button id="logout-button" class="secondary-button" type="button">Sign out</button>
+      </section>
+    </section>
+    <p class="security-note">Private administrator access · No public sign-up</p>
+  </main>
+</body>
+</html>
