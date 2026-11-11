@@ -1,13 +1,15 @@
 (() => {
-  const firebaseConfig = {
-    apiKey: "AIzaSyCkOkyOUqbwBRDPCxg2wUcbZp3sL3Y-1B4",
-    authDomain: "pixelforge-66f0c.firebaseapp.com",
-    projectId: "pixelforge-66f0c",
-    storageBucket: "pixelforge-66f0c.firebasestorage.app",
-    messagingSenderId: "133621997508",
-    appId: "1:133621997508:web:2d92b52b7ff46b4552ce91",
-    measurementId: "G-C22G53L12V"
-  };
+ 
+const firebaseConfig = {
+  apiKey: "AIzaSyCkQReOUqbwBRDPCxg2wUcbZp3sL3Y-1B4",
+  authDomain: "pixelforge-66f0c.firebaseapp.com",
+  databaseURL: "https://pixelforge-66f0c-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "pixelforge-66f0c",
+  storageBucket: "pixelforge-66f0c.firebasestorage.app",
+  messagingSenderId: "133621997508",
+  appId: "1:133621997508:web:2d92b52b7ff46b4552ce91",
+  measurementId: "G-C22G53L12V"
+};
 
   const ADMIN_UID = "5PcOkyDEcNc1puSeB2lQ6dLFVOF2";
   const SUPABASE_URL = "https://zeueivmdzhkhonkyllij.supabase.co";
