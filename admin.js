@@ -36,6 +36,8 @@ const firebaseConfig = {
   const countStat = document.getElementById("stat-doc-count");
   const storageStat = document.getElementById("stat-storage");
   const countLabel = document.getElementById("file-count-label");
+  const googleDriveButton = document.getElementById("google-drive-connect");
+  const googleDriveStatus = document.getElementById("google-drive-status");
   let currentFiles = [];
 
   if (!window.firebase || !form || !loginButton || !logoutButton || !status || !sessionPanel) {
@@ -58,6 +60,47 @@ const firebaseConfig = {
       }
     );
     window.pixelForgeSupabase = supabaseClient;
+  }
+
+  function setGoogleDriveStatus(message, isError = false) {
+    if (!googleDriveStatus) return;
+    googleDriveStatus.textContent = message;
+    googleDriveStatus.style.color = isError ? "#a23c32" : "#53617b";
+  }
+
+  async function connectGoogleDrive() {
+    if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+      setGoogleDriveStatus("Administrator session is required.", true);
+      return;
+    }
+    if (!googleDriveButton) return;
+    googleDriveButton.disabled = true;
+    setGoogleDriveStatus("Preparing secure Google Drive connection…");
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const response = await fetch(SUPABASE_URL + "/functions/v1/google-drive-oauth?action=start", {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + idToken, "Content-Type": "application/json" }
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.authorization_url) throw new Error(payload.error || "Could not start Google authorization.");
+      window.location.assign(payload.authorization_url);
+    } catch (error) {
+      setGoogleDriveStatus("Google Drive connection could not start: " + (error.message || "Unknown error"), true);
+      googleDriveButton.disabled = false;
+    }
+  }
+
+  if (googleDriveButton) googleDriveButton.addEventListener("click", connectGoogleDrive);
+
+  const googleDriveResult = new URLSearchParams(window.location.search).get("google_drive");
+  if (googleDriveResult === "connected") {
+    setGoogleDriveStatus("Google Drive account connected. Token storage confirmation received.");
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete("google_drive");
+    window.history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+  } else if (googleDriveResult === "error") {
+    setGoogleDriveStatus("Google Drive connection failed. Check the Edge Function logs and try again.", true);
   }
 
   function setVaultStatus(message, isError = false) {
