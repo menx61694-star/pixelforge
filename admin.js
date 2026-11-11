@@ -17,7 +17,6 @@ const firebaseConfig = {
   const BUCKET = "private-documents";
   const PUBLIC_BUCKET = "public-documents";
   const PUBLIC_CATEGORIES = ["pdf-documents", "study-notes", "books-resources", "other-documents", "exam-materials", "technology-guides"];
-  const MAX_FILE_SIZE = 10 * 1024 * 1024;
   const ALLOWED_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 
   const loginView = document.getElementById("login-view");
@@ -283,6 +282,52 @@ const firebaseConfig = {
     }
   }
 
+  function uploadLargeFile(bucketName, objectPath, file) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const user = auth.currentUser;
+        if (!user || user.uid !== ADMIN_UID) {
+          reject(new Error("Admin session expired. Sign in again."));
+          return;
+        }
+        const token = await user.getIdToken();
+        const projectRef = "zeueivmdzhkhonkyllij";
+        const upload = new window.tus.Upload(file, {
+          endpoint: "https://" + projectRef + ".storage.supabase.co/storage/v1/upload/resumable",
+          retryDelays: [0, 3000, 5000, 10000, 20000],
+          headers: {
+            authorization: "Bearer " + token,
+            apikey: SUPABASE_PUBLISHABLE_KEY
+          },
+          uploadDataDuringCreation: true,
+          removeFingerprintOnSuccess: true,
+          chunkSize: 6 * 1024 * 1024,
+          metadata: {
+            bucketName,
+            objectName: objectPath,
+            contentType: file.type || "application/octet-stream",
+            cacheControl: "0"
+          },
+          onError(error) {
+            reject(error);
+          },
+          onProgress(bytesUploaded, bytesTotal) {
+            const percent = Math.min(100, Math.round((bytesUploaded / bytesTotal) * 100));
+            setVaultStatus("Uploading privately… " + percent + "% (" + formatBytes(bytesUploaded) + " / " + formatBytes(bytesTotal) + ")");
+          },
+          onSuccess() {
+            resolve();
+          }
+        });
+        const previous = await upload.findPreviousUploads();
+        if (previous.length) upload.resumeFromPreviousUpload(previous[0]);
+        upload.start();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
   uploadForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const file = fileInput.files && fileInput.files[0];
@@ -302,8 +347,12 @@ const firebaseConfig = {
       setVaultStatus("Only PDF, JPEG and PNG files are allowed.", true);
       return;
     }
-    if (file.size <= 0 || file.size > MAX_FILE_SIZE) {
-      setVaultStatus("File must be larger than 0 bytes and no bigger than 10 MB.", true);
+    if (file.size <= 0) {
+      setVaultStatus("The selected file is empty. Choose a non-empty document.", true);
+      return;
+    }
+    if (!window.tus || typeof window.tus.Upload !== "function") {
+      setVaultStatus("The resumable upload service could not load. Refresh and try again.", true);
       return;
     }
 
@@ -313,14 +362,7 @@ const firebaseConfig = {
     try {
       const objectName = Date.now() + "-" + crypto.randomUUID() + "-" + safeFileName(file.name);
       const objectPath = ADMIN_UID + "/" + objectName;
-      const { error } = await supabaseClient.storage
-        .from(BUCKET)
-        .upload(objectPath, file, {
-          cacheControl: "0",
-          contentType: file.type,
-          upsert: false
-        });
-      if (error) throw error;
+      await uploadLargeFile(BUCKET, objectPath, file);
       fileInput.value = "";
       setVaultStatus("Upload successful. Refreshing document list…");
       await loadFiles();
