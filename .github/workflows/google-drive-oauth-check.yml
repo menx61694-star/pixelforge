@@ -13,6 +13,8 @@ on:
       - feature/private-admin-document-vault
     paths:
       - "supabase/functions/google-drive-oauth/**"
+      - "supabase/functions/google-drive-files/**"
+      - "admin.js"
       - ".github/workflows/google-drive-oauth-check.yml"
 
 permissions:
