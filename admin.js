@@ -25,23 +25,25 @@
 
   if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
-  if (!window.supabase || typeof window.supabase.createClient !== "function") {
-    status.textContent = "The secure storage service could not be loaded. Refresh and try again.";
-    return;
-  }
-  // Firebase remains the identity provider. Supabase validates this Firebase ID token
-  // through its configured Firebase third-party authentication integration.
-  const supabaseClient = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY,
-    {
-      accessToken: async () => {
-        const currentUser = auth.currentUser;
-        return currentUser ? currentUser.getIdToken() : null;
+  let supabaseClient = null;
+  if (window.supabase && typeof window.supabase.createClient === "function") {
+    // Firebase remains the identity provider. Supabase validates this Firebase ID token
+    // through its configured Firebase third-party authentication integration.
+    supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY,
+      {
+        accessToken: async () => {
+          const currentUser = auth.currentUser;
+          return currentUser ? currentUser.getIdToken() : null;
+        }
       }
-    }
-  );
-  window.pixelForgeSupabase = supabaseClient;
+    );
+    window.pixelForgeSupabase = supabaseClient;
+  } else {
+    // Do not break Firebase sign-in if the optional storage SDK is temporarily unavailable.
+    console.error("Supabase SDK did not load; storage actions will remain unavailable.");
+  }
 
   function showAdminSession(isAdmin) {
     form.hidden = isAdmin;
