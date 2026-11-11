@@ -181,7 +181,12 @@ const firebaseConfig = {
           remove.className = "delete-button";
           remove.textContent = "Delete";
           remove.addEventListener("click", () => deleteFile(path, li, remove));
-          actions.append(download, category, publish, remove);
+          const unpublish = document.createElement("button");
+          unpublish.type = "button";
+          unpublish.className = "unpublish-button";
+          unpublish.textContent = "Unpublish";
+          unpublish.addEventListener("click", () => unpublishFile(item.name, category.value, unpublish));
+          actions.append(download, category, publish, unpublish, remove);
           li.append(info, actions);
           fileList.append(li);
         });
@@ -205,7 +210,7 @@ const firebaseConfig = {
     try {
       const { data: downloaded, error: downloadError } = await supabaseClient.storage.from(BUCKET).download(privatePath);
       if (downloadError) throw downloadError;
-      const publicPath = category + "/" + ADMIN_UID + "/" + fileName;
+      const publicPath = category + "/" + ADMIN_UID + "-" + fileName;
       const { error: uploadError } = await supabaseClient.storage.from(PUBLIC_BUCKET).upload(publicPath, downloaded, {
         cacheControl: "60",
         contentType: downloaded.type || "application/octet-stream",
@@ -216,6 +221,25 @@ const firebaseConfig = {
       button.textContent = "Published";
     } catch (error) {
       setVaultStatus("Publish failed: " + (error.message || "Check public bucket and its write policies."), true);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function unpublishFile(fileName, category, button) {
+    if (!category || !PUBLIC_CATEGORIES.includes(category)) {
+      setVaultStatus("Choose the category where this file was published.", true);
+      return;
+    }
+    if (!window.confirm("Remove this file from the public website? The private original will remain in your vault.")) return;
+    button.disabled = true;
+    try {
+      const publicPath = category + "/" + ADMIN_UID + "-" + fileName;
+      const { error } = await supabaseClient.storage.from(PUBLIC_BUCKET).remove([publicPath]);
+      if (error) throw error;
+      setVaultStatus("Removed from public library. The private original is unchanged.");
+    } catch (error) {
+      setVaultStatus("Unpublish failed: " + (error.message || "Check public bucket policies."), true);
     } finally {
       button.disabled = false;
     }
