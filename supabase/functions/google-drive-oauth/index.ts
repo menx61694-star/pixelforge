@@ -36,9 +36,19 @@ function fromBase64(value: string): Uint8Array {
 async function encryptToken(token: string, secret: string): Promise<string> {
   const raw = fromBase64(secret);
   if (raw.length !== 32) throw new Error("GOOGLE_TOKEN_ENCRYPTION_KEY must be a base64-encoded 32-byte key");
-  const key = await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt"]);
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(token));
+  // Copy into ArrayBuffer-backed views for strict Web Crypto BufferSource typing.
+  const keyBuffer = new ArrayBuffer(32);
+  new Uint8Array(keyBuffer).set(raw);
+  const key = await crypto.subtle.importKey("raw", keyBuffer, "AES-GCM", false, ["encrypt"]);
+
+  const ivBuffer = new ArrayBuffer(12);
+  const iv = new Uint8Array(ivBuffer);
+  crypto.getRandomValues(iv);
+
+  const encodedToken = new TextEncoder().encode(token);
+  const tokenBuffer = new ArrayBuffer(encodedToken.byteLength);
+  new Uint8Array(tokenBuffer).set(encodedToken);
+  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv: ivBuffer }, key, tokenBuffer);
   return `${base64Url(iv)}.${base64Url(new Uint8Array(ciphertext))}`;
 }
 
