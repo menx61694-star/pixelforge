@@ -39,7 +39,7 @@
     count.textContent = "";
   }
   function niceName(name) {
-    return name.replace(/^\\d{10,}-[0-9a-f-]{36}-/i, "").replace(/[-_]+/g, " ").replace(/\\.(pdf|png|jpe?g)$/i, "");
+    return name.replace(/^\d{10,}-[0-9a-f-]{36}-/i, "").replace(/[-_]+/g, " ").replace(/\.(pdf|png|jpe?g)$/i, "");
   }
   function render() {
     const q = search.value.trim().toLowerCase();
