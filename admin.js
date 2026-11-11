@@ -38,6 +38,12 @@ const firebaseConfig = {
   const countLabel = document.getElementById("file-count-label");
   const googleDriveButton = document.getElementById("google-drive-connect");
   const googleDriveStatus = document.getElementById("google-drive-status");
+  const googleDriveFileInput = document.getElementById("google-drive-file");
+  const googleDriveUploadButton = document.getElementById("google-drive-upload");
+  const googleDriveRefreshButton = document.getElementById("google-drive-refresh");
+  const googleDriveFilesStatus = document.getElementById("google-drive-files-status");
+  const googleDriveFileList = document.getElementById("google-drive-file-list");
+  let googleDriveConnected = false;
   let currentFiles = [];
 
   if (!window.firebase || !form || !loginButton || !logoutButton || !status || !sessionPanel) {
@@ -91,7 +97,199 @@ const firebaseConfig = {
     }
   }
 
+  async function googleDriveRequest(action, options = {}) {
+    const user = auth.currentUser;
+    if (!user || user.uid !== ADMIN_UID) throw new Error("Administrator session is required.");
+    const headers = new Headers(options.headers || {});
+    headers.set("Authorization", "Bearer " + await user.getIdToken());
+    const response = await fetch(SUPABASE_URL + "/functions/v1/google-drive-files?action=" + encodeURIComponent(action), {
+      method: options.method || "GET",
+      headers,
+      body: options.body
+    });
+    return response;
+  }
+
+  function setDriveFilesStatus(message, isError = false) {
+    if (!googleDriveFilesStatus) return;
+    googleDriveFilesStatus.textContent = message;
+    googleDriveFilesStatus.style.color = isError ? "#a23c32" : "#53617b";
+  }
+
+  async function refreshGoogleDriveStatus() {
+    try {
+      const response = await googleDriveRequest("status");
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Could not check Google Drive status.");
+      googleDriveConnected = payload.connected === true;
+      if (googleDriveUploadButton) googleDriveUploadButton.disabled = !googleDriveConnected;
+      if (googleDriveRefreshButton) googleDriveRefreshButton.disabled = !googleDriveConnected;
+      if (googleDriveConnected) {
+        setGoogleDriveStatus("Google Drive is connected.");
+        await loadGoogleDriveFiles();
+      } else {
+        setGoogleDriveStatus("Google Drive is not connected.");
+        setDriveFilesStatus("Connect Google Drive to list or upload files.");
+      }
+    } catch (error) {
+      setDriveFilesStatus(error.message || "Google Drive status check failed.", true);
+    }
+  }
+
+  async function loadGoogleDriveFiles() {
+    if (!googleDriveConnected || !googleDriveFileList) return;
+    if (googleDriveRefreshButton) googleDriveRefreshButton.disabled = true;
+    setDriveFilesStatus("Loading Google Drive files…");
+    try {
+      const response = await googleDriveRequest("list");
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Could not list Google Drive files.");
+      googleDriveFileList.replaceChildren();
+      const files = payload.files || [];
+      if (!files.length) {
+        const empty = document.createElement("li");
+        empty.className = "empty-state";
+        empty.textContent = "No files found in the connected Drive app space.";
+        googleDriveFileList.append(empty);
+      }
+      files.forEach(file => {
+        const item = document.createElement("li");
+        item.className = "file-item";
+        const info = document.createElement("div");
+        info.className = "file-info";
+        const name = document.createElement("div");
+        name.className = "file-name";
+        name.textContent = file.name || "Untitled file";
+        const meta = document.createElement("div");
+        meta.className = "file-meta";
+        const size = Number(file.size || 0);
+        meta.textContent = (file.mimeType || "Unknown type") + (size ? " · " + formatBytes(size) : "");
+        info.append(name, meta);
+        const actions = document.createElement("div");
+        actions.className = "file-actions";
+        const download = document.createElement("button");
+        download.type = "button";
+        download.textContent = "Download";
+        download.addEventListener("click", () => downloadGoogleDriveFile(file, download));
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "delete-button";
+        remove.textContent = "Delete";
+        remove.addEventListener("click", () => deleteGoogleDriveFile(file, item, remove));
+        actions.append(download, remove);
+        item.append(info, actions);
+        googleDriveFileList.append(item);
+      });
+      setDriveFilesStatus(files.length + " Google Drive file(s) listed.");
+    } catch (error) {
+      setDriveFilesStatus(error.message || "Google Drive listing failed.", true);
+    } finally {
+      if (googleDriveRefreshButton) googleDriveRefreshButton.disabled = !googleDriveConnected;
+    }
+  }
+
+  async function downloadGoogleDriveFile(file, button) {
+    button.disabled = true;
+    try {
+      const response = await googleDriveRequest("download&id=" + encodeURIComponent(file.id));
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || "Download failed.");
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = file.name || "drive-file";
+      document.body.append(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+      setDriveFilesStatus("Downloaded " + (file.name || "file") + ".");
+    } catch (error) {
+      setDriveFilesStatus(error.message || "Google Drive download failed.", true);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function deleteGoogleDriveFile(file, item, button) {
+    if (!window.confirm("Permanently delete " + (file.name || "this Drive file") + "?")) return;
+    button.disabled = true;
+    try {
+      const response = await googleDriveRequest("delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: file.id })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Delete failed.");
+      item.remove();
+      setDriveFilesStatus("Deleted " + (file.name || "file") + " from Google Drive.");
+    } catch (error) {
+      setDriveFilesStatus(error.message || "Google Drive delete failed.", true);
+      button.disabled = false;
+    }
+  }
+
+  async function uploadGoogleDriveFile() {
+    const file = googleDriveFileInput && googleDriveFileInput.files && googleDriveFileInput.files[0];
+    if (!file) {
+      setDriveFilesStatus("Choose a file first.", true);
+      return;
+    }
+    if (!ALLOWED_TYPES.has(file.type)) {
+      setDriveFilesStatus("Only PDF, JPEG and PNG files are allowed.", true);
+      return;
+    }
+    if (!file.size || file.size > 2 * 1024 * 1024 * 1024) {
+      setDriveFilesStatus("Choose a non-empty file up to 2 GB.", true);
+      return;
+    }
+    googleDriveUploadButton.disabled = true;
+    googleDriveRefreshButton.disabled = true;
+    try {
+      setDriveFilesStatus("Preparing resumable Google Drive upload…");
+      const sessionResponse = await googleDriveRequest("create-upload-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: file.name, mimeType: file.type, size: file.size })
+      });
+      const session = await sessionResponse.json();
+      if (!sessionResponse.ok || !session.uploadUrl) throw new Error(session.error || "Could not start upload.");
+      const chunkSize = Math.min(Number(session.chunkSize) || 4 * 1024 * 1024, 4 * 1024 * 1024);
+      let uploaded = 0;
+      while (uploaded < file.size) {
+        const endExclusive = Math.min(uploaded + chunkSize, file.size);
+        const chunk = file.slice(uploaded, endExclusive);
+        const response = await googleDriveRequest("upload-chunk", {
+          method: "POST",
+          headers: {
+            "X-Drive-Upload-Url": session.uploadUrl,
+            "Content-Range": "bytes " + uploaded + "-" + (endExclusive - 1) + "/" + file.size
+          },
+          body: chunk
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok && response.status !== 308) throw new Error(result.error || "Upload failed at " + formatBytes(uploaded) + ".");
+        uploaded = endExclusive;
+        setDriveFilesStatus("Uploading to Google Drive… " + Math.round(uploaded / file.size * 100) + "%");
+        if (result.complete) break;
+      }
+      googleDriveFileInput.value = "";
+      setDriveFilesStatus("Upload completed. Refreshing Drive files…");
+      await loadGoogleDriveFiles();
+    } catch (error) {
+      setDriveFilesStatus(error.message || "Google Drive upload failed.", true);
+    } finally {
+      googleDriveUploadButton.disabled = !googleDriveConnected;
+      googleDriveRefreshButton.disabled = !googleDriveConnected;
+    }
+  }
+
   if (googleDriveButton) googleDriveButton.addEventListener("click", connectGoogleDrive);
+  if (googleDriveRefreshButton) googleDriveRefreshButton.addEventListener("click", loadGoogleDriveFiles);
+  if (googleDriveUploadButton) googleDriveUploadButton.addEventListener("click", uploadGoogleDriveFile);
 
   const googleDriveResult = new URLSearchParams(window.location.search).get("google_drive");
   if (googleDriveResult === "connected") {
@@ -440,6 +638,7 @@ const firebaseConfig = {
     }
     if (user.uid === ADMIN_UID) {
       showAdminSession(true);
+      refreshGoogleDriveStatus();
       return;
     }
     showAdminSession(false);
