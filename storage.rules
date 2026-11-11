@@ -1,0 +1,19 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isOwnerAdmin() {
+      return request.auth != null
+        && request.auth.uid == "5PcOkyDEcNc1puSeB2lQ6dLFVOF2";
+    }
+
+    // All uploaded documents are private to the single authorized admin.
+    match /documents/{allPaths=**} {
+      allow read, write: if isOwnerAdmin();
+    }
+
+    // Default-deny for all other Storage paths.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
