@@ -10,6 +10,8 @@
   };
 
   const ADMIN_UID = "5PcOkyDEcNc1puSeB2lQ6dLFVOF2";
+  const SUPABASE_URL = "https://zeueivmdzhkhonkyllij.supabase.co";
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_sTs9Niej0BbWOw1vITV_jA_utoWwsw3";
   const form = document.getElementById("login-form");
   const loginButton = document.getElementById("login-button");
   const logoutButton = document.getElementById("logout-button");
@@ -23,6 +25,23 @@
 
   if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
+  if (!window.supabase || typeof window.supabase.createClient !== "function") {
+    status.textContent = "The secure storage service could not be loaded. Refresh and try again.";
+    return;
+  }
+  // Firebase remains the identity provider. Supabase validates this Firebase ID token
+  // through its configured Firebase third-party authentication integration.
+  const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY,
+    {
+      accessToken: async () => {
+        const currentUser = auth.currentUser;
+        return currentUser ? currentUser.getIdToken() : null;
+      }
+    }
+  );
+  window.pixelForgeSupabase = supabaseClient;
 
   function showAdminSession(isAdmin) {
     form.hidden = isAdmin;
