@@ -8,7 +8,7 @@ const allowedOrigins = new Set([
 function corsHeaders(request: Request) {
   const origin = request.headers.get("Origin") ?? "";
   return {
-    "Access-Control-Allow-Origin": allowedOrigins.has(origin) ? origin : "https://pixelforge.jo3.org",
+    ...(allowedOrigins.has(origin) ? { "Access-Control-Allow-Origin": origin } : {}),
     "Access-Control-Allow-Headers": "authorization, content-type",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Vary": "Origin",
@@ -98,11 +98,11 @@ Deno.serve(async (request) => {
       return json({ authorization_url: google.toString() }, 200, request);
     }
 
-    if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+    if (request.method !== "GET") return json({ error: "Method not allowed" }, 405, request);
     const code = url.searchParams.get("code");
     const state = url.searchParams.get("state");
     const googleError = url.searchParams.get("error");
-    if (googleError) return new Response("Google authorization was not completed. You may close this page.", { status: 400, headers: corsHeaders(request) });
+    if (googleError) return new Response("Google authorization was not completed. You may close this page.", { status: 400, headers: { ...corsHeaders(request), "Content-Type": "text/plain; charset=utf-8" } });
     if (!code || !state) return json({ error: "Missing OAuth code or state" }, 400, request);
 
     const stateHash = base64Url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(state))));
@@ -121,6 +121,22 @@ Deno.serve(async (request) => {
       );
     }
 
+    // Validate the persisted return destination before exchanging the one-time code.
+    let destination: URL;
+    try {
+      destination = new URL(returnTo || required("PIXELFORGE_ADMIN_URL"));
+    } catch {
+      throw new Error("OAuth return destination is invalid");
+    }
+    if (
+      !allowedOrigins.has(destination.origin) ||
+      destination.pathname !== "/admin.html" ||
+      destination.username !== "" ||
+      destination.password !== ""
+    ) {
+      throw new Error("OAuth return destination is not allowed");
+    }
+
     const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -134,7 +150,7 @@ Deno.serve(async (request) => {
     });
     const tokens = await tokenResponse.json();
     if (!tokenResponse.ok) return json({ error: "Google token exchange failed", details: tokens.error_description ?? tokens.error }, 400, request);
-    if (!tokens.refresh_token) return json({ error: "Google did not return a refresh token. Revoke the app's access in Google Account permissions and reconnect." }, 400);
+    if (!tokens.refresh_token) return json({ error: "Google did not return a refresh token. Revoke the app's access in Google Account permissions and reconnect." }, 400, request);
 
     const encrypted = await encryptToken(tokens.refresh_token, required("GOOGLE_TOKEN_ENCRYPTION_KEY"));
     const { error: saveError } = await db.from("google_drive_oauth_tokens").upsert({
@@ -145,8 +161,6 @@ Deno.serve(async (request) => {
     });
     if (saveError) throw saveError;
 
-    const destination = new URL(returnTo || required("PIXELFORGE_ADMIN_URL"));
-    if (!allowedOrigins.has(destination.origin) || destination.pathname !== "/admin.html") throw new Error("OAuth return destination is not allowed");
     destination.searchParams.set("google_drive", "connected");
     return Response.redirect(destination.toString(), 303);
   } catch (error) {
