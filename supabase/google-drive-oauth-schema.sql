@@ -27,3 +27,30 @@ grant all on table public.google_drive_oauth_tokens to service_role;
 -- Persist the validated admin page origin for the OAuth completion redirect.
 alter table public.google_drive_oauth_states
   add column if not exists return_to text;
+
+-- Atomically consume a valid OAuth state exactly once.
+create or replace function public.consume_google_drive_oauth_state(
+  p_state_hash text
+)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_return_to text;
+begin
+  delete from public.google_drive_oauth_states
+  where state_hash = p_state_hash
+    and expires_at > now()
+  returning return_to into v_return_to;
+
+  return v_return_to;
+end;
+$$;
+
+revoke all on function public.consume_google_drive_oauth_state(text)
+  from public, anon, authenticated;
+
+grant execute on function public.consume_google_drive_oauth_state(text)
+  to service_role;
