@@ -103,6 +103,12 @@ Deno.serve(async (request) => {
 
     const url = new URL(request.url);
     const action = url.searchParams.get("action");
+    if (request.method === "GET" && action === "status") {
+      const { data, error } = await supabaseAdmin().from("google_drive_oauth_tokens")
+        .select("connected_at").eq("id", "pixelForge-owner").maybeSingle();
+      if (error) throw error;
+      return json({ connected: Boolean(data?.connected_at), connectedAt: data?.connected_at ?? null }, 200, request);
+    }
     const accessToken = await getAccessToken();
     const googleHeaders = { Authorization: "Bearer " + accessToken };
 
