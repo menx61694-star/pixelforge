@@ -259,6 +259,20 @@ const firebaseConfig = {
   });
 
   refreshButton.addEventListener("click", loadFiles);
+  fileSearch.addEventListener("input", () => {
+    const query = fileSearch.value.trim().toLowerCase();
+    Array.from(fileList.children).forEach(item => {
+      item.hidden = query && !item.textContent.toLowerCase().includes(query);
+    });
+  });
+
+  fileInput.addEventListener("change", () => {
+    selectedFile.textContent = fileInput.files && fileInput.files[0]
+      ? fileInput.files[0].name + " · " + formatBytes(fileInput.files[0].size)
+      : "No file selected";
+  });
+
+
 
   auth.onAuthStateChanged(async (user) => {
     if (!user) {
