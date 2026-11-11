@@ -159,7 +159,7 @@ Deno.serve(async (request) => {
       const uploadUrlHeader = request.headers.get("X-Drive-Upload-Url") ?? "";
       const uploadUrl = safeUploadUrl(uploadUrlHeader);
       const contentRange = request.headers.get("Content-Range") ?? "";
-      const rangeMatch = contentRange.match(/^bytes (\\d+)-(\\d+)\\/(\\d+)$/);
+      const rangeMatch = contentRange.match(/^bytes (\d+)-(\d+)\/(\d+)$/);
       if (!rangeMatch) return json({ error: "Invalid upload Content-Range." }, 400, request);
       const rangeStart = Number(rangeMatch[1]);
       const rangeEnd = Number(rangeMatch[2]);
