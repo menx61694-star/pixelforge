@@ -13,6 +13,25 @@ for select
 to anon, authenticated
 using (bucket_id = 'public-documents');
 
+-- The existing private-bucket restrictive SELECT policy also applies to this table.
+-- Extend it to permit public-bucket listing while keeping private objects owner-only.
+drop policy if exists "PixelForge owner restrict select private documents" on storage.objects;
+
+create policy "PixelForge owner restrict select private documents"
+on storage.objects
+as restrictive
+for select
+to anon, authenticated
+using (
+  bucket_id = 'public-documents'
+  or (
+    bucket_id = 'private-documents'
+    and (select auth.jwt() ->> 'sub') = '5PcOkyDEcNc1puSeB2lQ6dLFVOF2'
+    and (select auth.jwt() ->> 'iss') = 'https://securetoken.google.com/pixelforge-66f0c'
+    and (select auth.jwt() ->> 'aud') = 'pixelforge-66f0c'
+  )
+);
+
 -- These policies restrict authenticated object mutations to the single owner identity.
 
 create policy "PixelForge owner insert public documents"
