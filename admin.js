@@ -274,7 +274,7 @@
         "auth/too-many-requests": "Too many attempts. Wait a while and try again.",
         "auth/network-request-failed": "Network error. Check your connection and retry."
       };
-      status.textContent = safeMessages[error.code] || "Sign-in failed. Check your details and try again.";
+      status.textContent = safeMessages[error.code] || ("Sign-in failed (" + (error.code || "unknown-error") + "). Check Firebase Authentication settings and the account, then retry.");
     } finally {
       loginButton.disabled = false;
       loginButton.textContent = "Sign in securely";
