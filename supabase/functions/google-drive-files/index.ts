@@ -159,9 +159,18 @@ Deno.serve(async (request) => {
       const uploadUrlHeader = request.headers.get("X-Drive-Upload-Url") ?? "";
       const uploadUrl = safeUploadUrl(uploadUrlHeader);
       const contentRange = request.headers.get("Content-Range") ?? "";
-      if (!/^bytes \d+-\d+\/\d+$/.test(contentRange)) return json({ error: "Invalid upload Content-Range." }, 400, request);
+      const rangeMatch = contentRange.match(/^bytes (\\d+)-(\\d+)\\/(\\d+)$/);
+      if (!rangeMatch) return json({ error: "Invalid upload Content-Range." }, 400, request);
+      const rangeStart = Number(rangeMatch[1]);
+      const rangeEnd = Number(rangeMatch[2]);
+      const totalSize = Number(rangeMatch[3]);
       const body = await request.arrayBuffer();
-      if (!body.byteLength || body.byteLength > MAX_CHUNK_SIZE) return json({ error: "Upload chunks must be between 1 byte and 5 MiB." }, 400, request);
+      if (!Number.isSafeInteger(totalSize) || totalSize <= 0 || totalSize > MAX_FILE_SIZE ||
+          rangeEnd < rangeStart || rangeEnd >= totalSize ||
+          rangeEnd - rangeStart + 1 !== body.byteLength ||
+          !body.byteLength || body.byteLength > MAX_CHUNK_SIZE) {
+        return json({ error: "Upload chunk size or byte range is invalid." }, 400, request);
+      }
       const response = await fetch(uploadUrl.toString(), {
         method: "PUT",
         headers: { ...googleHeaders, "Content-Length": String(body.byteLength), "Content-Range": contentRange },
