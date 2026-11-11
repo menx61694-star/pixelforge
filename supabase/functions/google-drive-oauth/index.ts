@@ -106,14 +106,20 @@ Deno.serve(async (request) => {
     if (!code || !state) return json({ error: "Missing OAuth code or state" }, 400, request);
 
     const stateHash = base64Url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(state))));
-    const { data: pending, error: stateError } = await db.from("google_drive_oauth_states")
-      .select("state_hash, expires_at, return_to").eq("state_hash", stateHash).maybeSingle();
+    const { data: returnTo, error: stateError } = await db.rpc(
+      "consume_google_drive_oauth_state",
+      { p_state_hash: stateHash },
+    );
+
     if (stateError) throw stateError;
-    if (!pending || new Date(pending.expires_at).getTime() < Date.now()) {
-      return json({ error: "OAuth state is invalid or expired. Start the connection again." }, 400, request);
+
+    if (!returnTo) {
+      return json(
+        { error: "OAuth state is invalid, expired, or already used. Start the connection again." },
+        400,
+        request,
+      );
     }
-    const { error: deleteStateError } = await db.from("google_drive_oauth_states").delete().eq("state_hash", stateHash);
-    if (deleteStateError) throw deleteStateError;
 
     const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
@@ -139,7 +145,7 @@ Deno.serve(async (request) => {
     });
     if (saveError) throw saveError;
 
-    const destination = new URL(pending.return_to || required("PIXELFORGE_ADMIN_URL"));
+    const destination = new URL(returnTo || required("PIXELFORGE_ADMIN_URL"));
     if (!allowedOrigins.has(destination.origin) || destination.pathname !== "/admin.html") throw new Error("OAuth return destination is not allowed");
     destination.searchParams.set("google_drive", "connected");
     return Response.redirect(destination.toString(), 303);
