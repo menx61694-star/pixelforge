@@ -128,10 +128,11 @@ Deno.serve(async (request) => {
     if (request.method === "POST" && action === "create-upload-session") {
       const input = await request.json();
       const name = typeof input.name === "string" ? input.name.trim().slice(0, 180) : "";
-      const mimeType = typeof input.mimeType === "string" ? input.mimeType : "application/octet-stream";
+      const mimeType = typeof input.mimeType === "string" ? input.mimeType : "";
       const size = Number(input.size);
-      if (!name || !Number.isSafeInteger(size) || size <= 0 || size > MAX_FILE_SIZE) {
-        return json({ error: "Choose a non-empty file up to 2 GB." }, 400, request);
+      if (!name || !["application/pdf", "image/jpeg", "image/png"].includes(mimeType) ||
+          !Number.isSafeInteger(size) || size <= 0 || size > MAX_FILE_SIZE) {
+        return json({ error: "Choose a non-empty PDF, JPEG or PNG file up to 2 GB." }, 400, request);
       }
       const metadata = { name, mimeType };
       const response = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name,mimeType,size,modifiedTime,webViewLink", {
