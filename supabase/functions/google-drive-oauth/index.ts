@@ -53,7 +53,8 @@ async function verifyFirebaseAdmin(request: Request): Promise<boolean> {
   });
   if (!response.ok) return false;
   const payload = await response.json();
-  return payload.users?.[0]?.localId === required("PIXELFORGE_ADMIN_UID");
+  const account = payload.users?.[0];
+  return account?.localId === required("PIXELFORGE_ADMIN_UID") && account.disabled !== true;
 }
 
 function supabaseAdmin() {
@@ -70,11 +71,24 @@ Deno.serve(async (request) => {
     const db = supabaseAdmin();
 
     if (action === "start") {
-      if (request.method !== "POST" || !(await verifyFirebaseAdmin(request))) {
-        return json({ error: "Administrator authentication required" }, 401, request);
+      if (request.method !== "POST") {
+        return json({ error: "Method not allowed" }, 405, request);
       }
       const origin = request.headers.get("Origin") ?? "";
-      if (!allowedOrigins.has(origin)) return json({ error: "This PixelForge origin is not allowed to connect Google Drive." }, 403, request);
+      if (!allowedOrigins.has(origin)) {
+        return json({ error: "This PixelForge origin is not allowed to connect Google Drive." }, 403, request);
+      }
+      if (!(await verifyFirebaseAdmin(request))) {
+        return json({ error: "Administrator authentication required" }, 401, request);
+      }
+
+      // Keep the state table bounded; expired states can no longer be consumed.
+      const { error: cleanupError } = await db
+        .from("google_drive_oauth_states")
+        .delete()
+        .lte("expires_at", new Date().toISOString());
+      if (cleanupError) throw cleanupError;
+
       const stateBytes = crypto.getRandomValues(new Uint8Array(32));
       const state = base64Url(stateBytes);
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
