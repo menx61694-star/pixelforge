@@ -1,14 +1,22 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const cors = {
-  "Access-Control-Allow-Origin": Deno.env.get("PIXELFORGE_ADMIN_ORIGIN") ?? "https://pixelforge.jo3.org",
-  "Access-Control-Allow-Headers": "authorization, content-type",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Vary": "Origin",
-};
+const allowedOrigins = new Set([
+  Deno.env.get("PIXELFORGE_ADMIN_ORIGIN") ?? "https://pixelforge.jo3.org",
+  "http://localhost:8000",
+]);
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
+function corsHeaders(request: Request) {
+  const origin = request.headers.get("Origin") ?? "";
+  return {
+    "Access-Control-Allow-Origin": allowedOrigins.has(origin) ? origin : "https://pixelforge.jo3.org",
+    "Access-Control-Allow-Headers": "authorization, content-type",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
+
+const json = (body: unknown, status = 200, request?: Request) =>
+  new Response(JSON.stringify(body), { status, headers: { ...(request ? corsHeaders(request) : {}), "Content-Type": "application/json" } });
 
 function required(name: string): string {
   const value = Deno.env.get(name);
@@ -55,7 +63,7 @@ function supabaseAdmin() {
 }
 
 Deno.serve(async (request) => {
-  if (request.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(request) });
   try {
     const url = new URL(request.url);
     const action = url.searchParams.get("action");
@@ -63,14 +71,17 @@ Deno.serve(async (request) => {
 
     if (action === "start") {
       if (request.method !== "POST" || !(await verifyFirebaseAdmin(request))) {
-        return json({ error: "Administrator authentication required" }, 401);
+        return json({ error: "Administrator authentication required" }, 401, request);
       }
+      const origin = request.headers.get("Origin") ?? "";
+      if (!allowedOrigins.has(origin)) return json({ error: "This PixelForge origin is not allowed to connect Google Drive." }, 403, request);
       const stateBytes = crypto.getRandomValues(new Uint8Array(32));
       const state = base64Url(stateBytes);
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
       const { error } = await db.from("google_drive_oauth_states").insert({
         state_hash: await crypto.subtle.digest("SHA-256", new TextEncoder().encode(state)).then((v) => base64Url(new Uint8Array(v))),
         expires_at: expiresAt,
+        return_to: origin + "/admin.html",
       });
       if (error) throw error;
 
@@ -84,22 +95,22 @@ Deno.serve(async (request) => {
         prompt: "consent",
         state,
       }).toString();
-      return json({ authorization_url: google.toString() });
+      return json({ authorization_url: google.toString() }, 200, request);
     }
 
     if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
     const code = url.searchParams.get("code");
     const state = url.searchParams.get("state");
     const googleError = url.searchParams.get("error");
-    if (googleError) return new Response("Google authorization was not completed. You may close this page.", { status: 400, headers: cors });
-    if (!code || !state) return json({ error: "Missing OAuth code or state" }, 400);
+    if (googleError) return new Response("Google authorization was not completed. You may close this page.", { status: 400, headers: corsHeaders(request) });
+    if (!code || !state) return json({ error: "Missing OAuth code or state" }, 400, request);
 
     const stateHash = base64Url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(state))));
     const { data: pending, error: stateError } = await db.from("google_drive_oauth_states")
-      .select("state_hash, expires_at").eq("state_hash", stateHash).maybeSingle();
+      .select("state_hash, expires_at, return_to").eq("state_hash", stateHash).maybeSingle();
     if (stateError) throw stateError;
     if (!pending || new Date(pending.expires_at).getTime() < Date.now()) {
-      return json({ error: "OAuth state is invalid or expired. Start the connection again." }, 400);
+      return json({ error: "OAuth state is invalid or expired. Start the connection again." }, 400, request);
     }
     const { error: deleteStateError } = await db.from("google_drive_oauth_states").delete().eq("state_hash", stateHash);
     if (deleteStateError) throw deleteStateError;
@@ -116,7 +127,7 @@ Deno.serve(async (request) => {
       }),
     });
     const tokens = await tokenResponse.json();
-    if (!tokenResponse.ok) return json({ error: "Google token exchange failed", details: tokens.error_description ?? tokens.error }, 400);
+    if (!tokenResponse.ok) return json({ error: "Google token exchange failed", details: tokens.error_description ?? tokens.error }, 400, request);
     if (!tokens.refresh_token) return json({ error: "Google did not return a refresh token. Revoke the app's access in Google Account permissions and reconnect." }, 400);
 
     const encrypted = await encryptToken(tokens.refresh_token, required("GOOGLE_TOKEN_ENCRYPTION_KEY"));
@@ -128,11 +139,12 @@ Deno.serve(async (request) => {
     });
     if (saveError) throw saveError;
 
-    const destination = new URL(required("PIXELFORGE_ADMIN_URL"));
+    const destination = new URL(pending.return_to || required("PIXELFORGE_ADMIN_URL"));
+    if (!allowedOrigins.has(destination.origin) || destination.pathname !== "/admin.html") throw new Error("OAuth return destination is not allowed");
     destination.searchParams.set("google_drive", "connected");
     return Response.redirect(destination.toString(), 303);
   } catch (error) {
     console.error("Google Drive OAuth error:", error);
-    return json({ error: "OAuth request failed. Check Edge Function logs and configured secrets." }, 500);
+    return json({ error: "OAuth request failed. Check Edge Function logs and configured secrets." }, 500, request);
   }
 });
