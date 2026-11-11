@@ -5,6 +5,14 @@
 -- Never place a Supabase service-role key in browser code.
 
 -- Public read is provided by the bucket's PUBLIC setting.
+-- Allow visitors to list only objects in the public library bucket.
+create policy "PixelForge public list documents"
+on storage.objects
+as permissive
+for select
+to anon, authenticated
+using (bucket_id = 'public-documents');
+
 -- These policies restrict authenticated object mutations to the single owner identity.
 
 create policy "PixelForge owner insert public documents"
