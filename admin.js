@@ -15,6 +15,8 @@ const firebaseConfig = {
   const SUPABASE_URL = "https://zeueivmdzhkhonkyllij.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_sTs9Niej0BbWOw1vITV_jA_utoWwsw3";
   const BUCKET = "private-documents";
+  const PUBLIC_BUCKET = "public-documents";
+  const PUBLIC_CATEGORIES = ["pdf-documents", "study-notes", "books-resources", "other-documents", "exam-materials", "technology-guides"];
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
   const ALLOWED_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 
@@ -156,12 +158,30 @@ const firebaseConfig = {
           download.type = "button";
           download.textContent = "Download";
           download.addEventListener("click", () => downloadFile(path, item.name, download));
+          const category = document.createElement("select");
+          category.className = "publish-category";
+          category.setAttribute("aria-label", "Public category");
+          const placeholder = document.createElement("option");
+          placeholder.value = "";
+          placeholder.textContent = "Choose category";
+          category.append(placeholder);
+          PUBLIC_CATEGORIES.forEach(value => {
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = value.replace(/-/g, " ").replace(/\\b\\w/g, char => char.toUpperCase());
+            category.append(option);
+          });
+          const publish = document.createElement("button");
+          publish.type = "button";
+          publish.className = "publish-button";
+          publish.textContent = "Publish";
+          publish.addEventListener("click", () => publishFile(path, item.name, category.value, publish));
           const remove = document.createElement("button");
           remove.type = "button";
           remove.className = "delete-button";
           remove.textContent = "Delete";
           remove.addEventListener("click", () => deleteFile(path, li, remove));
-          actions.append(download, remove);
+          actions.append(download, category, publish, remove);
           li.append(info, actions);
           fileList.append(li);
         });
@@ -172,6 +192,32 @@ const firebaseConfig = {
       setVaultStatus("Storage list failed: " + (error.message || "Unknown error"), true);
     } finally {
       refreshButton.disabled = false;
+    }
+  }
+
+  async function publishFile(privatePath, fileName, category, button) {
+    if (!category || !PUBLIC_CATEGORIES.includes(category)) {
+      setVaultStatus("Choose a public category before publishing.", true);
+      return;
+    }
+    if (!window.confirm("Publish this file publicly in " + category.replace(/-/g, " ") + "? Anyone with the public library link will be able to access it.")) return;
+    button.disabled = true;
+    try {
+      const { data: downloaded, error: downloadError } = await supabaseClient.storage.from(BUCKET).download(privatePath);
+      if (downloadError) throw downloadError;
+      const publicPath = category + "/" + ADMIN_UID + "/" + fileName;
+      const { error: uploadError } = await supabaseClient.storage.from(PUBLIC_BUCKET).upload(publicPath, downloaded, {
+        cacheControl: "60",
+        contentType: downloaded.type || "application/octet-stream",
+        upsert: true
+      });
+      if (uploadError) throw uploadError;
+      setVaultStatus("Published publicly in " + category.replace(/-/g, " ") + ". The private original remains private.");
+      button.textContent = "Published";
+    } catch (error) {
+      setVaultStatus("Publish failed: " + (error.message || "Check public bucket and its write policies."), true);
+    } finally {
+      button.disabled = false;
     }
   }
 
