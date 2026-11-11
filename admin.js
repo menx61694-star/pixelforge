@@ -97,6 +97,13 @@ const firebaseConfig = {
       : (bytes / (1024 * 1024)).toFixed(2) + " MB";
   }
 
+  function updateStats(files) {
+    const bytes = files.reduce((sum, file) => sum + Number(file.metadata && file.metadata.size || 0), 0);
+    countStat.textContent = String(files.length);
+    storageStat.textContent = bytes < 1048576 ? Math.max(1, Math.round(bytes / 1024)) + " KB" : (bytes / 1048576).toFixed(2) + " MB";
+    countLabel.textContent = files.length + (files.length === 1 ? " file" : " files");
+  }
+
   function showEmpty(message) {
     const item = document.createElement("li");
     item.className = "empty-state";
