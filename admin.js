@@ -18,6 +18,7 @@ const firebaseConfig = {
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
   const ALLOWED_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 
+  const loginView = document.getElementById("login-view");
   const form = document.getElementById("login-form");
   const loginButton = document.getElementById("login-button");
   const logoutButton = document.getElementById("logout-button");
@@ -29,6 +30,12 @@ const firebaseConfig = {
   const vaultStatus = document.getElementById("vault-status");
   const fileList = document.getElementById("file-list");
   const refreshButton = document.getElementById("refresh-files");
+  const fileSearch = document.getElementById("file-search");
+  const selectedFile = document.getElementById("selected-file");
+  const countStat = document.getElementById("stat-doc-count");
+  const storageStat = document.getElementById("stat-storage");
+  const countLabel = document.getElementById("file-count-label");
+  let currentFiles = [];
 
   if (!window.firebase || !form || !loginButton || !logoutButton || !status || !sessionPanel) {
     if (status) status.textContent = "The sign-in service could not be loaded. Refresh and try again.";
@@ -58,7 +65,7 @@ const firebaseConfig = {
   }
 
   function showAdminSession(isAdmin) {
-    form.hidden = isAdmin;
+    loginView.hidden = isAdmin;
     sessionPanel.hidden = !isAdmin;
     status.textContent = "";
     if (isAdmin) {
@@ -68,7 +75,9 @@ const firebaseConfig = {
         loadFiles();
       }
     } else {
+      currentFiles = [];
       fileList.replaceChildren();
+      updateStats();
     }
   }
 
