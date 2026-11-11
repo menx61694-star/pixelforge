@@ -31,7 +31,10 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Type-check Edge Function
+      - name: Check admin JavaScript syntax
+        run: node --check admin.js
+
+      - name: Type-check Edge Functions
         run: |
           deno check supabase/functions/google-drive-oauth/index.ts
           deno check supabase/functions/google-drive-files/index.ts
