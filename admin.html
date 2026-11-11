@@ -30,11 +30,27 @@
 
       <p id="status" class="status" role="status" aria-live="polite"></p>
       <section id="admin-session" class="admin-session" hidden>
-        <div class="success-mark" aria-hidden="true">✓</div>
-        <h2>Admin identity verified</h2>
-        <p>Authentication succeeded for the authorized administrator.</p>
-        <p class="session-note">The management dashboard is the next implementation step.</p>
-        <button id="logout-button" class="secondary-button" type="button">Sign out</button>
+        <div class="session-heading">
+          <div>
+            <p class="eyebrow">OWNER WORKSPACE</p>
+            <h2>Private document vault</h2>
+            <p class="session-note">Files are stored in a private bucket. Maximum file size: 10 MB.</p>
+          </div>
+          <button id="logout-button" class="secondary-button" type="button">Sign out</button>
+        </div>
+        <form id="upload-form" class="upload-form">
+          <label for="document-file">Choose a document (PDF, JPG or PNG)</label>
+          <input id="document-file" name="document-file" type="file" accept="application/pdf,image/jpeg,image/png" required>
+          <button id="upload-button" type="submit">Upload privately</button>
+        </form>
+        <p id="vault-status" class="vault-status" role="status" aria-live="polite"></p>
+        <div class="file-list-heading">
+          <h3>Your documents</h3>
+          <button id="refresh-files" class="text-button" type="button">Refresh</button>
+        </div>
+        <ul id="file-list" class="file-list" aria-live="polite">
+          <li class="empty-state">Sign in to load your private documents.</li>
+        </ul>
       </section>
     </section>
     <p class="security-note">Private administrator access · No public sign-up</p>
