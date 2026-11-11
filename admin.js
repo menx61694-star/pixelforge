@@ -111,6 +111,10 @@ const firebaseConfig = {
     fileList.replaceChildren(item);
   }
 
+  function displayFileName(storedName) {
+    return storedName.replace(/^\\d{10,}-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, "");
+  }
+
   async function loadFiles() {
     if (!supabaseClient || !auth.currentUser || auth.currentUser.uid !== ADMIN_UID) return;
     refreshButton.disabled = true;
@@ -139,7 +143,7 @@ const firebaseConfig = {
           info.className = "file-info";
           const name = document.createElement("div");
           name.className = "file-name";
-          name.textContent = item.name;
+          name.textContent = displayFileName(item.name);
           const meta = document.createElement("div");
           meta.className = "file-meta";
           const size = item.metadata && item.metadata.size ? formatBytes(Number(item.metadata.size)) : "Stored privately";
