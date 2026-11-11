@@ -102,7 +102,12 @@ const firebaseConfig = {
     if (!user || user.uid !== ADMIN_UID) throw new Error("Administrator session is required.");
     const headers = new Headers(options.headers || {});
     headers.set("Authorization", "Bearer " + await user.getIdToken());
-    const response = await fetch(SUPABASE_URL + "/functions/v1/google-drive-files?action=" + encodeURIComponent(action), {
+    const endpoint = new URL(SUPABASE_URL + "/functions/v1/google-drive-files");
+    endpoint.searchParams.set("action", action);
+    if (options.query) {
+      Object.entries(options.query).forEach(([key, value]) => endpoint.searchParams.set(key, String(value)));
+    }
+    const response = await fetch(endpoint.toString(), {
       method: options.method || "GET",
       headers,
       body: options.body
@@ -191,7 +196,7 @@ const firebaseConfig = {
   async function downloadGoogleDriveFile(file, button) {
     button.disabled = true;
     try {
-      const response = await googleDriveRequest("download&id=" + encodeURIComponent(file.id));
+      const response = await googleDriveRequest("download", { query: { id: file.id } });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
         throw new Error(payload.error || "Download failed.");
