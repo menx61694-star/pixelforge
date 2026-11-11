@@ -1,0 +1,34 @@
+name: Google Drive OAuth Check
+
+on:
+  push:
+    branches:
+      - feature/private-admin-document-vault
+    paths:
+      - "supabase/functions/google-drive-oauth/**"
+      - ".github/workflows/google-drive-oauth-check.yml"
+  pull_request:
+    branches:
+      - feature/private-admin-document-vault
+    paths:
+      - "supabase/functions/google-drive-oauth/**"
+      - ".github/workflows/google-drive-oauth-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  deno-check:
+    name: Type-check Google Drive OAuth function
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check Edge Function
+        run: deno check supabase/functions/google-drive-oauth/index.ts
