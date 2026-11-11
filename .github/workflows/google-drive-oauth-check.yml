@@ -6,6 +6,7 @@ on:
       - feature/private-admin-document-vault
     paths:
       - "supabase/functions/google-drive-oauth/**"
+      - "supabase/functions/google-drive-files/**"
       - ".github/workflows/google-drive-oauth-check.yml"
   pull_request:
     branches:
@@ -31,4 +32,6 @@ jobs:
           deno-version: v2.x
 
       - name: Type-check Edge Function
-        run: deno check supabase/functions/google-drive-oauth/index.ts
+        run: |
+          deno check supabase/functions/google-drive-oauth/index.ts
+          deno check supabase/functions/google-drive-files/index.ts
