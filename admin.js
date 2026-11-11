@@ -125,6 +125,8 @@ const firebaseConfig = {
         });
       if (error) throw error;
       const files = (data || []).filter(item => item.name && !item.name.endsWith("/"));
+      currentFiles = files;
+      updateStats(files);
       if (!files.length) {
         showEmpty("No documents uploaded yet.");
       } else {
