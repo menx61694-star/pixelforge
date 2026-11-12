@@ -902,8 +902,8 @@ const firebaseConfig = {
       if (createdUser) {
         try {
           await managementRequest("set-status", { method: "POST", body: { uid: createdUser.uid, status: "suspended" } });
-          await provisioner.auth().currentUser?.delete();
         } catch (_) {}
+        try { await createdUser.delete(); } catch (_) {}
       }
       setUsersStatus(error.message || "Could not create user.", true);
     } finally {
