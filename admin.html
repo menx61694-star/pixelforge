@@ -29,7 +29,7 @@
           <button id="login-button" type="submit">Sign in securely</button>
         </form>
         <p id="status" class="status" role="status" aria-live="polite"></p>
-        <p class="login-footnote"><span class="lock-dot"></span> Owner access only · Protected session</p>
+        <p class="login-footnote"><span class="lock-dot"></span> Role-based workspace access · Protected session</p>
       </div>
     </section>
 
@@ -42,7 +42,7 @@
         <a class="nav-link" href="#documents"><span class="nav-icon">▤</span> Private vault</a>
         <a class="nav-link" href="#users" id="users-nav-link" hidden><span class="nav-icon">♙</span> Users &amp; roles</a>
         <div class="sidebar-bottom">
-          <div class="secure-card"><span class="secure-icon">✓</span><div><strong>Private by design</strong><small>Owner-only document access</small></div></div>
+          <div class="secure-card"><span class="secure-icon">✓</span><div><strong>Private by design</strong><small>Role-based document access</small></div></div>
           <button id="logout-button" class="logout-button" type="button">↪ <span>Sign out</span></button>
         </div>
       </aside>
@@ -55,7 +55,7 @@
 
         <div class="dashboard-content" id="overview">
           <section class="welcome-banner">
-            <div><p class="eyebrow">OWNER WORKSPACE</p><h1>Your private space.</h1><p>Manage personal documents securely from one place.</p></div>
+            <div><p class="eyebrow">PIXELFORGE WORKSPACE</p><h1>Your private space.</h1><p>Manage personal documents securely from one place.</p></div>
             <div class="banner-art" aria-hidden="true"><span>▤</span><i></i><b></b></div>
           </section>
 
@@ -120,7 +120,7 @@
               <ul id="file-list" class="file-list" aria-live="polite"><li class="empty-state">Loading your documents…</li></ul>
             </article>
           </section>
-          <footer class="dashboard-footer"><span>PIXELFORGE ADMIN</span><span>Private administrator access · No public sign-up</span></footer>
+          <footer class="dashboard-footer"><span>PIXELFORGE ADMIN</span><span>Role-based workspace access · No public sign-up</span></footer>
         </div>
 
         <div class="dashboard-content dashboard-page" id="users" hidden>
@@ -137,7 +137,7 @@
               <select id="new-user-role" required>
                 <option value="viewer">Viewer — read only</option>
                 <option value="editor">Editor — manage content</option>
-                <option value="admin">Admin — full access</option>
+                <option value="admin">Admin — manage workspace</option>
               </select>
               <button id="create-user-button" type="submit">Create user &amp; send setup email</button>
             </form>
