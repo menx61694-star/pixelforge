@@ -57,6 +57,7 @@ const firebaseConfig = {
   let currentUserRole = null;
   let currentPermissions = new Set();
   const usersNavLink = document.getElementById("users-nav-link");
+  const googleDriveNavLink = document.getElementById("google-drive-nav-link");
   const userCreateForm = document.getElementById("user-create-form");
   const usersStatus = document.getElementById("users-status");
   const usersTableBody = document.getElementById("users-table-body");
@@ -66,13 +67,13 @@ const firebaseConfig = {
   const createUserButton = document.getElementById("create-user-button");
 
   const sidebarLinks = Array.from(document.querySelectorAll(".sidebar .nav-link"));
-  const dashboardPages = ["overview", "recent-activity", "documents", "users"]
+  const dashboardPages = ["overview", "recent-activity", "documents", "google-drive", "users"]
     .map(id => document.getElementById(id))
     .filter(Boolean);
   function syncSidebarNavigation() {
     const requestedPage = (window.location.hash || "#overview").slice(1);
     let activePage = dashboardPages.some(page => page.id === requestedPage) ? requestedPage : "overview";
-    const pagePermissions = { overview: "dashboard.view", "recent-activity": "activity.view", documents: "vault.read", users: "users.manage" };
+    const pagePermissions = { overview: "dashboard.view", "recent-activity": "activity.view", documents: "vault.read", "google-drive": "drive.read", users: "users.manage" };
     if (currentUserUid && !currentPermissions.has(pagePermissions[activePage])) activePage = "overview";
     dashboardPages.forEach(page => { page.hidden = page.id !== activePage; });
     sidebarLinks.forEach(link => {
@@ -207,6 +208,9 @@ const firebaseConfig = {
         empty.textContent = "No files found in the connected Drive app space.";
         googleDriveFileList.append(empty);
       }
+      let publishedFiles = new Map();
+      try { publishedFiles = await getPublishedFilesIndex(); }
+      catch (publishError) { setDriveFilesStatus("Drive files loaded; published status could not be checked: " + (publishError.message || "Storage access error"), true); }
       files.forEach(file => {
         const item = document.createElement("li");
         item.className = "file-item";
@@ -226,13 +230,44 @@ const firebaseConfig = {
         download.type = "button";
         download.textContent = "Download";
         download.addEventListener("click", () => downloadGoogleDriveFile(file, download));
+        const category = document.createElement("select");
+        category.className = "publish-category";
+        category.setAttribute("aria-label", "Public category for " + (file.name || "Drive file"));
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Choose category";
+        category.append(placeholder);
+        PUBLIC_CATEGORIES.forEach(value => {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = value.replace(/-/g, " ").replace(/\\b\\w/g, char => char.toUpperCase());
+          category.append(option);
+        });
+        const safeName = safeFileName(file.name || "drive-file");
+        const publishedCategory = publishedFiles.get(safeName);
+        if (publishedCategory) category.value = publishedCategory;
+        const publish = document.createElement("button");
+        publish.type = "button";
+        publish.className = "publish-button";
+        publish.textContent = publishedCategory ? "Republish" : "Publish";
+        publish.addEventListener("click", () => publishGoogleDriveFile(file, category.value, publish));
+        const unpublish = document.createElement("button");
+        unpublish.type = "button";
+        unpublish.className = "unpublish-button";
+        unpublish.textContent = "Unpublish";
+        unpublish.disabled = !publishedCategory;
+        unpublish.title = publishedCategory ? "Remove from " + publishedCategory : "This file is not published";
+        unpublish.addEventListener("click", () => unpublishGoogleDriveFile(file, category.value || publishedCategory, unpublish));
+        category.hidden = !currentPermissions.has("vault.publish");
+        publish.hidden = !currentPermissions.has("vault.publish");
+        unpublish.hidden = !currentPermissions.has("vault.publish");
         const remove = document.createElement("button");
         remove.type = "button";
         remove.className = "delete-button";
         remove.textContent = "Delete";
         remove.addEventListener("click", () => deleteGoogleDriveFile(file, item, remove));
         remove.hidden = !currentPermissions.has("drive.delete");
-        actions.append(download, remove);
+        actions.append(download, category, publish, unpublish, remove);
         item.append(info, actions);
         googleDriveFileList.append(item);
       });
@@ -241,6 +276,61 @@ const firebaseConfig = {
       setDriveFilesStatus(error.message || "Google Drive listing failed.", true);
     } finally {
       if (googleDriveRefreshButton) googleDriveRefreshButton.disabled = !googleDriveConnected;
+    }
+  }
+
+  async function publishGoogleDriveFile(file, category, button) {
+    if (!currentPermissions.has("vault.publish")) {
+      setDriveFilesStatus("Your role cannot publish documents.", true);
+      return;
+    }
+    if (!category || !PUBLIC_CATEGORIES.includes(category)) {
+      setDriveFilesStatus("Choose a public category before publishing.", true);
+      return;
+    }
+    if (!window.confirm("Publish " + (file.name || "this Drive file") + " publicly in " + category.replace(/-/g, " ") + "? Anyone with the public library link can access it.")) return;
+    button.disabled = true;
+    try {
+      setDriveFilesStatus("Downloading from Google Drive for publishing…");
+      const response = await googleDriveRequest("download", { query: { id: file.id } });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || "Could not download the Drive file.");
+      }
+      const blob = await response.blob();
+      const publicPath = category + "/" + currentUserUid + "-" + safeFileName(file.name || "drive-file");
+      const { error } = await supabaseClient.storage.from(PUBLIC_BUCKET).upload(publicPath, blob, {
+        cacheControl: "60",
+        contentType: file.mimeType || blob.type || "application/octet-stream",
+        upsert: true
+      });
+      if (error) throw error;
+      setDriveFilesStatus("Published " + (file.name || "Drive file") + " in " + category.replace(/-/g, " ") + ".");
+      await loadGoogleDriveFiles();
+    } catch (error) {
+      setDriveFilesStatus("Drive publish failed: " + (error.message || "Storage upload failed."), true);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function unpublishGoogleDriveFile(file, category, button) {
+    if (!category || !PUBLIC_CATEGORIES.includes(category)) {
+      setDriveFilesStatus("Choose the category where this Drive file was published.", true);
+      return;
+    }
+    if (!window.confirm("Remove this Drive file from the public library? The Google Drive original will remain unchanged.")) return;
+    button.disabled = true;
+    try {
+      const publicPath = category + "/" + currentUserUid + "-" + safeFileName(file.name || "drive-file");
+      const { error } = await supabaseClient.storage.from(PUBLIC_BUCKET).remove([publicPath]);
+      if (error) throw error;
+      setDriveFilesStatus("Removed from public library. The Google Drive original is unchanged.");
+      await loadGoogleDriveFiles();
+    } catch (error) {
+      setDriveFilesStatus("Drive unpublish failed: " + (error.message || "Storage removal failed."), true);
+    } finally {
+      button.disabled = false;
     }
   }
 
@@ -477,7 +567,7 @@ const firebaseConfig = {
       item.append(marker, details);
       activityList.append(item);
     });
-    activityStatus.textContent = "Showing up to 6 real files from connected storage. This is file activity, not a full admin audit log.";
+    activityStatus.textContent = "Showing " + Math.min(validEntries.length, 6) + " of " + validEntries.length + " available files. This is file activity, not a full admin audit log.";
   }
 
   function showEmpty(message) {
@@ -489,6 +579,25 @@ const firebaseConfig = {
 
   function displayFileName(storedName) {
     return storedName.replace(/^\\d{10,}-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, "");
+  }
+
+  async function getPublishedFilesIndex() {
+    const published = new Map();
+    if (!supabaseClient || !currentUserUid || !currentPermissions.has("vault.read")) return published;
+    const results = await Promise.all(PUBLIC_CATEGORIES.map(async category => {
+      const { data, error } = await supabaseClient.storage.from(PUBLIC_BUCKET).list(category, {
+        limit: 100, offset: 0, sortBy: { column: "created_at", order: "desc" }
+      });
+      if (error) throw error;
+      return (data || []).filter(file => file.name && !file.name.endsWith("/"))
+        .map(file => ({ name: file.name, category }));
+    }));
+    results.flat().forEach(file => {
+      if (file.name.startsWith(currentUserUid + "-")) {
+        published.set(file.name.slice(currentUserUid.length + 1), file.category);
+      }
+    });
+    return published;
   }
 
   async function loadFiles() {
@@ -506,6 +615,9 @@ const firebaseConfig = {
       if (error) throw error;
       const files = (data || []).filter(item => item.name && !item.name.endsWith("/"));
       currentFiles = files;
+      let publishedFiles = new Map();
+      try { publishedFiles = await getPublishedFilesIndex(); }
+      catch (publishError) { setVaultStatus("Private files loaded; published status could not be checked: " + (publishError.message || "Storage access error"), true); }
       updateStats(files);
       updateDashboardActivity();
       if (!files.length) {
@@ -546,10 +658,12 @@ const firebaseConfig = {
             option.textContent = value.replace(/-/g, " ").replace(/\\b\\w/g, char => char.toUpperCase());
             category.append(option);
           });
+          const publishedCategory = publishedFiles.get(item.name);
+          if (publishedCategory) category.value = publishedCategory;
           const publish = document.createElement("button");
           publish.type = "button";
           publish.className = "publish-button";
-          publish.textContent = "Publish";
+          publish.textContent = publishedCategory ? "Republish" : "Publish";
           publish.addEventListener("click", () => publishFile(path, item.name, category.value, publish));
           const remove = document.createElement("button");
           remove.type = "button";
@@ -560,7 +674,9 @@ const firebaseConfig = {
           unpublish.type = "button";
           unpublish.className = "unpublish-button";
           unpublish.textContent = "Unpublish";
-          unpublish.addEventListener("click", () => unpublishFile(item.name, category.value, unpublish));
+          unpublish.addEventListener("click", () => unpublishFile(item.name, category.value || publishedCategory, unpublish));
+          unpublish.disabled = !publishedCategory;
+          unpublish.title = publishedCategory ? "Remove from " + publishedCategory : "This file is not published";
           category.hidden = !currentPermissions.has("vault.publish");
           publish.hidden = !currentPermissions.has("vault.publish");
           unpublish.hidden = !currentPermissions.has("vault.publish");
@@ -598,6 +714,7 @@ const firebaseConfig = {
       if (uploadError) throw uploadError;
       setVaultStatus("Published publicly in " + category.replace(/-/g, " ") + ". The private original remains private.");
       button.textContent = "Published";
+      await loadFiles();
     } catch (error) {
       setVaultStatus("Publish failed: " + (error.message || "Check public bucket and its write policies."), true);
     } finally {
@@ -617,6 +734,7 @@ const firebaseConfig = {
       const { error } = await supabaseClient.storage.from(PUBLIC_BUCKET).remove([publicPath]);
       if (error) throw error;
       setVaultStatus("Removed from public library. The private original is unchanged.");
+      await loadFiles();
     } catch (error) {
       setVaultStatus("Unpublish failed: " + (error.message || "Check public bucket policies."), true);
     } finally {
@@ -920,6 +1038,8 @@ const firebaseConfig = {
     currentPermissions = new Set(session.permissions || []);
     if (!currentPermissions.has("dashboard.view")) throw new Error("Dashboard access is not permitted.");
     if (usersNavLink) usersNavLink.hidden = !currentPermissions.has("users.manage");
+    if (googleDriveNavLink) googleDriveNavLink.hidden = !currentPermissions.has("drive.read");
+    syncSidebarNavigation();
     if (googleDriveButton) googleDriveButton.hidden = currentUserUid !== ADMIN_UID;
     if (googleDriveUploadButton) googleDriveUploadButton.hidden = !currentPermissions.has("drive.write");
     const uploadPanel = document.querySelector(".upload-panel");
