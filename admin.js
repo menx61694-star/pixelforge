@@ -864,7 +864,7 @@ const firebaseConfig = {
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox"; checkbox.className = "permission-toggle";
         checkbox.checked = Boolean(record && record.allowed);
-        checkbox.disabled = roleName === "admin" && ["users.manage", "roles.manage", "dashboard.view"].includes(permission);
+        checkbox.disabled = (roleName === "admin" && ["users.manage", "roles.manage", "dashboard.view"].includes(permission)) || (roleName !== "admin" && ["users.manage", "roles.manage"].includes(permission));
         checkbox.setAttribute("aria-label", roleName + " " + permission);
         checkbox.addEventListener("change", async () => {
           checkbox.disabled = true;
