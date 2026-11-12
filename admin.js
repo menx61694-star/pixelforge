@@ -18,6 +18,7 @@ const firebaseConfig = {
   const PUBLIC_BUCKET = "public-documents";
   const PUBLIC_CATEGORIES = ["pdf-documents", "study-notes", "books-resources", "other-documents", "exam-materials", "technology-guides"];
   const ALLOWED_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
+  const vaultStorage = window.PixelForgeVaultStorage;
 
   const loginView = document.getElementById("login-view");
   const form = document.getElementById("login-form");
