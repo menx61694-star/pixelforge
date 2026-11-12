@@ -229,6 +229,7 @@ const firebaseConfig = {
         remove.className = "delete-button";
         remove.textContent = "Delete";
         remove.addEventListener("click", () => deleteGoogleDriveFile(file, item, remove));
+        remove.hidden = !currentPermissions.has("drive.delete");
         actions.append(download, remove);
         item.append(info, actions);
         googleDriveFileList.append(item);
@@ -558,6 +559,10 @@ const firebaseConfig = {
           unpublish.className = "unpublish-button";
           unpublish.textContent = "Unpublish";
           unpublish.addEventListener("click", () => unpublishFile(item.name, category.value, unpublish));
+          category.hidden = !currentPermissions.has("vault.publish");
+          publish.hidden = !currentPermissions.has("vault.publish");
+          unpublish.hidden = !currentPermissions.has("vault.publish");
+          remove.hidden = !currentPermissions.has("vault.delete");
           actions.append(download, category, publish, unpublish, remove);
           li.append(info, actions);
           fileList.append(li);
@@ -913,6 +918,12 @@ const firebaseConfig = {
     currentPermissions = new Set(session.permissions || []);
     if (!currentPermissions.has("dashboard.view")) throw new Error("Dashboard access is not permitted.");
     if (usersNavLink) usersNavLink.hidden = !currentPermissions.has("users.manage");
+    if (googleDriveButton) googleDriveButton.hidden = currentUserUid !== ADMIN_UID;
+    if (googleDriveUploadButton) googleDriveUploadButton.hidden = !currentPermissions.has("drive.write");
+    const uploadPanel = document.querySelector(".upload-panel");
+    if (uploadPanel) uploadPanel.hidden = !currentPermissions.has("vault.write");
+    const roleLabel = document.querySelector(".account-chip > span:nth-child(2)");
+    if (roleLabel) roleLabel.textContent = currentUserRole[0].toUpperCase() + currentUserRole.slice(1);
     document.querySelectorAll("[data-permission]").forEach(element => {
       element.hidden = !currentPermissions.has(element.getAttribute("data-permission"));
     });
