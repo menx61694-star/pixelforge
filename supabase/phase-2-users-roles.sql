@@ -5,7 +5,7 @@
 
 create table if not exists public.pixel_forge_users (
   uid text primary key,
-  email text not null,
+  email text,
   role text not null check (role in ('admin', 'editor', 'viewer')),
   status text not null default 'active' check (status in ('active', 'suspended')),
   created_at timestamptz not null default now(),
@@ -28,7 +28,7 @@ grant all on public.pixel_forge_users to service_role;
 grant all on public.pixel_forge_role_permissions to service_role;
 
 insert into public.pixel_forge_users (uid, email, role, status)
-values ('5PcOkyDEcNc1puSeB2lQ6dLFVOF2', 'owner@pixelforge.local', 'admin', 'active')
+values ('5PcOkyDEcNc1puSeB2lQ6dLFVOF2', null, 'admin', 'active')
 on conflict (uid) do update set role = 'admin', status = 'active', updated_at = now();
 
 insert into public.pixel_forge_role_permissions (role, permission, allowed) values
