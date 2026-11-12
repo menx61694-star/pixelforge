@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - feature/phase-2-users-roles
+      - fix/phase-2-drive-publish-activity
       - main
     paths:
       - "supabase/functions/google-drive-oauth/**"
