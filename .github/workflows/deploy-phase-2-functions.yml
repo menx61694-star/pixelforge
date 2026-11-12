@@ -27,23 +27,15 @@ jobs:
       - name: Validate required deployment configuration
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
           test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Missing GitHub Actions secret SUPABASE_ACCESS_TOKEN"; exit 1; }
-          test "$SUPABASE_PROJECT_REF" = "zeueivmdzhkhonkyllij" || { echo "::error::SUPABASE_PROJECT_REF is missing or does not match the PixelForge project"; exit 1; }
-
-      - name: Link PixelForge Supabase project
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
 
       - name: Deploy user-management Edge Function
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: supabase functions deploy user-management --project-ref zeueivmdzhkhonkyllij
+        run: supabase functions deploy user-management --project-ref zeueivmdzhkhonkyllij --use-api --yes
 
       - name: Deploy google-drive-files Edge Function
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: supabase functions deploy google-drive-files --project-ref zeueivmdzhkhonkyllij
+        run: supabase functions deploy google-drive-files --project-ref zeueivmdzhkhonkyllij --use-api --yes
