@@ -35,6 +35,12 @@ const firebaseConfig = {
   const selectedFile = document.getElementById("selected-file");
   const countStat = document.getElementById("stat-doc-count");
   const storageStat = document.getElementById("stat-storage");
+  const driveCountStat = document.getElementById("stat-drive-count");
+  const driveCountNote = document.getElementById("stat-drive-count-note");
+  const driveStatusStat = document.getElementById("stat-drive-status");
+  const driveStatusNote = document.getElementById("stat-drive-status-note");
+  const activityList = document.getElementById("activity-list");
+  const activityStatus = document.getElementById("activity-status");
   const countLabel = document.getElementById("file-count-label");
   const googleDriveButton = document.getElementById("google-drive-connect");
   const googleDriveStatus = document.getElementById("google-drive-status");
@@ -45,6 +51,7 @@ const firebaseConfig = {
   const googleDriveFileList = document.getElementById("google-drive-file-list");
   let googleDriveConnected = false;
   let currentFiles = [];
+  let currentDriveFiles = [];
 
   if (!window.firebase || !form || !loginButton || !logoutButton || !status || !sessionPanel) {
     if (status) status.textContent = "The sign-in service could not be loaded. Refresh and try again.";
@@ -127,16 +134,22 @@ const firebaseConfig = {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Could not check Google Drive status.");
       googleDriveConnected = payload.connected === true;
+      updateDriveOverview();
       if (googleDriveUploadButton) googleDriveUploadButton.disabled = !googleDriveConnected;
       if (googleDriveRefreshButton) googleDriveRefreshButton.disabled = !googleDriveConnected;
       if (googleDriveConnected) {
         setGoogleDriveStatus("Google Drive is connected.");
         await loadGoogleDriveFiles();
       } else {
+        currentDriveFiles = [];
+        updateDriveOverview();
+        updateDashboardActivity();
         setGoogleDriveStatus("Google Drive is not connected.");
         setDriveFilesStatus("Connect Google Drive to list or upload files.");
       }
     } catch (error) {
+      if (driveStatusStat) driveStatusStat.textContent = "Unknown";
+      if (driveStatusNote) driveStatusNote.textContent = "Status check failed";
       setDriveFilesStatus(error.message || "Google Drive status check failed.", true);
     }
   }
@@ -150,7 +163,10 @@ const firebaseConfig = {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Could not list Google Drive files.");
       googleDriveFileList.replaceChildren();
-      const files = payload.files || [];
+      const files = Array.isArray(payload.files) ? payload.files : [];
+      currentDriveFiles = files;
+      updateDriveOverview();
+      updateDashboardActivity();
       if (!files.length) {
         const empty = document.createElement("li");
         empty.className = "empty-state";
@@ -323,8 +339,11 @@ const firebaseConfig = {
       }
     } else {
       currentFiles = [];
+      currentDriveFiles = [];
       fileList.replaceChildren();
       updateStats();
+      updateDriveOverview();
+      updateDashboardActivity();
     }
   }
 
@@ -344,11 +363,85 @@ const firebaseConfig = {
       : (bytes / (1024 * 1024)).toFixed(2) + " MB";
   }
 
-  function updateStats(files) {
-    const bytes = files.reduce((sum, file) => sum + Number(file.metadata && file.metadata.size || 0), 0);
-    countStat.textContent = String(files.length);
-    storageStat.textContent = bytes < 1048576 ? Math.max(1, Math.round(bytes / 1024)) + " KB" : (bytes / 1048576).toFixed(2) + " MB";
-    countLabel.textContent = files.length + (files.length === 1 ? " file" : " files");
+  function updateStats(files = currentFiles) {
+    const safeFiles = Array.isArray(files) ? files : [];
+    const bytes = safeFiles.reduce((sum, file) => sum + Number(file.metadata && file.metadata.size || 0), 0);
+    if (countStat) countStat.textContent = String(safeFiles.length);
+    if (storageStat) storageStat.textContent = bytes < 1048576
+      ? Math.max(1, Math.round(bytes / 1024)) + " KB"
+      : (bytes / (1024 * 1024)).toFixed(2) + " MB";
+    if (countLabel) countLabel.textContent = safeFiles.length + (safeFiles.length === 1 ? " file" : " files");
+    updateDriveOverview();
+  }
+
+  function updateDriveOverview() {
+    if (driveCountStat) driveCountStat.textContent = googleDriveConnected ? String(currentDriveFiles.length) : "—";
+    if (driveCountNote) driveCountNote.textContent = googleDriveConnected
+      ? "Files visible to PixelForge"
+      : "Connect Google Drive to view files";
+    if (driveStatusStat) {
+      driveStatusStat.textContent = googleDriveConnected ? "Connected" : "Not connected";
+      driveStatusStat.classList.toggle("secure-value", googleDriveConnected);
+      driveStatusStat.classList.toggle("status-muted", !googleDriveConnected);
+    }
+    if (driveStatusNote) driveStatusNote.textContent = googleDriveConnected
+      ? "Owner account authorization active"
+      : "No active Drive connection";
+  }
+
+  function updateDashboardActivity() {
+    if (!activityList || !activityStatus) return;
+    const entries = [];
+    currentFiles.forEach(file => {
+      const timestamp = file.created_at || file.updated_at || file.metadata?.lastModified;
+      entries.push({
+        source: "Private vault",
+        name: displayFileName(file.name || "Private document"),
+        timestamp: timestamp ? new Date(timestamp) : null
+      });
+    });
+    if (googleDriveConnected) {
+      currentDriveFiles.forEach(file => {
+        entries.push({
+          source: "Google Drive",
+          name: file.name || "Drive file",
+          timestamp: file.modifiedTime ? new Date(file.modifiedTime) : null
+        });
+      });
+    }
+    const validEntries = entries.filter(entry => !entry.timestamp || !Number.isNaN(entry.timestamp.getTime()));
+    validEntries.sort((a, b) => {
+      if (!a.timestamp && !b.timestamp) return 0;
+      if (!a.timestamp) return 1;
+      if (!b.timestamp) return -1;
+      return b.timestamp - a.timestamp;
+    });
+    activityList.replaceChildren();
+    if (!validEntries.length) {
+      const empty = document.createElement("li");
+      empty.className = "empty-state";
+      empty.textContent = "No file activity is available yet.";
+      activityList.append(empty);
+      activityStatus.textContent = "Activity is based on real files returned by connected storage. No records are currently available.";
+      return;
+    }
+    validEntries.slice(0, 6).forEach(entry => {
+      const item = document.createElement("li");
+      item.className = "activity-item";
+      const marker = document.createElement("span");
+      marker.className = entry.source === "Google Drive" ? "activity-marker drive" : "activity-marker vault";
+      marker.textContent = entry.source === "Google Drive" ? "G" : "▤";
+      const details = document.createElement("div");
+      details.className = "activity-details";
+      const name = document.createElement("strong");
+      name.textContent = entry.name;
+      const meta = document.createElement("span");
+      meta.textContent = entry.source + (entry.timestamp ? " · " + entry.timestamp.toLocaleString() : " · Date unavailable");
+      details.append(name, meta);
+      item.append(marker, details);
+      activityList.append(item);
+    });
+    activityStatus.textContent = "Showing up to 6 real files from connected storage. This is file activity, not a full admin audit log.";
   }
 
   function showEmpty(message) {
@@ -378,6 +471,7 @@ const firebaseConfig = {
       const files = (data || []).filter(item => item.name && !item.name.endsWith("/"));
       currentFiles = files;
       updateStats(files);
+      updateDashboardActivity();
       if (!files.length) {
         showEmpty("No documents uploaded yet.");
       } else {
