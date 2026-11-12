@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101d49">
+  <meta name="robots" content="noindex, nofollow">
+  <title>PixelForge Admin</title>
+  <link rel="stylesheet" href="admin.css">
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js" defer></script>
+  <script src="admin.js" defer></script>
+</head>
+<body>
+  <main class="admin-shell">
+    <section id="login-view" class="login-view" aria-labelledby="page-title">
+      <a class="brand" href="index.html"><span class="brand-mark">P</span><span>PIXELFORGE</span></a>
+      <div class="login-card">
+        <p class="eyebrow">RESTRICTED AREA</p>
+        <h1 id="page-title">Welcome back</h1>
+        <p class="intro">Sign in to manage your private PixelForge workspace.</p>
+        <form id="login-form">
+          <label for="email">Email address</label>
+          <input id="email" name="email" type="email" autocomplete="username" required>
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required>
+          <button id="login-button" type="submit">Sign in securely</button>
+        </form>
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+        <p class="login-footnote"><span class="lock-dot"></span> Owner access only · Protected session</p>
+      </div>
+    </section>
+
+    <section id="admin-session" class="dashboard" hidden>
+      <aside class="sidebar">
+        <a class="brand sidebar-brand" href="index.html"><span class="brand-mark">P</span><span>PIXELFORGE</span></a>
+        <p class="sidebar-label">WORKSPACE</p>
+        <a class="nav-link active" href="#overview"><span class="nav-icon">▦</span> Overview</a>
+        <a class="nav-link" href="#documents"><span class="nav-icon">▤</span> Private vault</a>
+        <div class="sidebar-bottom">
+          <div class="secure-card"><span class="secure-icon">✓</span><div><strong>Private by design</strong><small>Owner-only document access</small></div></div>
+          <button id="logout-button" class="logout-button" type="button">↪ <span>Sign out</span></button>
+        </div>
+      </aside>
+
+      <div class="dashboard-main">
+        <header class="topbar">
+          <div><span class="topbar-kicker">PIXELFORGE / ADMIN</span><strong>Workspace</strong></div>
+          <div class="account-chip"><span class="online-dot"></span><span>Administrator</span><span class="avatar">P</span></div>
+        </header>
+
+        <div class="dashboard-content" id="overview">
+          <section class="welcome-banner">
+            <div><p class="eyebrow">OWNER WORKSPACE</p><h1>Your private space.</h1><p>Manage personal documents securely from one place.</p></div>
+            <div class="banner-art" aria-hidden="true"><span>▤</span><i></i><b></b></div>
+          </section>
+
+          <section class="panel" aria-labelledby="google-drive-heading" style="margin-bottom: 1.5rem;">
+            <div class="panel-heading">
+              <div><p class="eyebrow">EXTERNAL STORAGE</p><h2 id="google-drive-heading">Google Drive</h2></div>
+              <button id="google-drive-connect" type="button">Connect Google Drive</button>
+            </div>
+            <p class="panel-copy">Connect the owner Google account securely. This step only authorizes access; document migration and storage routing are not enabled yet.</p>
+            <p id="google-drive-status" class="vault-status" role="status" aria-live="polite"></p>
+            <div class="drive-tools" style="display:grid;gap:.8rem;margin-top:1rem;">
+              <div style="display:flex;gap:.7rem;flex-wrap:wrap;align-items:center;">
+                <input id="google-drive-file" type="file" accept="application/pdf,image/jpeg,image/png">
+                <button id="google-drive-upload" type="button" disabled>Upload to Google Drive</button>
+                <button id="google-drive-refresh" type="button" disabled>Refresh Drive files</button>
+              </div>
+              <p id="google-drive-files-status" class="vault-status" role="status" aria-live="polite">Connect Google Drive to manage Drive files.</p>
+              <ul id="google-drive-file-list" class="file-list" aria-live="polite"><li class="empty-state">Google Drive files will appear here.</li></ul>
+            </div>
+          </section>
+
+          <section class="stats-grid" aria-label="Vault summary">
+            <article class="stat-card"><span class="stat-icon violet">▤</span><p>Total documents</p><strong id="stat-doc-count">—</strong><small>Files in your private vault</small></article>
+            <article class="stat-card"><span class="stat-icon orange">⇧</span><p>Storage used</p><strong id="stat-storage">—</strong><small>Across listed documents</small></article>
+            <article class="stat-card"><span class="stat-icon green">✓</span><p>Access status</p><strong class="secure-value">Private</strong><small>Only your admin account</small></article>
+          </section>
+
+          <section class="vault-layout" id="documents">
+            <article class="panel upload-panel">
+              <div class="panel-heading"><div><p class="eyebrow">ADD TO VAULT</p><h2>Upload a document</h2></div><span class="panel-symbol">＋</span></div>
+              <p class="panel-copy">Keep your important files in your private space. PDF, JPG and PNG · large files supported.</p>
+              <form id="upload-form" class="upload-form">
+                <label class="drop-zone" for="document-file"><span class="upload-symbol">↑</span><strong>Choose a file to upload</strong><small>PDF, JPG or PNG · resumable large-file uploads</small><span id="selected-file" class="selected-file">No file selected</span></label>
+                <input id="document-file" name="document-file" type="file" accept="application/pdf,image/jpeg,image/png" required>
+                <button id="upload-button" type="submit">Upload privately <span>→</span></button>
+              </form>
+              <p class="privacy-hint"><span>●</span> Files are stored in a non-public bucket.</p>
+            </article>
+
+            <article class="panel documents-panel">
+              <div class="panel-heading"><div><p class="eyebrow">YOUR FILES</p><h2>Private documents</h2></div><button id="refresh-files" class="refresh-button" type="button">↻ Refresh</button></div>
+              <div class="file-toolbar"><label class="search-box" for="file-search"><span>⌕</span><input id="file-search" type="search" placeholder="Search documents…" autocomplete="off"></label><span id="file-count-label" class="file-count-label">0 files</span></div>
+              <p id="vault-status" class="vault-status" role="status" aria-live="polite">Waiting for your private files…</p>
+              <ul id="file-list" class="file-list" aria-live="polite"><li class="empty-state">Loading your documents…</li></ul>
+            </article>
+          </section>
+          <footer class="dashboard-footer"><span>PIXELFORGE ADMIN</span><span>Private administrator access · No public sign-up</span></footer>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

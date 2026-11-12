@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101d49">
+  <meta name="description" content="Browse and search published PixelForge documents and resources.">
+  <title>Technology Guides — PixelForge</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="library.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="library.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="PixelForge home"><span class="brand-mark">P</span><span>PIXELFORGE</span></a>
+    <button class="menu-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+    <nav class="nav" aria-label="Main navigation">
+      <a href="index.html">Home</a><a class="active" href="library.html">Document Library</a><a href="index.html#about">About</a><a href="index.html#contact">Contact</a>
+    </nav>
+  </header>
+  <main data-library data-category="technology-guides">
+    <section class="library-hero">
+      <p class="eyebrow">PIXELFORGE / RESOURCE LIBRARY</p>
+      <h1 id="library-title">Document Library</h1>
+      <p id="library-description">Find useful documents, notes, books and technology resources in one place.</p>
+    </section>
+    <section class="library-wrap">
+      <label class="library-search" for="library-search-input"><input id="library-search-input" type="search" placeholder="Search published documents…" autocomplete="off"><button type="button" onclick="document.getElementById('library-search-input').focus()">Search</button></label>
+      <div class="library-heading"><h2>Browse categories</h2></div>
+      <div class="category-grid" id="category-grid"></div>
+      <div class="library-heading"><h2 id="documents-heading">Published documents</h2><span class="library-count" id="library-count"></span></div>
+      <div class="document-grid" id="document-grid"><p class="library-state">Loading published documents…</p></div>
+    </section>
+  </main>
+  <footer class="footer"><a class="brand footer-brand" href="index.html"><span class="brand-mark">P</span><span>PIXELFORGE</span></a><span>© <span id="year"></span> PixelForge.</span><a href="index.html">Home ↑</a></footer>
+  <script>const y=document.getElementById('year');if(y)y.textContent=new Date().getFullYear();const t=document.querySelector('.menu-toggle'),n=document.querySelector('.nav');if(t&&n)t.addEventListener('click',()=>{const o=n.classList.toggle('open');t.setAttribute('aria-expanded',String(o));});</script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwnerAdmin() {
+      return request.auth != null
+        && request.auth.uid == "5PcOkyDEcNc1puSeB2lQ6dLFVOF2";
+    }
+
+    // Public website content may be read by visitors.
+    // Only the owner admin can change published site content.
+    match /siteContent/{documentId} {
+      allow read: if true;
+      allow create, update, delete: if isOwnerAdmin();
+    }
+
+    // Private document metadata is never public.
+    match /documents/{documentId} {
+      allow read, create, update, delete: if isOwnerAdmin();
+    }
+
+    // Default-deny for every other collection/document.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

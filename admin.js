@@ -1,0 +1,690 @@
+(() => {
+ 
+const firebaseConfig = {
+  apiKey: "AIzaSyCkQReOUqbwBRDPCxg2wUcbZp3sL3Y-1B4",
+  authDomain: "pixelforge-66f0c.firebaseapp.com",
+  databaseURL: "https://pixelforge-66f0c-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "pixelforge-66f0c",
+  storageBucket: "pixelforge-66f0c.firebasestorage.app",
+  messagingSenderId: "133621997508",
+  appId: "1:133621997508:web:2d92b52b7ff46b4552ce91",
+  measurementId: "G-C22G53L12V"
+};
+
+  const ADMIN_UID = "5PcOkyDEcNc1puSeB2lQ6dLFVOF2";
+  const SUPABASE_URL = "https://zeueivmdzhkhonkyllij.supabase.co";
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_sTs9Niej0BbWOw1vITV_jA_utoWwsw3";
+  const BUCKET = "private-documents";
+  const PUBLIC_BUCKET = "public-documents";
+  const PUBLIC_CATEGORIES = ["pdf-documents", "study-notes", "books-resources", "other-documents", "exam-materials", "technology-guides"];
+  const ALLOWED_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
+
+  const loginView = document.getElementById("login-view");
+  const form = document.getElementById("login-form");
+  const loginButton = document.getElementById("login-button");
+  const logoutButton = document.getElementById("logout-button");
+  const status = document.getElementById("status");
+  const sessionPanel = document.getElementById("admin-session");
+  const uploadForm = document.getElementById("upload-form");
+  const uploadButton = document.getElementById("upload-button");
+  const fileInput = document.getElementById("document-file");
+  const vaultStatus = document.getElementById("vault-status");
+  const fileList = document.getElementById("file-list");
+  const refreshButton = document.getElementById("refresh-files");
+  const fileSearch = document.getElementById("file-search");
+  const selectedFile = document.getElementById("selected-file");
+  const countStat = document.getElementById("stat-doc-count");
+  const storageStat = document.getElementById("stat-storage");
+  const countLabel = document.getElementById("file-count-label");
+  const googleDriveButton = document.getElementById("google-drive-connect");
+  const googleDriveStatus = document.getElementById("google-drive-status");
+  const googleDriveFileInput = document.getElementById("google-drive-file");
+  const googleDriveUploadButton = document.getElementById("google-drive-upload");
+  const googleDriveRefreshButton = document.getElementById("google-drive-refresh");
+  const googleDriveFilesStatus = document.getElementById("google-drive-files-status");
+  const googleDriveFileList = document.getElementById("google-drive-file-list");
+  let googleDriveConnected = false;
+  let currentFiles = [];
+
+  if (!window.firebase || !form || !loginButton || !logoutButton || !status || !sessionPanel) {
+    if (status) status.textContent = "The sign-in service could not be loaded. Refresh and try again.";
+    return;
+  }
+
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  let supabaseClient = null;
+  if (window.supabase && typeof window.supabase.createClient === "function") {
+    supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY,
+      {
+        accessToken: async () => {
+          const currentUser = auth.currentUser;
+          return currentUser ? currentUser.getIdToken() : null;
+        }
+      }
+    );
+    window.pixelForgeSupabase = supabaseClient;
+  }
+
+  function setGoogleDriveStatus(message, isError = false) {
+    if (!googleDriveStatus) return;
+    googleDriveStatus.textContent = message;
+    googleDriveStatus.style.color = isError ? "#a23c32" : "#53617b";
+  }
+
+  async function connectGoogleDrive() {
+    if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+      setGoogleDriveStatus("Administrator session is required.", true);
+      return;
+    }
+    if (!googleDriveButton) return;
+    googleDriveButton.disabled = true;
+    setGoogleDriveStatus("Preparing secure Google Drive connection…");
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const response = await fetch(SUPABASE_URL + "/functions/v1/google-drive-oauth?action=start", {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + idToken, "Content-Type": "application/json" }
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.authorization_url) throw new Error(payload.error || "Could not start Google authorization.");
+      window.location.assign(payload.authorization_url);
+    } catch (error) {
+      setGoogleDriveStatus("Google Drive connection could not start: " + (error.message || "Unknown error"), true);
+      googleDriveButton.disabled = false;
+    }
+  }
+
+  async function googleDriveRequest(action, options = {}) {
+    const user = auth.currentUser;
+    if (!user || user.uid !== ADMIN_UID) throw new Error("Administrator session is required.");
+    const headers = new Headers(options.headers || {});
+    headers.set("Authorization", "Bearer " + await user.getIdToken());
+    const endpoint = new URL(SUPABASE_URL + "/functions/v1/google-drive-files");
+    endpoint.searchParams.set("action", action);
+    if (options.query) {
+      Object.entries(options.query).forEach(([key, value]) => endpoint.searchParams.set(key, String(value)));
+    }
+    const response = await fetch(endpoint.toString(), {
+      method: options.method || "GET",
+      headers,
+      body: options.body
+    });
+    return response;
+  }
+
+  function setDriveFilesStatus(message, isError = false) {
+    if (!googleDriveFilesStatus) return;
+    googleDriveFilesStatus.textContent = message;
+    googleDriveFilesStatus.style.color = isError ? "#a23c32" : "#53617b";
+  }
+
+  async function refreshGoogleDriveStatus() {
+    try {
+      const response = await googleDriveRequest("status");
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Could not check Google Drive status.");
+      googleDriveConnected = payload.connected === true;
+      if (googleDriveUploadButton) googleDriveUploadButton.disabled = !googleDriveConnected;
+      if (googleDriveRefreshButton) googleDriveRefreshButton.disabled = !googleDriveConnected;
+      if (googleDriveConnected) {
+        setGoogleDriveStatus("Google Drive is connected.");
+        await loadGoogleDriveFiles();
+      } else {
+        setGoogleDriveStatus("Google Drive is not connected.");
+        setDriveFilesStatus("Connect Google Drive to list or upload files.");
+      }
+    } catch (error) {
+      setDriveFilesStatus(error.message || "Google Drive status check failed.", true);
+    }
+  }
+
+  async function loadGoogleDriveFiles() {
+    if (!googleDriveConnected || !googleDriveFileList) return;
+    if (googleDriveRefreshButton) googleDriveRefreshButton.disabled = true;
+    setDriveFilesStatus("Loading Google Drive files…");
+    try {
+      const response = await googleDriveRequest("list");
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Could not list Google Drive files.");
+      googleDriveFileList.replaceChildren();
+      const files = payload.files || [];
+      if (!files.length) {
+        const empty = document.createElement("li");
+        empty.className = "empty-state";
+        empty.textContent = "No files found in the connected Drive app space.";
+        googleDriveFileList.append(empty);
+      }
+      files.forEach(file => {
+        const item = document.createElement("li");
+        item.className = "file-item";
+        const info = document.createElement("div");
+        info.className = "file-info";
+        const name = document.createElement("div");
+        name.className = "file-name";
+        name.textContent = file.name || "Untitled file";
+        const meta = document.createElement("div");
+        meta.className = "file-meta";
+        const size = Number(file.size || 0);
+        meta.textContent = (file.mimeType || "Unknown type") + (size ? " · " + formatBytes(size) : "");
+        info.append(name, meta);
+        const actions = document.createElement("div");
+        actions.className = "file-actions";
+        const download = document.createElement("button");
+        download.type = "button";
+        download.textContent = "Download";
+        download.addEventListener("click", () => downloadGoogleDriveFile(file, download));
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "delete-button";
+        remove.textContent = "Delete";
+        remove.addEventListener("click", () => deleteGoogleDriveFile(file, item, remove));
+        actions.append(download, remove);
+        item.append(info, actions);
+        googleDriveFileList.append(item);
+      });
+      setDriveFilesStatus(files.length + " Google Drive file(s) listed.");
+    } catch (error) {
+      setDriveFilesStatus(error.message || "Google Drive listing failed.", true);
+    } finally {
+      if (googleDriveRefreshButton) googleDriveRefreshButton.disabled = !googleDriveConnected;
+    }
+  }
+
+  async function downloadGoogleDriveFile(file, button) {
+    button.disabled = true;
+    try {
+      const response = await googleDriveRequest("download", { query: { id: file.id } });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || "Download failed.");
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = file.name || "drive-file";
+      document.body.append(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+      setDriveFilesStatus("Downloaded " + (file.name || "file") + ".");
+    } catch (error) {
+      setDriveFilesStatus(error.message || "Google Drive download failed.", true);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function deleteGoogleDriveFile(file, item, button) {
+    if (!window.confirm("Permanently delete " + (file.name || "this Drive file") + "?")) return;
+    button.disabled = true;
+    try {
+      const response = await googleDriveRequest("delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: file.id })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Delete failed.");
+      item.remove();
+      setDriveFilesStatus("Deleted " + (file.name || "file") + " from Google Drive.");
+    } catch (error) {
+      setDriveFilesStatus(error.message || "Google Drive delete failed.", true);
+      button.disabled = false;
+    }
+  }
+
+  async function uploadGoogleDriveFile() {
+    const file = googleDriveFileInput && googleDriveFileInput.files && googleDriveFileInput.files[0];
+    if (!file) {
+      setDriveFilesStatus("Choose a file first.", true);
+      return;
+    }
+    if (!ALLOWED_TYPES.has(file.type)) {
+      setDriveFilesStatus("Only PDF, JPEG and PNG files are allowed.", true);
+      return;
+    }
+    if (!file.size || file.size > 2 * 1024 * 1024 * 1024) {
+      setDriveFilesStatus("Choose a non-empty file up to 2 GB.", true);
+      return;
+    }
+    googleDriveUploadButton.disabled = true;
+    googleDriveRefreshButton.disabled = true;
+    try {
+      setDriveFilesStatus("Preparing resumable Google Drive upload…");
+      const sessionResponse = await googleDriveRequest("create-upload-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: file.name, mimeType: file.type, size: file.size })
+      });
+      const session = await sessionResponse.json();
+      if (!sessionResponse.ok || !session.uploadUrl) throw new Error(session.error || "Could not start upload.");
+      const chunkSize = Math.min(Number(session.chunkSize) || 4 * 1024 * 1024, 4 * 1024 * 1024);
+      let uploaded = 0;
+      while (uploaded < file.size) {
+        const endExclusive = Math.min(uploaded + chunkSize, file.size);
+        const chunk = file.slice(uploaded, endExclusive);
+        const response = await googleDriveRequest("upload-chunk", {
+          method: "POST",
+          headers: {
+            "X-Drive-Upload-Url": session.uploadUrl,
+            "Content-Range": "bytes " + uploaded + "-" + (endExclusive - 1) + "/" + file.size
+          },
+          body: chunk
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok && response.status !== 308) throw new Error(result.error || "Upload failed at " + formatBytes(uploaded) + ".");
+        uploaded = endExclusive;
+        setDriveFilesStatus("Uploading to Google Drive… " + Math.round(uploaded / file.size * 100) + "%");
+        if (result.complete) break;
+      }
+      googleDriveFileInput.value = "";
+      setDriveFilesStatus("Upload completed. Refreshing Drive files…");
+      await loadGoogleDriveFiles();
+    } catch (error) {
+      setDriveFilesStatus(error.message || "Google Drive upload failed.", true);
+    } finally {
+      googleDriveUploadButton.disabled = !googleDriveConnected;
+      googleDriveRefreshButton.disabled = !googleDriveConnected;
+    }
+  }
+
+  if (googleDriveButton) googleDriveButton.addEventListener("click", connectGoogleDrive);
+  if (googleDriveRefreshButton) googleDriveRefreshButton.addEventListener("click", loadGoogleDriveFiles);
+  if (googleDriveUploadButton) googleDriveUploadButton.addEventListener("click", uploadGoogleDriveFile);
+
+  const googleDriveResult = new URLSearchParams(window.location.search).get("google_drive");
+  if (googleDriveResult === "connected") {
+    setGoogleDriveStatus("Google Drive account connected. Token storage confirmation received.");
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete("google_drive");
+    window.history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+  } else if (googleDriveResult === "error") {
+    setGoogleDriveStatus("Google Drive connection failed. Check the Edge Function logs and try again.", true);
+  }
+
+  function setVaultStatus(message, isError = false) {
+    vaultStatus.textContent = message;
+    vaultStatus.style.color = isError ? "#a23c32" : "#53617b";
+  }
+
+  function showAdminSession(isAdmin) {
+    loginView.hidden = isAdmin;
+    sessionPanel.hidden = !isAdmin;
+    status.textContent = "";
+    if (isAdmin) {
+      if (!supabaseClient) {
+        setVaultStatus("Storage SDK did not load. Refresh this page before using the vault.", true);
+      } else {
+        loadFiles();
+      }
+    } else {
+      currentFiles = [];
+      fileList.replaceChildren();
+      updateStats();
+    }
+  }
+
+  function safeFileName(name) {
+    const cleaned = name.normalize("NFKD")
+      .replace(/[^a-zA-Z0-9._-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(-100);
+    return cleaned || "document";
+  }
+
+  function formatBytes(bytes) {
+    if (!Number.isFinite(bytes)) return "";
+    return bytes < 1024 * 1024
+      ? Math.max(1, Math.round(bytes / 1024)) + " KB"
+      : (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  }
+
+  function updateStats(files) {
+    const bytes = files.reduce((sum, file) => sum + Number(file.metadata && file.metadata.size || 0), 0);
+    countStat.textContent = String(files.length);
+    storageStat.textContent = bytes < 1048576 ? Math.max(1, Math.round(bytes / 1024)) + " KB" : (bytes / 1048576).toFixed(2) + " MB";
+    countLabel.textContent = files.length + (files.length === 1 ? " file" : " files");
+  }
+
+  function showEmpty(message) {
+    const item = document.createElement("li");
+    item.className = "empty-state";
+    item.textContent = message;
+    fileList.replaceChildren(item);
+  }
+
+  function displayFileName(storedName) {
+    return storedName.replace(/^\\d{10,}-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, "");
+  }
+
+  async function loadFiles() {
+    if (!supabaseClient || !auth.currentUser || auth.currentUser.uid !== ADMIN_UID) return;
+    refreshButton.disabled = true;
+    setVaultStatus("Loading private documents…");
+    try {
+      const { data, error } = await supabaseClient.storage
+        .from(BUCKET)
+        .list(ADMIN_UID, {
+          limit: 100,
+          offset: 0,
+          sortBy: { column: "created_at", order: "desc" }
+        });
+      if (error) throw error;
+      const files = (data || []).filter(item => item.name && !item.name.endsWith("/"));
+      currentFiles = files;
+      updateStats(files);
+      if (!files.length) {
+        showEmpty("No documents uploaded yet.");
+      } else {
+        fileList.replaceChildren();
+        files.forEach(item => {
+          const path = ADMIN_UID + "/" + item.name;
+          const li = document.createElement("li");
+          li.className = "file-item";
+          const info = document.createElement("div");
+          info.className = "file-info";
+          const name = document.createElement("div");
+          name.className = "file-name";
+          name.textContent = displayFileName(item.name);
+          const meta = document.createElement("div");
+          meta.className = "file-meta";
+          const size = item.metadata && item.metadata.size ? formatBytes(Number(item.metadata.size)) : "Stored privately";
+          meta.textContent = size;
+          info.append(name, meta);
+
+          const actions = document.createElement("div");
+          actions.className = "file-actions";
+          const download = document.createElement("button");
+          download.type = "button";
+          download.textContent = "Download";
+          download.addEventListener("click", () => downloadFile(path, item.name, download));
+          const category = document.createElement("select");
+          category.className = "publish-category";
+          category.setAttribute("aria-label", "Public category");
+          const placeholder = document.createElement("option");
+          placeholder.value = "";
+          placeholder.textContent = "Choose category";
+          category.append(placeholder);
+          PUBLIC_CATEGORIES.forEach(value => {
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = value.replace(/-/g, " ").replace(/\\b\\w/g, char => char.toUpperCase());
+            category.append(option);
+          });
+          const publish = document.createElement("button");
+          publish.type = "button";
+          publish.className = "publish-button";
+          publish.textContent = "Publish";
+          publish.addEventListener("click", () => publishFile(path, item.name, category.value, publish));
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.className = "delete-button";
+          remove.textContent = "Delete";
+          remove.addEventListener("click", () => deleteFile(path, li, remove));
+          const unpublish = document.createElement("button");
+          unpublish.type = "button";
+          unpublish.className = "unpublish-button";
+          unpublish.textContent = "Unpublish";
+          unpublish.addEventListener("click", () => unpublishFile(item.name, category.value, unpublish));
+          actions.append(download, category, publish, unpublish, remove);
+          li.append(info, actions);
+          fileList.append(li);
+        });
+      }
+      setVaultStatus(files.length + " private document(s) listed.");
+    } catch (error) {
+      showEmpty("Could not load documents. Check the Storage policies and Firebase token.");
+      setVaultStatus("Storage list failed: " + (error.message || "Unknown error"), true);
+    } finally {
+      refreshButton.disabled = false;
+    }
+  }
+
+  async function publishFile(privatePath, fileName, category, button) {
+    if (!category || !PUBLIC_CATEGORIES.includes(category)) {
+      setVaultStatus("Choose a public category before publishing.", true);
+      return;
+    }
+    if (!window.confirm("Publish this file publicly in " + category.replace(/-/g, " ") + "? Anyone with the public library link will be able to access it.")) return;
+    button.disabled = true;
+    try {
+      const { data: downloaded, error: downloadError } = await supabaseClient.storage.from(BUCKET).download(privatePath);
+      if (downloadError) throw downloadError;
+      const publicPath = category + "/" + ADMIN_UID + "-" + fileName;
+      const { error: uploadError } = await supabaseClient.storage.from(PUBLIC_BUCKET).upload(publicPath, downloaded, {
+        cacheControl: "60",
+        contentType: downloaded.type || "application/octet-stream",
+        upsert: true
+      });
+      if (uploadError) throw uploadError;
+      setVaultStatus("Published publicly in " + category.replace(/-/g, " ") + ". The private original remains private.");
+      button.textContent = "Published";
+    } catch (error) {
+      setVaultStatus("Publish failed: " + (error.message || "Check public bucket and its write policies."), true);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function unpublishFile(fileName, category, button) {
+    if (!category || !PUBLIC_CATEGORIES.includes(category)) {
+      setVaultStatus("Choose the category where this file was published.", true);
+      return;
+    }
+    if (!window.confirm("Remove this file from the public website? The private original will remain in your vault.")) return;
+    button.disabled = true;
+    try {
+      const publicPath = category + "/" + ADMIN_UID + "-" + fileName;
+      const { error } = await supabaseClient.storage.from(PUBLIC_BUCKET).remove([publicPath]);
+      if (error) throw error;
+      setVaultStatus("Removed from public library. The private original is unchanged.");
+    } catch (error) {
+      setVaultStatus("Unpublish failed: " + (error.message || "Check public bucket policies."), true);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function downloadFile(path, fileName, button) {
+    button.disabled = true;
+    try {
+      const { data, error } = await supabaseClient.storage
+        .from(BUCKET)
+        .createSignedUrl(path, 60);
+      if (error) throw error;
+      const link = document.createElement("a");
+      link.href = data.signedUrl;
+      link.download = fileName;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setVaultStatus("A private download link was generated. It expires in 60 seconds.");
+    } catch (error) {
+      setVaultStatus("Download failed: " + (error.message || "Unknown error"), true);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function deleteFile(path, listItem, button) {
+    if (!window.confirm("Permanently delete this document?")) return;
+    button.disabled = true;
+    try {
+      const { error } = await supabaseClient.storage.from(BUCKET).remove([path]);
+      if (error) throw error;
+      listItem.remove();
+      if (!fileList.children.length) showEmpty("No documents uploaded yet.");
+      setVaultStatus("Document deleted.");
+    } catch (error) {
+      setVaultStatus("Delete failed: " + (error.message || "Unknown error"), true);
+      button.disabled = false;
+    }
+  }
+
+  function uploadLargeFile(bucketName, objectPath, file) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const user = auth.currentUser;
+        if (!user || user.uid !== ADMIN_UID) {
+          reject(new Error("Admin session expired. Sign in again."));
+          return;
+        }
+        const token = await user.getIdToken();
+        const projectRef = "zeueivmdzhkhonkyllij";
+        const upload = new window.tus.Upload(file, {
+          endpoint: "https://" + projectRef + ".storage.supabase.co/storage/v1/upload/resumable",
+          retryDelays: [0, 3000, 5000, 10000, 20000],
+          headers: {
+            authorization: "Bearer " + token,
+            apikey: SUPABASE_PUBLISHABLE_KEY
+          },
+          uploadDataDuringCreation: true,
+          removeFingerprintOnSuccess: true,
+          chunkSize: 6 * 1024 * 1024,
+          metadata: {
+            bucketName,
+            objectName: objectPath,
+            contentType: file.type || "application/octet-stream",
+            cacheControl: "0"
+          },
+          onError(error) {
+            reject(error);
+          },
+          onProgress(bytesUploaded, bytesTotal) {
+            const percent = Math.min(100, Math.round((bytesUploaded / bytesTotal) * 100));
+            setVaultStatus("Uploading privately… " + percent + "% (" + formatBytes(bytesUploaded) + " / " + formatBytes(bytesTotal) + ")");
+          },
+          onSuccess() {
+            resolve();
+          }
+        });
+        const previous = await upload.findPreviousUploads();
+        if (previous.length) upload.resumeFromPreviousUpload(previous[0]);
+        upload.start();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  uploadForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) {
+      setVaultStatus("Choose a PDF, JPG or PNG file first.", true);
+      return;
+    }
+    if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+      setVaultStatus("Admin session is not valid. Sign in again.", true);
+      return;
+    }
+    if (!supabaseClient) {
+      setVaultStatus("Storage SDK is unavailable. Refresh and try again.", true);
+      return;
+    }
+    if (!ALLOWED_TYPES.has(file.type)) {
+      setVaultStatus("Only PDF, JPEG and PNG files are allowed.", true);
+      return;
+    }
+    if (file.size <= 0) {
+      setVaultStatus("The selected file is empty. Choose a non-empty document.", true);
+      return;
+    }
+    if (!window.tus || typeof window.tus.Upload !== "function") {
+      setVaultStatus("The resumable upload service could not load. Refresh and try again.", true);
+      return;
+    }
+
+    uploadButton.disabled = true;
+    uploadButton.textContent = "Uploading…";
+    setVaultStatus("Uploading privately…");
+    try {
+      const objectName = Date.now() + "-" + crypto.randomUUID() + "-" + safeFileName(file.name);
+      const objectPath = ADMIN_UID + "/" + objectName;
+      await uploadLargeFile(BUCKET, objectPath, file);
+      fileInput.value = "";
+      setVaultStatus("Upload successful. Refreshing document list…");
+      await loadFiles();
+    } catch (error) {
+      setVaultStatus("Upload failed: " + (error.message || "Unknown error"), true);
+    } finally {
+      uploadButton.disabled = false;
+      uploadButton.textContent = "Upload privately";
+    }
+  });
+
+  refreshButton.addEventListener("click", loadFiles);
+  fileSearch.addEventListener("input", () => {
+    const query = fileSearch.value.trim().toLowerCase();
+    Array.from(fileList.children).forEach(item => {
+      item.hidden = query && !item.textContent.toLowerCase().includes(query);
+    });
+  });
+
+  fileInput.addEventListener("change", () => {
+    selectedFile.textContent = fileInput.files && fileInput.files[0]
+      ? fileInput.files[0].name + " · " + formatBytes(fileInput.files[0].size)
+      : "No file selected";
+  });
+
+
+
+  auth.onAuthStateChanged(async (user) => {
+    if (!user) {
+      showAdminSession(false);
+      return;
+    }
+    if (user.uid === ADMIN_UID) {
+      showAdminSession(true);
+      refreshGoogleDriveStatus();
+      return;
+    }
+    showAdminSession(false);
+    status.textContent = "This account is not authorized for PixelForge administration.";
+    try { await auth.signOut(); } catch (_) {}
+  });
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    status.textContent = "";
+    loginButton.disabled = true;
+    loginButton.textContent = "Signing in…";
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    try {
+      const credential = await auth.signInWithEmailAndPassword(email, password);
+      if (credential.user.uid !== ADMIN_UID) {
+        await auth.signOut();
+        status.textContent = "This account is not authorized for PixelForge administration.";
+      }
+    } catch (error) {
+      const safeMessages = {
+        "auth/invalid-credential": "Email or password is incorrect.",
+        "auth/invalid-email": "Enter a valid email address.",
+        "auth/too-many-requests": "Too many attempts. Wait a while and try again.",
+        "auth/network-request-failed": "Network error. Check your connection and retry."
+      };
+      status.textContent = safeMessages[error.code] || ("Sign-in failed (" + (error.code || "unknown-error") + "). Check Firebase Authentication settings and the account, then retry.");
+    } finally {
+      loginButton.disabled = false;
+      loginButton.textContent = "Sign in securely";
+      document.getElementById("password").value = "";
+    }
+  });
+
+  logoutButton.addEventListener("click", async () => {
+    try {
+      await auth.signOut();
+      status.textContent = "You have been signed out.";
+    } catch (_) {
+      status.textContent = "Sign-out failed. Please retry.";
+    }
+  });
+})();
