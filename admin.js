@@ -960,10 +960,7 @@ const firebaseConfig = {
     const password = document.getElementById("password").value;
     try {
       const credential = await auth.signInWithEmailAndPassword(email, password);
-      if (false) {
-        await auth.signOut();
-        status.textContent = "This account is not authorized for PixelForge administration.";
-      }
+      await loadRoleSession(credential.user);
     } catch (error) {
       const safeMessages = {
         "auth/invalid-credential": "Email or password is incorrect.",
