@@ -223,10 +223,9 @@ begin
     raise exception 'The PixelForge owner account cannot be changed or removed';
   end if;
 
-  if tg_op = 'UPDATE'
-     and old.role = 'admin'
+  if old.role = 'admin'
      and old.status = 'active'
-     and (new.role <> 'admin' or new.status <> 'active') then
+     and (tg_op = 'DELETE' or (new.role <> 'admin' or new.status <> 'active')) then
     select count(*) into v_active_admins
     from public.pixel_forge_users
     where role = 'admin' and status = 'active';
