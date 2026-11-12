@@ -130,3 +130,21 @@ button:disabled{opacity:.6;cursor:wait}
 .dashboard-page{min-height:calc(100vh - 76px)}
 .nav-link[aria-current="page"]{background:#ffffff16;color:#fff}
 @media(max-width:650px){.dashboard-page{min-height:calc(100vh - 60px)}}
+
+
+/* Phase 2 users and role management */
+.user-create-form{max-width:560px;grid-template-columns:1fr 1fr;align-items:end;gap:10px}
+.user-create-form label{grid-column:span 1}
+.user-create-form input,.user-create-form select{width:100%;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+.user-create-form button{grid-column:1/-1;min-height:44px;border:0;border-radius:8px;background:var(--orange);color:#17213b;font-weight:800}
+.users-panel{margin-bottom:16px}
+.users-table-wrap{width:100%;overflow-x:auto}
+.users-table{width:100%;border-collapse:collapse;font-size:11px}
+.users-table th,.users-table td{padding:12px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.users-table th{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em}
+.users-table td{color:var(--ink)}
+.users-table select{min-height:32px;padding:0 8px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);font-size:10px}
+.users-table button{min-height:30px;padding:0 9px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);font-size:10px}
+.users-table button.danger{border-color:#f1d2cf;background:#fff2f0;color:#a23c32}
+.permission-toggle{width:18px;height:18px;min-height:18px;accent-color:#169b69}
+@media(max-width:650px){.user-create-form{grid-template-columns:1fr}.user-create-form label,.user-create-form button{grid-column:1}.users-table th,.users-table td{padding:10px 7px}}
