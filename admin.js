@@ -823,13 +823,13 @@ const firebaseConfig = {
         role.append(option);
       });
       role.value = user.role;
-      role.disabled = user.uid === ADMIN_UID;
+      role.disabled = user.uid === ADMIN_UID || user.uid === currentUserUid;
       roleCell.append(role);
       const stateCell = document.createElement("td");
       stateCell.textContent = user.status;
       const actionCell = document.createElement("td");
       const save = document.createElement("button");
-      save.type = "button"; save.textContent = "Save role"; save.disabled = user.uid === ADMIN_UID;
+      save.type = "button"; save.textContent = "Save role"; save.disabled = user.uid === ADMIN_UID || user.uid === currentUserUid;
       save.addEventListener("click", async () => {
         save.disabled = true;
         try { await managementRequest("set-role", { method: "POST", body: { uid: user.uid, role: role.value } }); await loadUsersAndPermissions(); }
@@ -838,7 +838,7 @@ const firebaseConfig = {
       const toggle = document.createElement("button");
       toggle.type = "button"; toggle.className = user.status === "active" ? "danger" : "";
       toggle.textContent = user.status === "active" ? "Suspend" : "Reactivate";
-      toggle.disabled = user.uid === ADMIN_UID;
+      toggle.disabled = user.uid === ADMIN_UID || user.uid === currentUserUid;
       toggle.addEventListener("click", async () => {
         toggle.disabled = true;
         try { await managementRequest("set-status", { method: "POST", body: { uid: user.uid, status: user.status === "active" ? "suspended" : "active" } }); await loadUsersAndPermissions(); }
