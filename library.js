@@ -56,7 +56,7 @@
       const h3 = document.createElement("h3");
       h3.textContent = doc.title;
       const p = document.createElement("p");
-      p.textContent = doc.category + " · " + doc.size;
+      p.textContent = doc.category + " · " + doc.size + (doc.source === "google_drive" ? " · Google Drive" : " · PixelForge Storage");
       const a = document.createElement("a");
       a.href = doc.url;
       a.target = "_blank";
@@ -85,10 +85,23 @@
           const bytes = Number(file.metadata && file.metadata.size || 0);
           const size = bytes >= 1048576 ? (bytes / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(bytes / 1024)) + " KB";
           const ext = (file.name.split(".").pop() || "FILE").slice(0, 4);
-          return { title: niceName(file.name), category: category.name, url: publicData.publicUrl, size, ext };
+          return { title: niceName(file.name), category: category.name, url: publicData.publicUrl, size, ext, source: "supabase" };
         });
       }));
-      state.documents = results.flat();
+      const driveResponse = await fetch(SUPABASE_URL + "/functions/v1/google-drive-files?action=public-list");
+      const drivePayload = await driveResponse.json();
+      if (!driveResponse.ok) throw new Error(drivePayload.error || "Published Drive documents could not be loaded.");
+      const driveDocs = (drivePayload.documents || [])
+        .filter(doc => selected.some(category => category.slug === doc.category))
+        .map(doc => ({
+          title: doc.title || "Google Drive document",
+          category: categories.find(category => category.slug === doc.category)?.name || doc.category,
+          url: SUPABASE_URL + "/functions/v1/google-drive-files?action=public-download&id=" + encodeURIComponent(doc.drive_file_id),
+          size: doc.size_bytes ? (doc.size_bytes >= 1048576 ? (doc.size_bytes / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(doc.size_bytes / 1024)) + " KB") : "Size unavailable",
+          ext: (doc.title || "").split(".").pop()?.slice(0, 4) || "FILE",
+          source: "google_drive"
+        }));
+      state.documents = results.flat().concat(driveDocs);
       render();
     } catch (error) {
       showState("The public library is not connected yet. Admin-only files remain private. (" + (error.message || "Storage unavailable") + ")", true);
