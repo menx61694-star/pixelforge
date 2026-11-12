@@ -112,8 +112,8 @@ const firebaseConfig = {
   }
 
   async function connectGoogleDrive() {
-    if (!auth.currentUser || !currentPermissions.has("vault.write")) {
-      setGoogleDriveStatus("Administrator session is required.", true);
+    if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID || currentUserRole !== "admin") {
+      setGoogleDriveStatus("Owner administrator access is required to connect Google Drive.", true);
       return;
     }
     if (!googleDriveButton) return;
