@@ -212,7 +212,7 @@ create or replace function public.pixel_forge_protect_owner()
 returns trigger
 language plpgsql
 set search_path = ''
-as $
+as $$
 declare
   v_active_admins integer;
 begin
@@ -237,7 +237,7 @@ begin
   if tg_op = 'DELETE' then return old; end if;
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists pixel_forge_protect_owner_trigger on public.pixel_forge_users;
 create trigger pixel_forge_protect_owner_trigger
