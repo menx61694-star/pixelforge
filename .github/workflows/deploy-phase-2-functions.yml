@@ -2,6 +2,13 @@ name: Deploy PixelForge Phase 2 Edge Functions
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/phase-2-users-roles
+    paths:
+      - '.github/workflows/deploy-phase-2-functions.yml'
+      - 'supabase/functions/user-management/**'
+      - 'supabase/functions/google-drive-files/**'
 
 permissions:
   contents: read
