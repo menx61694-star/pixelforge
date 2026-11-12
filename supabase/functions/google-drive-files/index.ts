@@ -140,17 +140,21 @@ Deno.serve(async (request) => {
       if (publishedError) throw publishedError;
       if (!published) return json({ error: "This document is not published." }, 404, request);
       const accessToken = await getAccessToken();
+      const range = request.headers.get("Range");
       const response = await fetch("https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(fileId) + "?alt=media", {
-        headers: { Authorization: "Bearer " + accessToken }
+        headers: { Authorization: "Bearer " + accessToken, ...(range ? { Range: range } : {}) }
       });
-      if (!response.ok) return json({ error: response.status === 404 ? "The original Drive file is no longer available." : "Published document could not be retrieved." }, response.status === 404 ? 404 : 502, request);
+      if (!response.ok && response.status !== 206) return json({ error: response.status === 404 ? "The original Drive file is no longer available." : "Published document could not be retrieved." }, response.status === 404 ? 404 : 502, request);
       const headers = new Headers(corsHeaders(request));
       headers.set("Content-Type", published.mime_type || response.headers.get("Content-Type") || "application/octet-stream");
       headers.set("Content-Disposition", "inline; filename*=UTF-8''" + encodeURIComponent(published.title || "document"));
       headers.set("Cache-Control", "public, max-age=60");
-      const length = response.headers.get("Content-Length");
-      if (length) headers.set("Content-Length", length);
-      return new Response(response.body, { status: 200, headers });
+      headers.set("Accept-Ranges", response.headers.get("Accept-Ranges") || "bytes");
+      for (const name of ["Content-Length", "Content-Range"]) {
+        const value = response.headers.get(name);
+        if (value) headers.set(name, value);
+      }
+      return new Response(response.body, { status: response.status, headers });
     }
 
     const uid = await verifyFirebaseUser(request);
@@ -268,6 +272,9 @@ Deno.serve(async (request) => {
         const payload = await response.json().catch(() => ({}));
         return json({ error: "Google Drive delete failed.", details: payload.error?.message }, 502, request);
       }
+      const { error: unpublishError } = await supabaseAdmin().from("pixel_forge_published_documents")
+        .delete().eq("source", "google_drive").eq("drive_file_id", fileId);
+      if (unpublishError) throw unpublishError;
       return json({ deleted: true }, 200, request);
     }
 
