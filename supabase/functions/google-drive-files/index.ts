@@ -6,6 +6,7 @@ const allowedOrigins = new Set([
 ]);
 const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024;
 const MAX_CHUNK_SIZE = 5 * 1024 * 1024;
+const FIREBASE_PROJECT_ID = "pixelforge-66f0c";
 
 function corsHeaders(request: Request) {
   const origin = request.headers.get("Origin") ?? "";
@@ -44,7 +45,14 @@ async function verifyFirebaseUser(request: Request): Promise<string | null> {
   if (!response.ok) return null;
   const payload = await response.json();
   const account = payload.users?.[0];
-  return account && account.disabled !== true ? account.localId as string : null;
+  if (!account || account.disabled === true) return null;
+  const tokenPayload = match[1].split(".")[1];
+  if (!tokenPayload) return null;
+  const normalized = tokenPayload.replace(/-/g, "+").replace(/_/g, "/");
+  const claims = JSON.parse(atob(normalized + "=".repeat((4 - normalized.length % 4) % 4)));
+  if (claims.iss !== "https://securetoken.google.com/" + FIREBASE_PROJECT_ID ||
+      claims.aud !== FIREBASE_PROJECT_ID || claims.sub !== account.localId) return null;
+  return account.localId as string;
 }
 function supabaseAdmin() {
   return createClient(required("SUPABASE_URL"), required("SUPABASE_SERVICE_ROLE_KEY"), {
