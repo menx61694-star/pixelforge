@@ -1,17 +1,18 @@
-name: Google Drive OAuth Check
+name: PixelForge Admin and Edge Function Checks
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - feature/private-admin-document-vault
+      - feature/phase-2-users-roles
+      - main
     paths:
       - "supabase/functions/google-drive-oauth/**"
       - "supabase/functions/google-drive-files/**"
       - ".github/workflows/google-drive-oauth-check.yml"
   pull_request:
     branches:
-      - feature/private-admin-document-vault
+      - main
     paths:
       - "supabase/functions/google-drive-oauth/**"
       - "supabase/functions/google-drive-files/**"
@@ -23,7 +24,7 @@ permissions:
 
 jobs:
   deno-check:
-    name: Type-check Google Drive OAuth function
+    name: Type-check Admin JavaScript and Supabase Edge Functions
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -41,3 +42,4 @@ jobs:
         run: |
           deno check supabase/functions/google-drive-oauth/index.ts
           deno check supabase/functions/google-drive-files/index.ts
+          deno check supabase/functions/user-management/index.ts
