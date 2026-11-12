@@ -124,3 +124,9 @@ button:disabled{opacity:.6;cursor:wait}
   .sidebar .nav-link{display:inline-flex;align-self:flex-start;margin:9px 4px 0 0}
   .sidebar .nav-link:nth-of-type(2),.sidebar .nav-link:nth-of-type(3),.sidebar .nav-link:nth-of-type(4){grid-column:auto;grid-row:auto}
 }
+
+
+/* Separate admin navigation pages */
+.dashboard-page{min-height:calc(100vh - 76px)}
+.nav-link[aria-current="page"]{background:#ffffff16;color:#fff}
+@media(max-width:650px){.dashboard-page{min-height:calc(100vh - 60px)}}
