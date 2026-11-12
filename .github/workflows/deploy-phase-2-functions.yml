@@ -46,3 +46,16 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: supabase functions deploy google-drive-files --project-ref zeueivmdzhkhonkyllij --use-api --yes
+
+      - name: Smoke-test deployed endpoints reject unauthenticated requests
+        run: |
+          set -eu
+          USER_STATUS=$(curl --silent --show-error --output /tmp/user-management-response.json --write-out "%{http_code}" \
+            --header "Origin: https://pixelforge.jo3.org" \
+            "https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/user-management?action=session")
+          test "$USER_STATUS" = "403" || { cat /tmp/user-management-response.json; echo "::error::Expected user-management to reject unauthenticated access with HTTP 403, got $USER_STATUS"; exit 1; }
+          DRIVE_STATUS=$(curl --silent --show-error --output /tmp/google-drive-response.json --write-out "%{http_code}" \
+            --header "Origin: https://pixelforge.jo3.org" \
+            "https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/google-drive-files?action=status")
+          test "$DRIVE_STATUS" = "401" || { cat /tmp/google-drive-response.json; echo "::error::Expected google-drive-files to reject unauthenticated access with HTTP 401, got $DRIVE_STATUS"; exit 1; }
+          echo "Both deployed functions reject unauthenticated requests."
