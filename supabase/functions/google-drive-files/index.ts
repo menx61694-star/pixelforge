@@ -36,7 +36,7 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
 }
 async function verifyFirebaseUser(request: Request): Promise<string | null> {
   const authorization = request.headers.get("Authorization") ?? "";
-  const match = authorization.match(/^Bearer\\s+(.+)$/i);
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
   if (!match) return null;
   const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(required("FIREBASE_WEB_API_KEY"))}`, {
     method: "POST", headers: { "Content-Type": "application/json" },
