@@ -53,9 +53,20 @@ const firebaseConfig = {
   let currentFiles = [];
   let currentDriveFiles = [];
   let driveFilesLoaded = false;
+  let currentUserUid = null;
+  let currentUserRole = null;
+  let currentPermissions = new Set();
+  const usersNavLink = document.getElementById("users-nav-link");
+  const userCreateForm = document.getElementById("user-create-form");
+  const usersStatus = document.getElementById("users-status");
+  const usersTableBody = document.getElementById("users-table-body");
+  const permissionsTableBody = document.getElementById("permissions-table-body");
+  const newUserEmail = document.getElementById("new-user-email");
+  const newUserRole = document.getElementById("new-user-role");
+  const createUserButton = document.getElementById("create-user-button");
 
   const sidebarLinks = Array.from(document.querySelectorAll(".sidebar .nav-link"));
-  const dashboardPages = ["overview", "recent-activity", "documents"]
+  const dashboardPages = ["overview", "recent-activity", "documents", "users"]
     .map(id => document.getElementById(id))
     .filter(Boolean);
   function syncSidebarNavigation() {
@@ -125,7 +136,7 @@ const firebaseConfig = {
 
   async function googleDriveRequest(action, options = {}) {
     const user = auth.currentUser;
-    if (!user || user.uid !== ADMIN_UID) throw new Error("Administrator session is required.");
+    if (!user || !currentPermissions.has("drive.read")) throw new Error("Drive access is not permitted for this account.");
     const headers = new Headers(options.headers || {});
     headers.set("Authorization", "Bearer " + await user.getIdToken());
     const endpoint = new URL(SUPABASE_URL + "/functions/v1/google-drive-files");
@@ -478,13 +489,13 @@ const firebaseConfig = {
   }
 
   async function loadFiles() {
-    if (!supabaseClient || !auth.currentUser || auth.currentUser.uid !== ADMIN_UID) return;
+    if (!supabaseClient || !auth.currentUser || !currentPermissions.has("vault.read")) return;
     refreshButton.disabled = true;
     setVaultStatus("Loading private documents…");
     try {
       const { data, error } = await supabaseClient.storage
         .from(BUCKET)
-        .list(ADMIN_UID, {
+        .list(currentUserUid, {
           limit: 100,
           offset: 0,
           sortBy: { column: "created_at", order: "desc" }
@@ -499,7 +510,7 @@ const firebaseConfig = {
       } else {
         fileList.replaceChildren();
         files.forEach(item => {
-          const path = ADMIN_UID + "/" + item.name;
+          const path = currentUserUid + "/" + item.name;
           const li = document.createElement("li");
           li.className = "file-item";
           const info = document.createElement("div");
@@ -571,7 +582,7 @@ const firebaseConfig = {
     try {
       const { data: downloaded, error: downloadError } = await supabaseClient.storage.from(BUCKET).download(privatePath);
       if (downloadError) throw downloadError;
-      const publicPath = category + "/" + ADMIN_UID + "-" + fileName;
+      const publicPath = category + "/" + currentUserUid + "-" + fileName;
       const { error: uploadError } = await supabaseClient.storage.from(PUBLIC_BUCKET).upload(publicPath, downloaded, {
         cacheControl: "60",
         contentType: downloaded.type || "application/octet-stream",
@@ -723,7 +734,7 @@ const firebaseConfig = {
     setVaultStatus("Uploading privately…");
     try {
       const objectName = Date.now() + "-" + crypto.randomUUID() + "-" + safeFileName(file.name);
-      const objectPath = ADMIN_UID + "/" + objectName;
+      const objectPath = currentUserUid + "/" + objectName;
       await uploadLargeFile(BUCKET, objectPath, file);
       fileInput.value = "";
       setVaultStatus("Upload successful. Refreshing document list…");
@@ -752,19 +763,181 @@ const firebaseConfig = {
 
 
 
+  async function managementRequest(action, options = {}) {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Please sign in again.");
+    const headers = { "Authorization": "Bearer " + await user.getIdToken() };
+    if (options.body) headers["Content-Type"] = "application/json";
+    const response = await fetch(SUPABASE_URL + "/functions/v1/user-management?action=" + encodeURIComponent(action), {
+      method: options.method || "GET", headers, body: options.body ? JSON.stringify(options.body) : undefined
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "User-management request failed.");
+    return payload;
+  }
+
+  function setUsersStatus(message, isError = false) {
+    if (!usersStatus) return;
+    usersStatus.textContent = message;
+    usersStatus.style.color = isError ? "#a23c32" : "#53617b";
+  }
+
+  async function loadUsersAndPermissions() {
+    if (!currentPermissions.has("users.manage")) return;
+    setUsersStatus("Loading workspace users…");
+    try {
+      const payload = await managementRequest("list");
+      renderUsers(payload.users || []);
+      renderPermissions(payload.permissions || []);
+      setUsersStatus((payload.users || []).length + " user account(s) registered.");
+    } catch (error) {
+      setUsersStatus(error.message || "Could not load users.", true);
+    }
+  }
+
+  function renderUsers(users) {
+    if (!usersTableBody) return;
+    usersTableBody.replaceChildren();
+    if (!users.length) {
+      const row = document.createElement("tr");
+      row.innerHTML = '<td colspan="4" class="empty-state">No users are registered.</td>';
+      usersTableBody.append(row);
+      return;
+    }
+    users.forEach(user => {
+      const row = document.createElement("tr");
+      const email = document.createElement("td");
+      email.textContent = user.email || user.uid;
+      const roleCell = document.createElement("td");
+      const role = document.createElement("select");
+      ["admin", "editor", "viewer"].forEach(value => {
+        const option = document.createElement("option");
+        option.value = value; option.textContent = value[0].toUpperCase() + value.slice(1);
+        role.append(option);
+      });
+      role.value = user.role;
+      role.disabled = user.uid === ADMIN_UID;
+      roleCell.append(role);
+      const stateCell = document.createElement("td");
+      stateCell.textContent = user.status;
+      const actionCell = document.createElement("td");
+      const save = document.createElement("button");
+      save.type = "button"; save.textContent = "Save role"; save.disabled = user.uid === ADMIN_UID;
+      save.addEventListener("click", async () => {
+        save.disabled = true;
+        try { await managementRequest("set-role", { method: "POST", body: { uid: user.uid, role: role.value } }); await loadUsersAndPermissions(); }
+        catch (error) { setUsersStatus(error.message, true); save.disabled = false; }
+      });
+      const toggle = document.createElement("button");
+      toggle.type = "button"; toggle.className = user.status === "active" ? "danger" : "";
+      toggle.textContent = user.status === "active" ? "Suspend" : "Reactivate";
+      toggle.disabled = user.uid === ADMIN_UID;
+      toggle.addEventListener("click", async () => {
+        toggle.disabled = true;
+        try { await managementRequest("set-status", { method: "POST", body: { uid: user.uid, status: user.status === "active" ? "suspended" : "active" } }); await loadUsersAndPermissions(); }
+        catch (error) { setUsersStatus(error.message, true); toggle.disabled = false; }
+      });
+      actionCell.append(save, toggle);
+      row.append(email, roleCell, stateCell, actionCell);
+      usersTableBody.append(row);
+    });
+  }
+
+  function renderPermissions(permissions) {
+    if (!permissionsTableBody) return;
+    permissionsTableBody.replaceChildren();
+    const names = [...new Set(permissions.map(item => item.permission))].sort();
+    names.forEach(permission => {
+      const row = document.createElement("tr");
+      const label = document.createElement("td"); label.textContent = permission;
+      row.append(label);
+      ["admin", "editor", "viewer"].forEach(roleName => {
+        const cell = document.createElement("td");
+        const record = permissions.find(item => item.role === roleName && item.permission === permission);
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox"; checkbox.className = "permission-toggle";
+        checkbox.checked = Boolean(record && record.allowed);
+        checkbox.disabled = roleName === "admin" && ["users.manage", "roles.manage", "dashboard.view"].includes(permission);
+        checkbox.setAttribute("aria-label", roleName + " " + permission);
+        checkbox.addEventListener("change", async () => {
+          checkbox.disabled = true;
+          try { await managementRequest("set-permission", { method: "POST", body: { role: roleName, permission, allowed: checkbox.checked } }); setUsersStatus("Permission updated."); }
+          catch (error) { checkbox.checked = !checkbox.checked; setUsersStatus(error.message, true); }
+          finally { checkbox.disabled = false; }
+        });
+        cell.append(checkbox); row.append(cell);
+      });
+      permissionsTableBody.append(row);
+    });
+  }
+
+  async function createWorkspaceUser(event) {
+    event.preventDefault();
+    const email = newUserEmail.value.trim().toLowerCase();
+    const role = newUserRole.value;
+    if (!email || !currentPermissions.has("users.manage")) return;
+    createUserButton.disabled = true;
+    setUsersStatus("Creating Firebase account…");
+    let provisioner = null;
+    let createdUser = null;
+    try {
+      const appName = "PixelForgeProvisioner";
+      provisioner = firebase.apps.find(app => app.name === appName) || firebase.initializeApp(firebaseConfig, appName);
+      const provisionerAuth = provisioner.auth();
+      const temporaryPassword = crypto.randomUUID() + "Aa1!";
+      const credential = await provisionerAuth.createUserWithEmailAndPassword(email, temporaryPassword);
+      createdUser = credential.user;
+      await managementRequest("assign", { method: "POST", body: { uid: createdUser.uid, email, role } });
+      await provisionerAuth.sendPasswordResetEmail(email);
+      await provisionerAuth.signOut();
+      userCreateForm.reset();
+      setUsersStatus("User created as " + role + ". A password-setup email was sent to " + email + ".");
+      await loadUsersAndPermissions();
+    } catch (error) {
+      if (createdUser) {
+        try {
+          await managementRequest("set-status", { method: "POST", body: { uid: createdUser.uid, status: "suspended" } });
+          await provisioner.auth().currentUser?.delete();
+        } catch (_) {}
+      }
+      setUsersStatus(error.message || "Could not create user.", true);
+    } finally {
+      createUserButton.disabled = false;
+    }
+  }
+
+  async function loadRoleSession(user) {
+    const session = await managementRequest("session");
+    currentUserUid = session.uid;
+    currentUserRole = session.role;
+    currentPermissions = new Set(session.permissions || []);
+    if (!currentPermissions.has("dashboard.view")) throw new Error("Dashboard access is not permitted.");
+    if (usersNavLink) usersNavLink.hidden = !currentPermissions.has("users.manage");
+    document.querySelectorAll("[data-permission]").forEach(element => {
+      element.hidden = !currentPermissions.has(element.getAttribute("data-permission"));
+    });
+    showAdminSession(true);
+    if (currentPermissions.has("drive.read")) refreshGoogleDriveStatus();
+    if (currentPermissions.has("users.manage")) loadUsersAndPermissions();
+  }
+
+  if (userCreateForm) userCreateForm.addEventListener("submit", createWorkspaceUser);
+  const refreshUsersButton = document.getElementById("refresh-users");
+  if (refreshUsersButton) refreshUsersButton.addEventListener("click", loadUsersAndPermissions);
+
   auth.onAuthStateChanged(async (user) => {
     if (!user) {
+      currentUserUid = null; currentUserRole = null; currentPermissions = new Set();
       showAdminSession(false);
       return;
     }
-    if (user.uid === ADMIN_UID) {
-      showAdminSession(true);
-      refreshGoogleDriveStatus();
-      return;
+    try {
+      await loadRoleSession(user);
+    } catch (error) {
+      showAdminSession(false);
+      status.textContent = error.message || "This account has no active PixelForge access.";
+      try { await auth.signOut(); } catch (_) {}
     }
-    showAdminSession(false);
-    status.textContent = "This account is not authorized for PixelForge administration.";
-    try { await auth.signOut(); } catch (_) {}
   });
 
   form.addEventListener("submit", async (event) => {
