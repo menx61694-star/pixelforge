@@ -1,7 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const OWNER_UID = "5PcOkyDEcNc1puSeB2lQ6dLFVOF2";
-const PROJECT_ID = "pixelforge-66f0c";
 const allowedOrigins = new Set([
   Deno.env.get("PIXELFORGE_ADMIN_ORIGIN") ?? "https://pixelforge.jo3.org",
   "http://localhost:8000",
