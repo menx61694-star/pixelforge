@@ -57,6 +57,7 @@ const firebaseConfig = {
   let currentUserRole = null;
   let currentPermissions = new Set();
   const usersNavLink = document.getElementById("users-nav-link");
+  const googleDriveNavLink = document.getElementById("google-drive-nav-link");
   const userCreateForm = document.getElementById("user-create-form");
   const usersStatus = document.getElementById("users-status");
   const usersTableBody = document.getElementById("users-table-body");
@@ -66,13 +67,13 @@ const firebaseConfig = {
   const createUserButton = document.getElementById("create-user-button");
 
   const sidebarLinks = Array.from(document.querySelectorAll(".sidebar .nav-link"));
-  const dashboardPages = ["overview", "recent-activity", "documents", "users"]
+  const dashboardPages = ["overview", "recent-activity", "documents", "google-drive", "users"]
     .map(id => document.getElementById(id))
     .filter(Boolean);
   function syncSidebarNavigation() {
     const requestedPage = (window.location.hash || "#overview").slice(1);
     let activePage = dashboardPages.some(page => page.id === requestedPage) ? requestedPage : "overview";
-    const pagePermissions = { overview: "dashboard.view", "recent-activity": "activity.view", documents: "vault.read", users: "users.manage" };
+    const pagePermissions = { overview: "dashboard.view", "recent-activity": "activity.view", documents: "vault.read", "google-drive": "drive.read", users: "users.manage" };
     if (currentUserUid && !currentPermissions.has(pagePermissions[activePage])) activePage = "overview";
     dashboardPages.forEach(page => { page.hidden = page.id !== activePage; });
     sidebarLinks.forEach(link => {
@@ -477,7 +478,7 @@ const firebaseConfig = {
       item.append(marker, details);
       activityList.append(item);
     });
-    activityStatus.textContent = "Showing up to 6 real files from connected storage. This is file activity, not a full admin audit log.";
+    activityStatus.textContent = "Showing " + Math.min(validEntries.length, 6) + " of " + validEntries.length + " available files. This is file activity, not a full admin audit log.";
   }
 
   function showEmpty(message) {
@@ -920,6 +921,8 @@ const firebaseConfig = {
     currentPermissions = new Set(session.permissions || []);
     if (!currentPermissions.has("dashboard.view")) throw new Error("Dashboard access is not permitted.");
     if (usersNavLink) usersNavLink.hidden = !currentPermissions.has("users.manage");
+    if (googleDriveNavLink) googleDriveNavLink.hidden = !currentPermissions.has("drive.read");
+    syncSidebarNavigation();
     if (googleDriveButton) googleDriveButton.hidden = currentUserUid !== ADMIN_UID;
     if (googleDriveUploadButton) googleDriveUploadButton.hidden = !currentPermissions.has("drive.write");
     const uploadPanel = document.querySelector(".upload-panel");
