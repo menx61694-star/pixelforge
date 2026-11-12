@@ -40,6 +40,7 @@
         <a class="nav-link active" href="#overview"><span class="nav-icon">▦</span> Overview</a>
         <a class="nav-link" href="#recent-activity"><span class="nav-icon">◷</span> Recent activity</a>
         <a class="nav-link" href="#documents"><span class="nav-icon">▤</span> Private vault</a>
+        <a class="nav-link" href="#google-drive" id="google-drive-nav-link" hidden><span class="nav-icon">G</span> Google Drive</a>
         <a class="nav-link" href="#users" id="users-nav-link" hidden><span class="nav-icon">♙</span> Users &amp; roles</a>
         <div class="sidebar-bottom">
           <div class="secure-card"><span class="secure-icon">✓</span><div><strong>Private by design</strong><small>Role-based document access</small></div></div>
@@ -59,23 +60,7 @@
             <div class="banner-art" aria-hidden="true"><span>▤</span><i></i><b></b></div>
           </section>
 
-          <section class="panel" aria-labelledby="google-drive-heading" style="margin-bottom: 1.5rem;">
-            <div class="panel-heading">
-              <div><p class="eyebrow">EXTERNAL STORAGE</p><h2 id="google-drive-heading">Google Drive</h2></div>
-              <button id="google-drive-connect" type="button">Connect Google Drive</button>
-            </div>
-            <p class="panel-copy">Connect the owner Google account securely. This step only authorizes access; document migration and storage routing are not enabled yet.</p>
-            <p id="google-drive-status" class="vault-status" role="status" aria-live="polite"></p>
-            <div class="drive-tools" style="display:grid;gap:.8rem;margin-top:1rem;">
-              <div style="display:flex;gap:.7rem;flex-wrap:wrap;align-items:center;">
-                <input id="google-drive-file" type="file" accept="application/pdf,image/jpeg,image/png">
-                <button id="google-drive-upload" type="button" disabled>Upload to Google Drive</button>
-                <button id="google-drive-refresh" type="button" disabled>Refresh Drive files</button>
-              </div>
-              <p id="google-drive-files-status" class="vault-status" role="status" aria-live="polite">Connect Google Drive to manage Drive files.</p>
-              <ul id="google-drive-file-list" class="file-list" aria-live="polite"><li class="empty-state">Google Drive files will appear here.</li></ul>
-            </div>
-          </section>
+
 
           <section class="stats-grid" aria-label="Workspace overview">
             <article class="stat-card"><span class="stat-icon violet">▤</span><p>Private documents</p><strong id="stat-doc-count">—</strong><small>Files in your Supabase vault</small></article>
@@ -121,6 +106,26 @@
             </article>
           </section>
           <footer class="dashboard-footer"><span>PIXELFORGE ADMIN</span><span>Role-based workspace access · No public sign-up</span></footer>
+        </div>
+
+        <div class="dashboard-content dashboard-page" id="google-drive" hidden>
+          <section class="panel" aria-labelledby="google-drive-heading" style="margin-bottom: 1.5rem;">
+            <div class="panel-heading">
+              <div><p class="eyebrow">EXTERNAL STORAGE</p><h2 id="google-drive-heading">Google Drive</h2></div>
+              <button id="google-drive-connect" type="button">Connect Google Drive</button>
+            </div>
+            <p class="panel-copy">Connect the owner Google account securely. This step only authorizes access; document migration and storage routing are not enabled yet.</p>
+            <p id="google-drive-status" class="vault-status" role="status" aria-live="polite"></p>
+            <div class="drive-tools" style="display:grid;gap:.8rem;margin-top:1rem;">
+              <div style="display:flex;gap:.7rem;flex-wrap:wrap;align-items:center;">
+                <input id="google-drive-file" type="file" accept="application/pdf,image/jpeg,image/png">
+                <button id="google-drive-upload" type="button" disabled>Upload to Google Drive</button>
+                <button id="google-drive-refresh" type="button" disabled>Refresh Drive files</button>
+              </div>
+              <p id="google-drive-files-status" class="vault-status" role="status" aria-live="polite">Connect Google Drive to manage Drive files.</p>
+              <ul id="google-drive-file-list" class="file-list" aria-live="polite"><li class="empty-state">Google Drive files will appear here.</li></ul>
+            </div>
+          </section>
         </div>
 
         <div class="dashboard-content dashboard-page" id="users" hidden>
