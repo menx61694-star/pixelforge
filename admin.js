@@ -245,7 +245,7 @@ const firebaseConfig = {
           category.append(option);
         });
         const safeName = safeFileName(file.name || "drive-file");
-        const publishedCategory = publishedFiles.get(safeName) || publishedFiles.get(file.name || file.id);
+        const publishedCategory = publishedFiles.get(file.id);
         if (publishedCategory) category.value = publishedCategory;
         const publish = document.createElement("button");
         publish.type = "button";
@@ -645,7 +645,7 @@ const firebaseConfig = {
       .eq("published", true);
     if (drivePublishError) throw drivePublishError;
     (drivePublished || []).forEach(item => {
-      if (item.drive_file_id) published.set(item.title || item.drive_file_id, item.category);
+      if (item.drive_file_id) published.set(item.drive_file_id, item.category);
     });
     return published;
   }
