@@ -208,6 +208,9 @@ const firebaseConfig = {
         empty.textContent = "No files found in the connected Drive app space.";
         googleDriveFileList.append(empty);
       }
+      let publishedFiles = new Map();
+      try { publishedFiles = await getPublishedFilesIndex(); }
+      catch (publishError) { setDriveFilesStatus("Drive files loaded; published status could not be checked: " + (publishError.message || "Storage access error"), true); }
       files.forEach(file => {
         const item = document.createElement("li");
         item.className = "file-item";
@@ -227,13 +230,44 @@ const firebaseConfig = {
         download.type = "button";
         download.textContent = "Download";
         download.addEventListener("click", () => downloadGoogleDriveFile(file, download));
+        const category = document.createElement("select");
+        category.className = "publish-category";
+        category.setAttribute("aria-label", "Public category for " + (file.name || "Drive file"));
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Choose category";
+        category.append(placeholder);
+        PUBLIC_CATEGORIES.forEach(value => {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = value.replace(/-/g, " ").replace(/\\b\\w/g, char => char.toUpperCase());
+          category.append(option);
+        });
+        const safeName = safeFileName(file.name || "drive-file");
+        const publishedCategory = publishedFiles.get(safeName);
+        if (publishedCategory) category.value = publishedCategory;
+        const publish = document.createElement("button");
+        publish.type = "button";
+        publish.className = "publish-button";
+        publish.textContent = publishedCategory ? "Republish" : "Publish";
+        publish.addEventListener("click", () => publishGoogleDriveFile(file, category.value, publish));
+        const unpublish = document.createElement("button");
+        unpublish.type = "button";
+        unpublish.className = "unpublish-button";
+        unpublish.textContent = "Unpublish";
+        unpublish.disabled = !publishedCategory;
+        unpublish.title = publishedCategory ? "Remove from " + publishedCategory : "This file is not published";
+        unpublish.addEventListener("click", () => unpublishGoogleDriveFile(file, category.value || publishedCategory, unpublish));
+        category.hidden = !currentPermissions.has("vault.publish");
+        publish.hidden = !currentPermissions.has("vault.publish");
+        unpublish.hidden = !currentPermissions.has("vault.publish");
         const remove = document.createElement("button");
         remove.type = "button";
         remove.className = "delete-button";
         remove.textContent = "Delete";
         remove.addEventListener("click", () => deleteGoogleDriveFile(file, item, remove));
         remove.hidden = !currentPermissions.has("drive.delete");
-        actions.append(download, remove);
+        actions.append(download, category, publish, unpublish, remove);
         item.append(info, actions);
         googleDriveFileList.append(item);
       });
@@ -242,6 +276,61 @@ const firebaseConfig = {
       setDriveFilesStatus(error.message || "Google Drive listing failed.", true);
     } finally {
       if (googleDriveRefreshButton) googleDriveRefreshButton.disabled = !googleDriveConnected;
+    }
+  }
+
+  async function publishGoogleDriveFile(file, category, button) {
+    if (!currentPermissions.has("vault.publish")) {
+      setDriveFilesStatus("Your role cannot publish documents.", true);
+      return;
+    }
+    if (!category || !PUBLIC_CATEGORIES.includes(category)) {
+      setDriveFilesStatus("Choose a public category before publishing.", true);
+      return;
+    }
+    if (!window.confirm("Publish " + (file.name || "this Drive file") + " publicly in " + category.replace(/-/g, " ") + "? Anyone with the public library link can access it.")) return;
+    button.disabled = true;
+    try {
+      setDriveFilesStatus("Downloading from Google Drive for publishing…");
+      const response = await googleDriveRequest("download", { query: { id: file.id } });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || "Could not download the Drive file.");
+      }
+      const blob = await response.blob();
+      const publicPath = category + "/" + currentUserUid + "-" + safeFileName(file.name || "drive-file");
+      const { error } = await supabaseClient.storage.from(PUBLIC_BUCKET).upload(publicPath, blob, {
+        cacheControl: "60",
+        contentType: file.mimeType || blob.type || "application/octet-stream",
+        upsert: true
+      });
+      if (error) throw error;
+      setDriveFilesStatus("Published " + (file.name || "Drive file") + " in " + category.replace(/-/g, " ") + ".");
+      await loadGoogleDriveFiles();
+    } catch (error) {
+      setDriveFilesStatus("Drive publish failed: " + (error.message || "Storage upload failed."), true);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function unpublishGoogleDriveFile(file, category, button) {
+    if (!category || !PUBLIC_CATEGORIES.includes(category)) {
+      setDriveFilesStatus("Choose the category where this Drive file was published.", true);
+      return;
+    }
+    if (!window.confirm("Remove this Drive file from the public library? The Google Drive original will remain unchanged.")) return;
+    button.disabled = true;
+    try {
+      const publicPath = category + "/" + currentUserUid + "-" + safeFileName(file.name || "drive-file");
+      const { error } = await supabaseClient.storage.from(PUBLIC_BUCKET).remove([publicPath]);
+      if (error) throw error;
+      setDriveFilesStatus("Removed from public library. The Google Drive original is unchanged.");
+      await loadGoogleDriveFiles();
+    } catch (error) {
+      setDriveFilesStatus("Drive unpublish failed: " + (error.message || "Storage removal failed."), true);
+    } finally {
+      button.disabled = false;
     }
   }
 
