@@ -245,7 +245,7 @@ const firebaseConfig = {
           category.append(option);
         });
         const safeName = safeFileName(file.name || "drive-file");
-        const publishedCategory = publishedFiles.get(safeName);
+        const publishedCategory = publishedFiles.get(safeName) || publishedFiles.get(file.name || file.id);
         if (publishedCategory) category.value = publishedCategory;
         const publish = document.createElement("button");
         publish.type = "button";
@@ -293,21 +293,21 @@ const firebaseConfig = {
     if (!window.confirm("Publish " + (file.name || "this Drive file") + " publicly in " + category.replace(/-/g, " ") + "? Anyone with the public library link can access it.")) return;
     button.disabled = true;
     try {
-      setDriveFilesStatus("Downloading from Google Drive for publishing…");
-      const response = await googleDriveRequest("download", { query: { id: file.id } });
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.error || "Could not download the Drive file.");
-      }
-      const blob = await response.blob();
-      const publicPath = category + "/" + currentUserUid + "-" + safeFileName(file.name || "drive-file");
-      const { error } = await supabaseClient.storage.from(PUBLIC_BUCKET).upload(publicPath, blob, {
-        cacheControl: "60",
-        contentType: file.mimeType || blob.type || "application/octet-stream",
-        upsert: true
-      });
+      setDriveFilesStatus("Publishing Drive reference…");
+      const { error } = await supabaseClient.from("pixel_forge_published_documents").upsert({
+        source: "google_drive",
+        owner_uid: currentUserUid,
+        drive_file_id: file.id,
+        storage_path: null,
+        category,
+        title: file.name || "Drive document",
+        mime_type: file.mimeType || "application/octet-stream",
+        size_bytes: Number(file.size || 0) || null,
+        published: true,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "source,drive_file_id" });
       if (error) throw error;
-      setDriveFilesStatus("Published " + (file.name || "Drive file") + " in " + category.replace(/-/g, " ") + ".");
+      setDriveFilesStatus("Published " + (file.name || "Drive file") + " in " + category.replace(/-/g, " ") + ". No duplicate upload was created.");
       await loadGoogleDriveFiles();
     } catch (error) {
       setDriveFilesStatus("Drive publish failed: " + (error.message || "Storage upload failed."), true);
@@ -324,8 +324,11 @@ const firebaseConfig = {
     if (!window.confirm("Remove this Drive file from the public library? The Google Drive original will remain unchanged.")) return;
     button.disabled = true;
     try {
-      const publicPath = category + "/" + currentUserUid + "-" + safeFileName(file.name || "drive-file");
-      const { error } = await supabaseClient.storage.from(PUBLIC_BUCKET).remove([publicPath]);
+      const { error } = await supabaseClient.from("pixel_forge_published_documents")
+        .delete()
+        .eq("source", "google_drive")
+        .eq("drive_file_id", file.id)
+        .eq("owner_uid", currentUserUid);
       if (error) throw error;
       setDriveFilesStatus("Removed from public library. The Google Drive original is unchanged.");
       await loadGoogleDriveFiles();
@@ -633,6 +636,16 @@ const firebaseConfig = {
       if (file.name.startsWith(currentUserUid + "-")) {
         published.set(file.name.slice(currentUserUid.length + 1), file.category);
       }
+    });
+    const { data: drivePublished, error: drivePublishError } = await supabaseClient
+      .from("pixel_forge_published_documents")
+      .select("drive_file_id,category,title")
+      .eq("source", "google_drive")
+      .eq("owner_uid", currentUserUid)
+      .eq("published", true);
+    if (drivePublishError) throw drivePublishError;
+    (drivePublished || []).forEach(item => {
+      if (item.drive_file_id) published.set(item.title || item.drive_file_id, item.category);
     });
     return published;
   }
