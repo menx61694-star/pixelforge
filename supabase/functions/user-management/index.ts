@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const OWNER_UID = "5PcOkyDEcNc1puSeB2lQ6dLFVOF2";
+const FIREBASE_PROJECT_ID = "pixelforge-66f0c";
 const allowedOrigins = new Set([
   Deno.env.get("PIXELFORGE_ADMIN_ORIGIN") ?? "https://pixelforge.jo3.org",
   "http://localhost:8000",
@@ -40,6 +41,12 @@ async function lookupFirebaseUser(idToken: string) {
   const payload = await response.json();
   const user = payload.users?.[0];
   if (!user || user.disabled === true) return null;
+  const tokenPayload = idToken.split(".")[1];
+  if (!tokenPayload) return null;
+  const normalized = tokenPayload.replace(/-/g, "+").replace(/_/g, "/");
+  const claims = JSON.parse(atob(normalized + "=".repeat((4 - normalized.length % 4) % 4)));
+  if (claims.iss !== "https://securetoken.google.com/" + FIREBASE_PROJECT_ID ||
+      claims.aud !== FIREBASE_PROJECT_ID || claims.sub !== user.localId) return null;
   return { uid: user.localId as string, email: user.email as string };
 }
 async function authenticate(request: Request) {
