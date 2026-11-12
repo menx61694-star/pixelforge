@@ -38,6 +38,7 @@
         <a class="brand sidebar-brand" href="index.html"><span class="brand-mark">P</span><span>PIXELFORGE</span></a>
         <p class="sidebar-label">WORKSPACE</p>
         <a class="nav-link active" href="#overview"><span class="nav-icon">▦</span> Overview</a>
+        <a class="nav-link" href="#recent-activity"><span class="nav-icon">◷</span> Recent activity</a>
         <a class="nav-link" href="#documents"><span class="nav-icon">▤</span> Private vault</a>
         <div class="sidebar-bottom">
           <div class="secure-card"><span class="secure-icon">✓</span><div><strong>Private by design</strong><small>Owner-only document access</small></div></div>
@@ -75,10 +76,22 @@
             </div>
           </section>
 
-          <section class="stats-grid" aria-label="Vault summary">
-            <article class="stat-card"><span class="stat-icon violet">▤</span><p>Total documents</p><strong id="stat-doc-count">—</strong><small>Files in your private vault</small></article>
-            <article class="stat-card"><span class="stat-icon orange">⇧</span><p>Storage used</p><strong id="stat-storage">—</strong><small>Across listed documents</small></article>
-            <article class="stat-card"><span class="stat-icon green">✓</span><p>Access status</p><strong class="secure-value">Private</strong><small>Only your admin account</small></article>
+          <section class="stats-grid" aria-label="Workspace overview">
+            <article class="stat-card"><span class="stat-icon violet">▤</span><p>Private documents</p><strong id="stat-doc-count">—</strong><small>Files in your Supabase vault</small></article>
+            <article class="stat-card"><span class="stat-icon orange">⇧</span><p>Private storage</p><strong id="stat-storage">—</strong><small>Combined size of listed files</small></article>
+            <article class="stat-card"><span class="stat-icon violet">G</span><p>Google Drive files</p><strong id="stat-drive-count">—</strong><small id="stat-drive-count-note">Waiting for Drive status</small></article>
+            <article class="stat-card"><span class="stat-icon green">✓</span><p>Google Drive</p><strong id="stat-drive-status" class="secure-value">Checking</strong><small id="stat-drive-status-note">Connection status</small></article>
+          </section>
+
+          <section class="panel activity-panel" id="recent-activity" aria-labelledby="recent-activity-heading">
+            <div class="panel-heading">
+              <div><p class="eyebrow">WORKSPACE UPDATES</p><h2 id="recent-activity-heading">Recent activity</h2></div>
+              <span class="activity-live-label"><span></span> From connected storage</span>
+            </div>
+            <p id="activity-status" class="panel-copy">Loading real file activity…</p>
+            <ul id="activity-list" class="activity-list" aria-live="polite">
+              <li class="empty-state">Activity will appear when storage records are available.</li>
+            </ul>
           </section>
 
           <section class="vault-layout" id="documents">
