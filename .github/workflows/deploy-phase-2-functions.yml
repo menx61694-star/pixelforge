@@ -9,6 +9,7 @@ on:
       - '.github/workflows/deploy-phase-2-functions.yml'
       - 'supabase/functions/user-management/**'
       - 'supabase/functions/google-drive-files/**'
+      - 'supabase/dual-storage-publishing.sql'
 
 permissions:
   contents: read
@@ -58,4 +59,8 @@ jobs:
             --header "Origin: https://pixelforge.jo3.org" \
             "https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/google-drive-files?action=status")
           test "$DRIVE_STATUS" = "401" || { cat /tmp/google-drive-response.json; echo "::error::Expected google-drive-files to reject unauthenticated access with HTTP 401, got $DRIVE_STATUS"; exit 1; }
-          echo "Both deployed functions reject unauthenticated requests."
+          PUBLIC_STATUS=$(curl --silent --show-error --output /tmp/public-drive-response.json --write-out "%{http_code}" \
+            --header "Origin: https://pixelforge.jo3.org" \
+            "https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/google-drive-files?action=public-list")
+          test "$PUBLIC_STATUS" = "200" || { cat /tmp/public-drive-response.json; echo "::error::Expected public Drive listing to return HTTP 200 after migration, got $PUBLIC_STATUS"; exit 1; }
+          echo "Both authenticated endpoints reject anonymous requests and public Drive listing is available."
