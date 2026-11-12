@@ -3,3 +3,6 @@ verify_jwt = false
 
 [functions.google-drive-files]
 verify_jwt = false
+
+[functions.user-management]
+verify_jwt = false
