@@ -117,12 +117,44 @@ Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(request) });
   try {
     const origin = request.headers.get("Origin") ?? "";
-    if (!allowedOrigins.has(origin)) return json({ error: "Origin is not allowed." }, 403, request);
-    const uid = await verifyFirebaseUser(request);
-    if (!uid) return json({ error: "Firebase authentication required." }, 401, request);
-
+    if (origin && !allowedOrigins.has(origin)) return json({ error: "Origin is not allowed." }, 403, request);
     const url = new URL(request.url);
     const action = url.searchParams.get("action");
+
+    // Public listing exposes metadata only; public-download verifies the published record.
+    if (request.method === "GET" && action === "public-list") {
+      const { data, error } = await supabaseAdmin().from("pixel_forge_published_documents")
+        .select("drive_file_id,category,title,mime_type,size_bytes,updated_at")
+        .eq("source", "google_drive").eq("published", true)
+        .order("updated_at", { ascending: false });
+      if (error) throw error;
+      return json({ documents: data ?? [] }, 200, request);
+    }
+    if (request.method === "GET" && action === "public-download") {
+      const fileId = url.searchParams.get("id") ?? "";
+      if (!/^[a-zA-Z0-9_-]{10,200}$/.test(fileId)) return json({ error: "Invalid Drive file ID." }, 400, request);
+      const db = supabaseAdmin();
+      const { data: published, error: publishedError } = await db.from("pixel_forge_published_documents")
+        .select("drive_file_id,title,mime_type")
+        .eq("source", "google_drive").eq("drive_file_id", fileId).eq("published", true).maybeSingle();
+      if (publishedError) throw publishedError;
+      if (!published) return json({ error: "This document is not published." }, 404, request);
+      const accessToken = await getAccessToken();
+      const response = await fetch("https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(fileId) + "?alt=media", {
+        headers: { Authorization: "Bearer " + accessToken }
+      });
+      if (!response.ok) return json({ error: response.status === 404 ? "The original Drive file is no longer available." : "Published document could not be retrieved." }, response.status === 404 ? 404 : 502, request);
+      const headers = new Headers(corsHeaders(request));
+      headers.set("Content-Type", published.mime_type || response.headers.get("Content-Type") || "application/octet-stream");
+      headers.set("Content-Disposition", "inline; filename*=UTF-8''" + encodeURIComponent(published.title || "document"));
+      headers.set("Cache-Control", "public, max-age=60");
+      const length = response.headers.get("Content-Length");
+      if (length) headers.set("Content-Length", length);
+      return new Response(response.body, { status: 200, headers });
+    }
+
+    const uid = await verifyFirebaseUser(request);
+    if (!uid) return json({ error: "Firebase authentication required." }, 401, request);
     const requiredPermission = action === "delete" ? "drive.delete"
       : ["create-upload-session", "upload-chunk"].includes(action ?? "") ? "drive.write" : "drive.read";
     if (!(await hasDrivePermission(uid, requiredPermission))) {
