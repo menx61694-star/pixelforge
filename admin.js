@@ -611,7 +611,7 @@ const firebaseConfig = {
     if (!window.confirm("Remove this file from the public website? The private original will remain in your vault.")) return;
     button.disabled = true;
     try {
-      const publicPath = category + "/" + ADMIN_UID + "-" + fileName;
+      const publicPath = category + "/" + currentUserUid + "-" + fileName;
       const { error } = await supabaseClient.storage.from(PUBLIC_BUCKET).remove([publicPath]);
       if (error) throw error;
       setVaultStatus("Removed from public library. The private original is unchanged.");
