@@ -5,10 +5,12 @@ on:
   push:
     branches:
       - feature/phase-2-users-roles
+      - feature/dual-storage-publishing
     paths:
       - '.github/workflows/deploy-phase-2-functions.yml'
       - 'supabase/functions/user-management/**'
       - 'supabase/functions/google-drive-files/**'
+      - 'supabase/dual-storage-publishing.sql'
 
 permissions:
   contents: read
