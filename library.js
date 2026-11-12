@@ -88,19 +88,24 @@
           return { title: niceName(file.name), category: category.name, url: publicData.publicUrl, size, ext, source: "supabase" };
         });
       }));
-      const driveResponse = await fetch(SUPABASE_URL + "/functions/v1/google-drive-files?action=public-list");
-      const drivePayload = await driveResponse.json();
-      if (!driveResponse.ok) throw new Error(drivePayload.error || "Published Drive documents could not be loaded.");
-      const driveDocs = (drivePayload.documents || [])
-        .filter(doc => selected.some(category => category.slug === doc.category))
-        .map(doc => ({
-          title: doc.title || "Google Drive document",
-          category: categories.find(category => category.slug === doc.category)?.name || doc.category,
-          url: SUPABASE_URL + "/functions/v1/google-drive-files?action=public-download&id=" + encodeURIComponent(doc.drive_file_id),
-          size: doc.size_bytes ? (doc.size_bytes >= 1048576 ? (doc.size_bytes / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(doc.size_bytes / 1024)) + " KB") : "Size unavailable",
-          ext: (doc.title || "").split(".").pop()?.slice(0, 4) || "FILE",
-          source: "google_drive"
-        }));
+      let driveDocs = [];
+      try {
+        const driveResponse = await fetch(SUPABASE_URL + "/functions/v1/google-drive-files?action=public-list");
+        const drivePayload = await driveResponse.json();
+        if (!driveResponse.ok) throw new Error(drivePayload.error || "Published Drive documents could not be loaded.");
+        driveDocs = (drivePayload.documents || [])
+          .filter(doc => selected.some(category => category.slug === doc.category))
+          .map(doc => ({
+            title: doc.title || "Google Drive document",
+            category: categories.find(category => category.slug === doc.category)?.name || doc.category,
+            url: SUPABASE_URL + "/functions/v1/google-drive-files?action=public-download&id=" + encodeURIComponent(doc.drive_file_id),
+            size: doc.size_bytes ? (doc.size_bytes >= 1048576 ? (doc.size_bytes / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(doc.size_bytes / 1024)) + " KB") : "Size unavailable",
+            ext: (doc.title || "").split(".").pop()?.slice(0, 4) || "FILE",
+            source: "google_drive"
+          }));
+      } catch (driveError) {
+        console.warn("Published Google Drive documents could not be loaded:", driveError);
+      }
       state.documents = results.flat().concat(driveDocs);
       render();
     } catch (error) {
