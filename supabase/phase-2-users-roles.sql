@@ -212,15 +212,33 @@ create or replace function public.pixel_forge_protect_owner()
 returns trigger
 language plpgsql
 set search_path = ''
-as $$
+as $
+declare
+  v_active_admins integer;
 begin
+  -- Serialize admin changes so concurrent requests cannot remove the last admin.
+  perform pg_advisory_xact_lock(73190521);
+
   if old.uid = '5PcOkyDEcNc1puSeB2lQ6dLFVOF2' then
     raise exception 'The PixelForge owner account cannot be changed or removed';
   end if;
+
+  if tg_op = 'UPDATE'
+     and old.role = 'admin'
+     and old.status = 'active'
+     and (new.role <> 'admin' or new.status <> 'active') then
+    select count(*) into v_active_admins
+    from public.pixel_forge_users
+    where role = 'admin' and status = 'active';
+    if v_active_admins <= 1 then
+      raise exception 'The last active administrator cannot be demoted or suspended';
+    end if;
+  end if;
+
   if tg_op = 'DELETE' then return old; end if;
   return new;
 end;
-$$;
+$;
 
 drop trigger if exists pixel_forge_protect_owner_trigger on public.pixel_forge_users;
 create trigger pixel_forge_protect_owner_trigger
