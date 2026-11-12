@@ -13,14 +13,14 @@ The owner UID `5PcOkyDEcNc1puSeB2lQ6dLFVOF2` is seeded as Admin and protected fr
 ## Required deployment order
 
 1. Confirm Firebase Authentication has the Email/Password provider enabled.
-2. Review and run `supabase/phase-2-users-roles.sql` in the Supabase SQL Editor. It expects the existing storage policies created by `supabase-storage-policies.sql` and `supabase-public-storage-policies.sql`.
-3. Deploy the updated functions:
+2. Open the complete `supabase/phase-2-users-roles.sql` file from this branch, paste the entire file into Supabase SQL Editor, and run it once. Do not run only the verification query. It expects the existing storage policies created by `supabase-storage-policies.sql` and `supabase-public-storage-policies.sql`. If the SQL Editor returns an error, stop and share the exact first error; do not continue to Edge Function deployment.\n3. After the migration reports success, run the read-only queries in `supabase/phase-2-verify.sql`. Confirm both tables exist, the owner row is active Admin, and all expected policies and the trigger appear. If either table is NULL/missing, the migration has not completed; do not deploy the frontend or functions.
+4. Deploy the updated functions:
    ```sh
    supabase functions deploy user-management
    supabase functions deploy google-drive-files
    ```
-4. Confirm the existing Edge Function secrets remain configured: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `FIREBASE_WEB_API_KEY`, and the Google Drive secrets already used by the Drive function.
-5. Deploy the static website from the reviewed pull request only after the SQL migration and Edge Functions are live.
+5. Confirm the existing Edge Function secrets remain configured: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `FIREBASE_WEB_API_KEY`, and the Google Drive secrets already used by the Drive function.
+6. Deploy the static website from the reviewed pull request only after the SQL migration and Edge Functions are live.
 
 No new service-account JSON or Firebase Admin private key is required. User creation uses a secondary Firebase client app to create the Auth account, then calls the protected Edge Function to assign a role and sends a password-reset email.
 
