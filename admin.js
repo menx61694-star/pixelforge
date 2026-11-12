@@ -112,7 +112,7 @@ const firebaseConfig = {
   }
 
   async function connectGoogleDrive() {
-    if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    if (!auth.currentUser || !currentPermissions.has("vault.write")) {
       setGoogleDriveStatus("Administrator session is required.", true);
       return;
     }
@@ -664,8 +664,8 @@ const firebaseConfig = {
     return new Promise(async (resolve, reject) => {
       try {
         const user = auth.currentUser;
-        if (!user || user.uid !== ADMIN_UID) {
-          reject(new Error("Admin session expired. Sign in again."));
+        if (!user || !currentPermissions.has("vault.write")) {
+          reject(new Error("Your account does not have upload permission."));
           return;
         }
         const token = await user.getIdToken();
@@ -714,7 +714,7 @@ const firebaseConfig = {
       return;
     }
     if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
-      setVaultStatus("Admin session is not valid. Sign in again.", true);
+      setVaultStatus("Your account does not have upload permission.", true);
       return;
     }
     if (!supabaseClient) {
