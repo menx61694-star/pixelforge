@@ -55,13 +55,20 @@ const firebaseConfig = {
   let driveFilesLoaded = false;
 
   const sidebarLinks = Array.from(document.querySelectorAll(".sidebar .nav-link"));
+  const dashboardPages = ["overview", "recent-activity", "documents"]
+    .map(id => document.getElementById(id))
+    .filter(Boolean);
   function syncSidebarNavigation() {
-    const activeTarget = window.location.hash || "#overview";
-    sidebarLinks.forEach(link => link.classList.toggle("active", link.getAttribute("href") === activeTarget));
+    const requestedPage = (window.location.hash || "#overview").slice(1);
+    const activePage = dashboardPages.some(page => page.id === requestedPage) ? requestedPage : "overview";
+    dashboardPages.forEach(page => { page.hidden = page.id !== activePage; });
+    sidebarLinks.forEach(link => {
+      const isActive = link.getAttribute("href") === "#" + activePage;
+      link.classList.toggle("active", isActive);
+      if (isActive) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+    });
   }
-  sidebarLinks.forEach(link => link.addEventListener("click", () => {
-    sidebarLinks.forEach(item => item.classList.toggle("active", item === link));
-  }));
   window.addEventListener("hashchange", syncSidebarNavigation);
   syncSidebarNavigation();
 
