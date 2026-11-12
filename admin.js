@@ -52,6 +52,7 @@ const firebaseConfig = {
   let googleDriveConnected = false;
   let currentFiles = [];
   let currentDriveFiles = [];
+  let driveFilesLoaded = false;
 
   const sidebarLinks = Array.from(document.querySelectorAll(".sidebar .nav-link"));
   function syncSidebarNavigation() {
@@ -153,6 +154,7 @@ const firebaseConfig = {
         await loadGoogleDriveFiles();
       } else {
         currentDriveFiles = [];
+        driveFilesLoaded = false;
         updateDriveOverview();
         updateDashboardActivity();
         setGoogleDriveStatus("Google Drive is not connected.");
@@ -176,6 +178,7 @@ const firebaseConfig = {
       googleDriveFileList.replaceChildren();
       const files = Array.isArray(payload.files) ? payload.files : [];
       currentDriveFiles = files;
+      driveFilesLoaded = true;
       updateDriveOverview();
       updateDashboardActivity();
       if (!files.length) {
@@ -351,6 +354,7 @@ const firebaseConfig = {
     } else {
       currentFiles = [];
       currentDriveFiles = [];
+      driveFilesLoaded = false;
       fileList.replaceChildren();
       updateStats();
       updateDriveOverview();
@@ -386,10 +390,10 @@ const firebaseConfig = {
   }
 
   function updateDriveOverview() {
-    if (driveCountStat) driveCountStat.textContent = googleDriveConnected ? String(currentDriveFiles.length) : "—";
-    if (driveCountNote) driveCountNote.textContent = googleDriveConnected
-      ? "Files visible to PixelForge"
-      : "Connect Google Drive to view files";
+    if (driveCountStat) driveCountStat.textContent = googleDriveConnected && driveFilesLoaded ? String(currentDriveFiles.length) : "—";
+    if (driveCountNote) driveCountNote.textContent = !googleDriveConnected
+      ? "Connect Google Drive to view files"
+      : driveFilesLoaded ? "Files visible to PixelForge" : "Waiting for file list";
     if (driveStatusStat) {
       driveStatusStat.textContent = googleDriveConnected ? "Connected" : "Not connected";
       driveStatusStat.classList.toggle("secure-value", googleDriveConnected);
