@@ -12,7 +12,8 @@ The owner UID `5PcOkyDEcNc1puSeB2lQ6dLFVOF2` is seeded as Admin and protected fr
 
 ## Required deployment order
 
-1. Confirm Firebase Authentication has the Email/Password provider enabled.\n2. Review and run `supabase/phase-2-users-roles.sql` in the Supabase SQL Editor. It expects the existing storage policies created by `supabase-storage-policies.sql` and `supabase-public-storage-policies.sql`.
+1. Confirm Firebase Authentication has the Email/Password provider enabled.
+2. Review and run `supabase/phase-2-users-roles.sql` in the Supabase SQL Editor. It expects the existing storage policies created by `supabase-storage-policies.sql` and `supabase-public-storage-policies.sql`.
 3. Deploy the updated functions:
    ```sh
    supabase functions deploy user-management
