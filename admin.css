@@ -133,8 +133,8 @@ button:disabled{opacity:.6;cursor:wait}
 
 
 /* Phase 2 users and role management */
-.user-create-form{max-width:560px;grid-template-columns:1fr 1fr;align-items:end;gap:10px}
-.user-create-form label{grid-column:span 1}
+.user-create-form{max-width:560px;grid-template-columns:1fr;gap:10px}
+.user-create-form label{grid-column:1}
 .user-create-form input,.user-create-form select{width:100%;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
 .user-create-form button{grid-column:1/-1;min-height:44px;border:0;border-radius:8px;background:var(--orange);color:#17213b;font-weight:800}
 .users-panel{margin-bottom:16px}
@@ -147,4 +147,4 @@ button:disabled{opacity:.6;cursor:wait}
 .users-table button{min-height:30px;padding:0 9px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);font-size:10px}
 .users-table button.danger{border-color:#f1d2cf;background:#fff2f0;color:#a23c32}
 .permission-toggle{width:18px;height:18px;min-height:18px;accent-color:#169b69}
-@media(max-width:650px){.user-create-form{grid-template-columns:1fr}.user-create-form label,.user-create-form button{grid-column:1}.users-table th,.users-table td{padding:10px 7px}}
+@media(max-width:650px){.users-table th,.users-table td{padding:10px 7px}}
