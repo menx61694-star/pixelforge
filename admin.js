@@ -53,6 +53,17 @@ const firebaseConfig = {
   let currentFiles = [];
   let currentDriveFiles = [];
 
+  const sidebarLinks = Array.from(document.querySelectorAll(".sidebar .nav-link"));
+  function syncSidebarNavigation() {
+    const activeTarget = window.location.hash || "#overview";
+    sidebarLinks.forEach(link => link.classList.toggle("active", link.getAttribute("href") === activeTarget));
+  }
+  sidebarLinks.forEach(link => link.addEventListener("click", () => {
+    sidebarLinks.forEach(item => item.classList.toggle("active", item === link));
+  }));
+  window.addEventListener("hashchange", syncSidebarNavigation);
+  syncSidebarNavigation();
+
   if (!window.firebase || !form || !loginButton || !logoutButton || !status || !sessionPanel) {
     if (status) status.textContent = "The sign-in service could not be loaded. Refresh and try again.";
     return;
