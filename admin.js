@@ -484,27 +484,20 @@ const firebaseConfig = {
   }
 
   function formatBytes(bytes) {
-    if (!Number.isFinite(bytes)) return "";
-    if (bytes === 0) return "0 B";
-    return bytes < 1024 * 1024
-      ? Math.max(1, Math.round(bytes / 1024)) + " KB"
-      : (bytes / (1024 * 1024)).toFixed(2) + " MB";
+    return vaultStorage.formatBytes(bytes);
   }
 
   function updateStats(files = currentFiles) {
-    const safeFiles = Array.isArray(files) ? files : [];
-    const knownSizes = safeFiles
-      .map(file => Number(file.metadata && file.metadata.size))
-      .filter(size => Number.isFinite(size) && size >= 0);
-    const bytes = knownSizes.reduce((sum, size) => sum + size, 0);
-    if (countStat) countStat.textContent = String(safeFiles.length);
+    const usage = vaultStorage.calculateUsage(files);
+    if (countStat) countStat.textContent = String(usage.fileCount);
     if (storageStat) {
-      if (knownSizes.length !== safeFiles.length) {
+      if (usage.unknownSizeCount > 0) {
         storageStat.textContent = "Unavailable";
-        storageStat.title = "Storage size metadata is missing for one or more files.";
+        storageStat.title = "Size metadata is unavailable for " + usage.unknownSizeCount +
+          " of " + usage.fileCount + " private files. The total is not estimated.";
       } else {
-        storageStat.textContent = formatBytes(bytes);
-        storageStat.title = "Combined size of all listed private files.";
+        storageStat.textContent = formatBytes(usage.totalBytes);
+        storageStat.title = "Combined size of all " + usage.fileCount + " listed private files.";
       }
     }
     updateVaultFileCount();
@@ -621,7 +614,7 @@ const firebaseConfig = {
         sortBy: { column: "created_at", order: "desc" }
       });
       if (error) throw error;
-      const page = (data || []).filter(item => item.name && !item.name.endsWith("/"));
+      const page = (data || []).filter(item => vaultStorage.isFileEntry(item));
       allFiles.push(...page);
       if (!data || data.length < pageSize) break;
     }
@@ -671,8 +664,8 @@ const firebaseConfig = {
           name.textContent = displayFileName(item.name);
           const meta = document.createElement("div");
           meta.className = "file-meta";
-          const size = item.metadata && item.metadata.size ? formatBytes(Number(item.metadata.size)) : "Stored privately";
-          meta.textContent = size;
+          const sizeBytes = vaultStorage.getFileSizeBytes(item);
+          meta.textContent = sizeBytes === null ? "Size unavailable" : formatBytes(sizeBytes);
           info.append(name, meta);
 
           const actions = document.createElement("div");
