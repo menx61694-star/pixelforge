@@ -55,4 +55,4 @@ The additive migration `supabase/dual-storage-publishing.sql` creates a private 
 - Unpublishing a Drive file removes only its publication record. Deleting the Drive original also removes its publication record.
 - The migration is additive and does not move or delete existing public-bucket files.
 
-After applying the SQL migration, deploy `google-drive-files` from the `feature/dual-storage-publishing` branch using the production Edge Function deployment workflow, then publish the static site from the reviewed PR. Verify Drive publish/unpublish/download and the existing Supabase Vault publish/unpublish/download paths independently.
+After applying the SQL migration, run the read-only checks in `supabase/dual-storage-publishing-verify.sql`. Then deploy `google-drive-files` from the `feature/dual-storage-publishing` branch using the production Edge Function deployment workflow; its smoke test also checks that the public Drive listing returns HTTP 200. Finally publish the static site from the reviewed PR. Verify Drive publish/unpublish/download and the existing Supabase Vault publish/unpublish/download paths independently.
