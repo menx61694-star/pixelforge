@@ -116,6 +116,40 @@ using (
   and (storage.foldername(name))[1] = (select auth.jwt() ->> 'sub')
 );
 
+
+-- Public library writes are limited to each user's own published object namespace.
+drop policy if exists "PixelForge role insert public documents" on storage.objects;
+create policy "PixelForge role insert public documents" on storage.objects
+for insert to anon, authenticated
+with check (
+  bucket_id = 'public-documents'
+  and public.pixel_forge_has_permission('vault.publish')
+  and split_part(name, '/', 2) like ((select auth.jwt() ->> 'sub') || '-%')
+);
+
+drop policy if exists "PixelForge role update public documents" on storage.objects;
+create policy "PixelForge role update public documents" on storage.objects
+for update to anon, authenticated
+using (
+  bucket_id = 'public-documents'
+  and public.pixel_forge_has_permission('vault.publish')
+  and split_part(name, '/', 2) like ((select auth.jwt() ->> 'sub') || '-%')
+)
+with check (
+  bucket_id = 'public-documents'
+  and public.pixel_forge_has_permission('vault.publish')
+  and split_part(name, '/', 2) like ((select auth.jwt() ->> 'sub') || '-%')
+);
+
+drop policy if exists "PixelForge role delete public documents" on storage.objects;
+create policy "PixelForge role delete public documents" on storage.objects
+for delete to anon, authenticated
+using (
+  bucket_id = 'public-documents'
+  and public.pixel_forge_has_permission('vault.publish')
+  and split_part(name, '/', 2) like ((select auth.jwt() ->> 'sub') || '-%')
+);
+
 -- Restrictive policies make sure old owner-only policies cannot accidentally
 -- grant access outside the role registry. Public documents stay publicly readable.
 alter policy "PixelForge owner restrict select private documents"
@@ -183,7 +217,8 @@ begin
   if old.uid = '5PcOkyDEcNc1puSeB2lQ6dLFVOF2' then
     raise exception 'The PixelForge owner account cannot be changed or removed';
   end if;
-  return case when tg_op = 'DELETE' then old else new end;
+  if tg_op = 'DELETE' then return old; end if;
+  return new;
 end;
 $$;
 
