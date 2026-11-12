@@ -71,7 +71,9 @@ const firebaseConfig = {
     .filter(Boolean);
   function syncSidebarNavigation() {
     const requestedPage = (window.location.hash || "#overview").slice(1);
-    const activePage = dashboardPages.some(page => page.id === requestedPage) ? requestedPage : "overview";
+    let activePage = dashboardPages.some(page => page.id === requestedPage) ? requestedPage : "overview";
+    const pagePermissions = { overview: "dashboard.view", "recent-activity": "activity.view", documents: "vault.read", users: "users.manage" };
+    if (currentUserUid && !currentPermissions.has(pagePermissions[activePage])) activePage = "overview";
     dashboardPages.forEach(page => { page.hidden = page.id !== activePage; });
     sidebarLinks.forEach(link => {
       const isActive = link.getAttribute("href") === "#" + activePage;
