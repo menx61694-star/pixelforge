@@ -9,6 +9,12 @@ on:
     paths:
       - "supabase/functions/google-drive-oauth/**"
       - "supabase/functions/google-drive-files/**"
+      - "supabase/functions/user-management/**"
+      - "supabase/config.toml"
+      - "supabase/phase-2-users-roles.sql"
+      - "admin.js"
+      - "admin.html"
+      - "admin.css"
       - ".github/workflows/google-drive-oauth-check.yml"
   pull_request:
     branches:
@@ -16,7 +22,12 @@ on:
     paths:
       - "supabase/functions/google-drive-oauth/**"
       - "supabase/functions/google-drive-files/**"
+      - "supabase/functions/user-management/**"
+      - "supabase/config.toml"
+      - "supabase/phase-2-users-roles.sql"
       - "admin.js"
+      - "admin.html"
+      - "admin.css"
       - ".github/workflows/google-drive-oauth-check.yml"
 
 permissions:
