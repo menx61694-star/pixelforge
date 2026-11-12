@@ -29,7 +29,7 @@ grant all on public.pixel_forge_role_permissions to service_role;
 
 insert into public.pixel_forge_users (uid, email, role, status)
 values ('5PcOkyDEcNc1puSeB2lQ6dLFVOF2', null, 'admin', 'active')
-on conflict (uid) do update set role = 'admin', status = 'active', updated_at = now();
+on conflict (uid) do nothing;
 
 insert into public.pixel_forge_role_permissions (role, permission, allowed) values
 ('admin','dashboard.view',true),('admin','activity.view',true),('admin','vault.read',true),('admin','vault.write',true),('admin','vault.delete',true),('admin','vault.publish',true),('admin','drive.read',true),('admin','drive.write',true),('admin','drive.delete',true),('admin','users.manage',true),('admin','roles.manage',true),
