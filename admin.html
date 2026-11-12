@@ -11,6 +11,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js" defer></script>
+  <script src="vault-storage-utils.js" defer></script>
   <script src="admin.js" defer></script>
 </head>
 <body>
@@ -64,7 +65,7 @@
 
           <section class="stats-grid" aria-label="Workspace overview">
             <article class="stat-card"><span class="stat-icon violet">▤</span><p>Private documents</p><strong id="stat-doc-count">—</strong><small>Files in your Supabase vault</small></article>
-            <article class="stat-card"><span class="stat-icon orange">⇧</span><p>Private storage</p><strong id="stat-storage">—</strong><small>Combined size of listed files</small></article>
+            <article class="stat-card"><span class="stat-icon orange">⇧</span><p>Private storage</p><strong id="stat-storage">—</strong><small>Total size of all listed private files</small></article>
             <article class="stat-card"><span class="stat-icon violet">G</span><p>Google Drive files</p><strong id="stat-drive-count">—</strong><small id="stat-drive-count-note">Waiting for Drive status</small></article>
             <article class="stat-card"><span class="stat-icon green">✓</span><p>Google Drive</p><strong id="stat-drive-status" class="secure-value">Checking</strong><small id="stat-drive-status-note">Connection status</small></article>
           </section>
