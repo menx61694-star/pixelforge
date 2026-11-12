@@ -582,16 +582,29 @@ const firebaseConfig = {
     return storedName.replace(/^\\d{10,}-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, "");
   }
 
+  async function listAllStorageFiles(bucketName, folderPath) {
+    const allFiles = [];
+    const pageSize = 100;
+    for (let offset = 0; ; offset += pageSize) {
+      const { data, error } = await supabaseClient.storage.from(bucketName).list(folderPath, {
+        limit: pageSize,
+        offset,
+        sortBy: { column: "created_at", order: "desc" }
+      });
+      if (error) throw error;
+      const page = (data || []).filter(item => item.name && !item.name.endsWith("/"));
+      allFiles.push(...page);
+      if (!data || data.length < pageSize) break;
+    }
+    return allFiles;
+  }
+
   async function getPublishedFilesIndex() {
     const published = new Map();
     if (!supabaseClient || !currentUserUid || !currentPermissions.has("vault.read")) return published;
     const results = await Promise.all(PUBLIC_CATEGORIES.map(async category => {
-      const { data, error } = await supabaseClient.storage.from(PUBLIC_BUCKET).list(category, {
-        limit: 100, offset: 0, sortBy: { column: "created_at", order: "desc" }
-      });
-      if (error) throw error;
-      return (data || []).filter(file => file.name && !file.name.endsWith("/"))
-        .map(file => ({ name: file.name, category }));
+      const files = await listAllStorageFiles(PUBLIC_BUCKET, category);
+      return files.map(file => ({ name: file.name, category }));
     }));
     results.flat().forEach(file => {
       if (file.name.startsWith(currentUserUid + "-")) {
@@ -606,19 +619,12 @@ const firebaseConfig = {
     refreshButton.disabled = true;
     setVaultStatus("Loading private documents…");
     try {
-      const { data, error } = await supabaseClient.storage
-        .from(BUCKET)
-        .list(currentUserUid, {
-          limit: 100,
-          offset: 0,
-          sortBy: { column: "created_at", order: "desc" }
-        });
-      if (error) throw error;
-      const files = (data || []).filter(item => item.name && !item.name.endsWith("/"));
+      const files = await listAllStorageFiles(BUCKET, currentUserUid);
       currentFiles = files;
       let publishedFiles = new Map();
+      let publishStatusWarning = "";
       try { publishedFiles = await getPublishedFilesIndex(); }
-      catch (publishError) { setVaultStatus("Private files loaded; published status could not be checked: " + (publishError.message || "Storage access error"), true); }
+      catch (publishError) { publishStatusWarning = " Published status could not be checked: " + (publishError.message || "Storage access error"); }
       updateStats(files);
       updateDashboardActivity();
       if (!files.length) {
@@ -687,7 +693,7 @@ const firebaseConfig = {
           fileList.append(li);
         });
       }
-      setVaultStatus(files.length + " private document(s) listed.");
+      setVaultStatus(files.length + " private document(s) listed." + publishStatusWarning, Boolean(publishStatusWarning));
     } catch (error) {
       showEmpty("Could not load documents. Check the Storage policies and Firebase token.");
       setVaultStatus("Storage list failed: " + (error.message || "Unknown error"), true);
@@ -772,9 +778,8 @@ const firebaseConfig = {
     try {
       const { error } = await supabaseClient.storage.from(BUCKET).remove([path]);
       if (error) throw error;
-      listItem.remove();
-      if (!fileList.children.length) showEmpty("No documents uploaded yet.");
-      setVaultStatus("Document deleted.");
+      setVaultStatus("Document deleted. Refreshing vault and dashboard…");
+      await loadFiles();
     } catch (error) {
       setVaultStatus("Delete failed: " + (error.message || "Unknown error"), true);
       button.disabled = false;
