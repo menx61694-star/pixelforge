@@ -220,7 +220,13 @@ begin
   perform pg_advisory_xact_lock(73190521);
 
   if old.uid = '5PcOkyDEcNc1puSeB2lQ6dLFVOF2' then
-    raise exception 'The PixelForge owner account cannot be changed or removed';
+    if tg_op = 'DELETE'
+       or new.uid <> old.uid
+       or new.role <> old.role
+       or new.status <> old.status then
+      raise exception 'The PixelForge owner role and status are immutable';
+    end if;
+    return new;
   end if;
 
   if old.role = 'admin'
