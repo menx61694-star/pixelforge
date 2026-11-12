@@ -12,9 +12,9 @@ function corsHeaders(request: Request) {
   const origin = request.headers.get("Origin") ?? "";
   return {
     ...(allowedOrigins.has(origin) ? { "Access-Control-Allow-Origin": origin } : {}),
-    "Access-Control-Allow-Headers": "authorization, content-type, content-range, x-drive-upload-url",
+    "Access-Control-Allow-Headers": "authorization, content-type, content-range, range, x-drive-upload-url",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Expose-Headers": "Content-Disposition, Range",
+    "Access-Control-Expose-Headers": "Content-Disposition, Content-Length, Content-Range, Accept-Ranges",
     "Vary": "Origin",
   };
 }
@@ -144,7 +144,14 @@ Deno.serve(async (request) => {
       const response = await fetch("https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(fileId) + "?alt=media", {
         headers: { Authorization: "Bearer " + accessToken, ...(range ? { Range: range } : {}) }
       });
-      if (!response.ok && response.status !== 206) return json({ error: response.status === 404 ? "The original Drive file is no longer available." : "Published document could not be retrieved." }, response.status === 404 ? 404 : 502, request);
+      if (!response.ok && response.status !== 206) {
+        if (response.status === 404) {
+          await supabaseAdmin().from("pixel_forge_published_documents")
+            .delete().eq("source", "google_drive").eq("drive_file_id", fileId);
+          return json({ error: "The original Drive file is no longer available; its public listing was removed." }, 404, request);
+        }
+        return json({ error: "Published document could not be retrieved." }, 502, request);
+      }
       const headers = new Headers(corsHeaders(request));
       headers.set("Content-Type", published.mime_type || response.headers.get("Content-Type") || "application/octet-stream");
       headers.set("Content-Disposition", "inline; filename*=UTF-8''" + encodeURIComponent(published.title || "document"));
