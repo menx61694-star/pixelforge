@@ -40,10 +40,10 @@ async function lookupFirebaseUser(idToken: string) {
   if (!response.ok) return null;
   const payload = await response.json();
   const user = payload.users?.[0];
-  if (!user || user.disabled === true || user.emailVerified === false) return null;
+  if (!user || user.disabled === true) return null;
   return { uid: user.localId as string, email: user.email as string };
 }
-async function requireAdmin(request: Request) {
+async function authenticate(request: Request) {
   const token = request.headers.get("Authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) return null;
   const identity = await lookupFirebaseUser(token);
@@ -51,8 +51,12 @@ async function requireAdmin(request: Request) {
   const { data, error } = await dbAdmin().from("pixel_forge_users")
     .select("role,status").eq("uid", identity.uid).maybeSingle();
   if (error) throw error;
-  if (!data || data.status !== "active" || data.role !== "admin") return null;
-  return identity;
+  if (!data || data.status !== "active") return null;
+  return { ...identity, role: data.role as string };
+}
+async function requireAdmin(request: Request) {
+  const identity = await authenticate(request);
+  return identity?.role === "admin" ? identity : null;
 }
 const validRoles = new Set(["admin", "editor", "viewer"]);
 const validStatuses = new Set(["active", "suspended"]);
@@ -63,11 +67,20 @@ Deno.serve(async (request) => {
   if (!allowedOrigins.has(origin)) return json({ error: "Origin is not allowed." }, 403, request);
   if (request.method !== "GET" && request.method !== "POST") return json({ error: "Method not allowed." }, 405, request);
   try {
+    const url = new URL(request.url);
+    const action = url.searchParams.get("action") ?? "";
+    if (request.method === "GET" && action === "session") {
+      const identity = await authenticate(request);
+      if (!identity) return json({ error: "This account has no active PixelForge access." }, 403, request);
+      const db = dbAdmin();
+      const { data: permissions, error } = await db.from("pixel_forge_role_permissions")
+        .select("permission").eq("role", identity.role).eq("allowed", true);
+      if (error) throw error;
+      return json({ uid: identity.uid, email: identity.email, role: identity.role, permissions: (permissions ?? []).map((item) => item.permission) }, 200, request);
+    }
     const actor = await requireAdmin(request);
     if (!actor) return json({ error: "Active administrator access is required." }, 403, request);
     const db = dbAdmin();
-    const url = new URL(request.url);
-    const action = url.searchParams.get("action") ?? "";
     const input = request.method === "POST" ? await request.json() : {};
 
     if (request.method === "GET" && action === "list") {
