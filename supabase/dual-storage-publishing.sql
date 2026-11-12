@@ -20,11 +20,9 @@ create table if not exists public.pixel_forge_published_documents (
 );
 
 create unique index if not exists pixel_forge_published_drive_file_unique
-  on public.pixel_forge_published_documents (source, drive_file_id)
-  where drive_file_id is not null;
+  on public.pixel_forge_published_documents (source, drive_file_id);
 create unique index if not exists pixel_forge_published_storage_path_unique
-  on public.pixel_forge_published_documents (source, storage_path)
-  where storage_path is not null;
+  on public.pixel_forge_published_documents (source, storage_path);
 create index if not exists pixel_forge_published_documents_public_idx
   on public.pixel_forge_published_documents (published, category, updated_at desc);
 
