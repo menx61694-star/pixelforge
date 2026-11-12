@@ -485,6 +485,7 @@ const firebaseConfig = {
 
   function formatBytes(bytes) {
     if (!Number.isFinite(bytes)) return "";
+    if (bytes === 0) return "0 B";
     return bytes < 1024 * 1024
       ? Math.max(1, Math.round(bytes / 1024)) + " KB"
       : (bytes / (1024 * 1024)).toFixed(2) + " MB";
@@ -492,13 +493,41 @@ const firebaseConfig = {
 
   function updateStats(files = currentFiles) {
     const safeFiles = Array.isArray(files) ? files : [];
-    const bytes = safeFiles.reduce((sum, file) => sum + Number(file.metadata && file.metadata.size || 0), 0);
+    const knownSizes = safeFiles
+      .map(file => Number(file.metadata && file.metadata.size))
+      .filter(size => Number.isFinite(size) && size >= 0);
+    const bytes = knownSizes.reduce((sum, size) => sum + size, 0);
     if (countStat) countStat.textContent = String(safeFiles.length);
-    if (storageStat) storageStat.textContent = bytes < 1048576
-      ? Math.max(1, Math.round(bytes / 1024)) + " KB"
-      : (bytes / (1024 * 1024)).toFixed(2) + " MB";
-    if (countLabel) countLabel.textContent = safeFiles.length + (safeFiles.length === 1 ? " file" : " files");
+    if (storageStat) {
+      if (knownSizes.length !== safeFiles.length) {
+        storageStat.textContent = "Unavailable";
+        storageStat.title = "Storage size metadata is missing for one or more files.";
+      } else {
+        storageStat.textContent = formatBytes(bytes);
+        storageStat.title = "Combined size of all listed private files.";
+      }
+    }
+    updateVaultFileCount();
     updateDriveOverview();
+  }
+
+  function updateVaultFileCount() {
+    if (!countLabel || !fileList) return;
+    const items = Array.from(fileList.querySelectorAll(".file-item"));
+    const visible = items.filter(item => !item.hidden).length;
+    const total = currentFiles.length;
+    countLabel.textContent = visible === total
+      ? total + (total === 1 ? " file" : " files")
+      : "Showing " + visible + " of " + total;
+  }
+
+  function applyVaultSearch() {
+    const query = (fileSearch && fileSearch.value || "").trim().toLowerCase();
+    Array.from(fileList.children).forEach(item => {
+      if (!item.classList.contains("file-item")) return;
+      item.hidden = Boolean(query) && !item.textContent.toLowerCase().includes(query);
+    });
+    updateVaultFileCount();
   }
 
   function updateDriveOverview() {
@@ -693,6 +722,7 @@ const firebaseConfig = {
           fileList.append(li);
         });
       }
+      applyVaultSearch();
       setVaultStatus(files.length + " private document(s) listed." + publishStatusWarning, Boolean(publishStatusWarning));
     } catch (error) {
       showEmpty("Could not load documents. Check the Storage policies and Firebase token.");
@@ -879,12 +909,7 @@ const firebaseConfig = {
   });
 
   refreshButton.addEventListener("click", loadFiles);
-  fileSearch.addEventListener("input", () => {
-    const query = fileSearch.value.trim().toLowerCase();
-    Array.from(fileList.children).forEach(item => {
-      item.hidden = query && !item.textContent.toLowerCase().includes(query);
-    });
-  });
+  fileSearch.addEventListener("input", applyVaultSearch);
 
   fileInput.addEventListener("change", () => {
     selectedFile.textContent = fileInput.files && fileInput.files[0]
