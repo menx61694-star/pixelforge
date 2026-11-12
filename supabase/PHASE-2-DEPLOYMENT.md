@@ -42,3 +42,17 @@ No new service-account JSON or Firebase Admin private key is required. User crea
 ## Important
 
 The SQL migration and Edge Functions must be deployed before the updated admin page can authenticate non-owner users. Do not publish the frontend first. The migration is additive to the existing storage setup; review the actual Supabase policy names before running it if the earlier SQL scripts were not applied as documented.
+
+
+## Dual-storage publishing follow-up
+
+The additive migration `supabase/dual-storage-publishing.sql` creates a private published-document index for Drive references. Apply it in Supabase SQL Editor before deploying the updated `google-drive-files` function or publishing the updated website.
+
+- Google Drive publish writes only a metadata/reference row; it does not download or duplicate the Drive object into Supabase Storage.
+- Supabase Private Vault publish remains on the existing `public-documents` bucket workflow.
+- The public library combines existing public-bucket objects with published Drive references.
+- The public Drive download endpoint checks that a matching row is still marked published before streaming the original file. It does not expose the stored OAuth token.
+- Unpublishing a Drive file removes only its publication record. Deleting the Drive original also removes its publication record.
+- The migration is additive and does not move or delete existing public-bucket files.
+
+After applying the SQL migration, deploy `google-drive-files` from the `feature/dual-storage-publishing` branch using the production Edge Function deployment workflow, then publish the static site from the reviewed PR. Verify Drive publish/unpublish/download and the existing Supabase Vault publish/unpublish/download paths independently.
