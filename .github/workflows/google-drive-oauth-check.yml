@@ -15,6 +15,8 @@ on:
       - "supabase/config.toml"
       - "supabase/phase-2-users-roles.sql"
       - "admin.js"
+      - "vault-storage-utils.js"
+      - "tests/vault-storage.test.js"
       - "admin.html"
       - "admin.css"
       - ".github/workflows/google-drive-oauth-check.yml"
@@ -49,7 +51,12 @@ jobs:
           deno-version: v2.x
 
       - name: Check admin JavaScript syntax
-        run: node --check admin.js
+        run: |
+          node --check admin.js
+          node --check vault-storage-utils.js
+
+      - name: Run Private Vault storage regression tests
+        run: node --test tests/vault-storage.test.js
 
       - name: Type-check Edge Functions
         run: |
