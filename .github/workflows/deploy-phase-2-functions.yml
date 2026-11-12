@@ -1,0 +1,61 @@
+name: Deploy PixelForge Phase 2 Edge Functions
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/phase-2-users-roles
+    paths:
+      - '.github/workflows/deploy-phase-2-functions.yml'
+      - 'supabase/functions/user-management/**'
+      - 'supabase/functions/google-drive-files/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pixelforge-phase-2-edge-functions
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy user-management and google-drive-files
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout selected branch
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Validate required deployment configuration
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Missing GitHub Actions secret SUPABASE_ACCESS_TOKEN"; exit 1; }
+
+      - name: Deploy user-management Edge Function
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy user-management --project-ref zeueivmdzhkhonkyllij --use-api --yes
+
+      - name: Deploy google-drive-files Edge Function
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy google-drive-files --project-ref zeueivmdzhkhonkyllij --use-api --yes
+
+      - name: Smoke-test deployed endpoints reject unauthenticated requests
+        run: |
+          set -eu
+          USER_STATUS=$(curl --silent --show-error --output /tmp/user-management-response.json --write-out "%{http_code}" \
+            --header "Origin: https://pixelforge.jo3.org" \
+            "https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/user-management?action=session")
+          test "$USER_STATUS" = "403" || { cat /tmp/user-management-response.json; echo "::error::Expected user-management to reject unauthenticated access with HTTP 403, got $USER_STATUS"; exit 1; }
+          DRIVE_STATUS=$(curl --silent --show-error --output /tmp/google-drive-response.json --write-out "%{http_code}" \
+            --header "Origin: https://pixelforge.jo3.org" \
+            "https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/google-drive-files?action=status")
+          test "$DRIVE_STATUS" = "401" || { cat /tmp/google-drive-response.json; echo "::error::Expected google-drive-files to reject unauthenticated access with HTTP 401, got $DRIVE_STATUS"; exit 1; }
+          echo "Both deployed functions reject unauthenticated requests."

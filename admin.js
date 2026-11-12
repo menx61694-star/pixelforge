@@ -53,14 +53,28 @@ const firebaseConfig = {
   let currentFiles = [];
   let currentDriveFiles = [];
   let driveFilesLoaded = false;
+  let currentUserUid = null;
+  let currentUserRole = null;
+  let currentPermissions = new Set();
+  const usersNavLink = document.getElementById("users-nav-link");
+  const googleDriveNavLink = document.getElementById("google-drive-nav-link");
+  const userCreateForm = document.getElementById("user-create-form");
+  const usersStatus = document.getElementById("users-status");
+  const usersTableBody = document.getElementById("users-table-body");
+  const permissionsTableBody = document.getElementById("permissions-table-body");
+  const newUserEmail = document.getElementById("new-user-email");
+  const newUserRole = document.getElementById("new-user-role");
+  const createUserButton = document.getElementById("create-user-button");
 
   const sidebarLinks = Array.from(document.querySelectorAll(".sidebar .nav-link"));
-  const dashboardPages = ["overview", "recent-activity", "documents"]
+  const dashboardPages = ["overview", "recent-activity", "documents", "google-drive", "users"]
     .map(id => document.getElementById(id))
     .filter(Boolean);
   function syncSidebarNavigation() {
     const requestedPage = (window.location.hash || "#overview").slice(1);
-    const activePage = dashboardPages.some(page => page.id === requestedPage) ? requestedPage : "overview";
+    let activePage = dashboardPages.some(page => page.id === requestedPage) ? requestedPage : "overview";
+    const pagePermissions = { overview: "dashboard.view", "recent-activity": "activity.view", documents: "vault.read", "google-drive": "drive.read", users: "users.manage" };
+    if (currentUserUid && !currentPermissions.has(pagePermissions[activePage])) activePage = "overview";
     dashboardPages.forEach(page => { page.hidden = page.id !== activePage; });
     sidebarLinks.forEach(link => {
       const isActive = link.getAttribute("href") === "#" + activePage;
@@ -101,8 +115,8 @@ const firebaseConfig = {
   }
 
   async function connectGoogleDrive() {
-    if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
-      setGoogleDriveStatus("Administrator session is required.", true);
+    if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID || currentUserRole !== "admin") {
+      setGoogleDriveStatus("Owner administrator access is required to connect Google Drive.", true);
       return;
     }
     if (!googleDriveButton) return;
@@ -125,7 +139,7 @@ const firebaseConfig = {
 
   async function googleDriveRequest(action, options = {}) {
     const user = auth.currentUser;
-    if (!user || user.uid !== ADMIN_UID) throw new Error("Administrator session is required.");
+    if (!user || !currentPermissions.has("drive.read")) throw new Error("Drive access is not permitted for this account.");
     const headers = new Headers(options.headers || {});
     headers.set("Authorization", "Bearer " + await user.getIdToken());
     const endpoint = new URL(SUPABASE_URL + "/functions/v1/google-drive-files");
@@ -194,6 +208,9 @@ const firebaseConfig = {
         empty.textContent = "No files found in the connected Drive app space.";
         googleDriveFileList.append(empty);
       }
+      let publishedFiles = new Map();
+      try { publishedFiles = await getPublishedFilesIndex(); }
+      catch (publishError) { setDriveFilesStatus("Drive files loaded; published status could not be checked: " + (publishError.message || "Storage access error"), true); }
       files.forEach(file => {
         const item = document.createElement("li");
         item.className = "file-item";
@@ -213,12 +230,45 @@ const firebaseConfig = {
         download.type = "button";
         download.textContent = "Download";
         download.addEventListener("click", () => downloadGoogleDriveFile(file, download));
+        const category = document.createElement("select");
+        category.className = "publish-category";
+        category.setAttribute("aria-label", "Public category for " + (file.name || "Drive file"));
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Choose category";
+        category.append(placeholder);
+        PUBLIC_CATEGORIES.forEach(value => {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = value.replace(/-/g, " ").replace(/\\b\\w/g, char => char.toUpperCase());
+          category.append(option);
+        });
+        const safeName = safeFileName(file.name || "drive-file");
+        const publishedCategory = publishedFiles.get(safeName);
+        if (publishedCategory) category.value = publishedCategory;
+        const publish = document.createElement("button");
+        publish.type = "button";
+        publish.className = "publish-button";
+        publish.textContent = publishedCategory ? "Republish" : "Publish";
+        publish.addEventListener("click", () => publishGoogleDriveFile(file, category.value, publish));
+        const unpublish = document.createElement("button");
+        unpublish.type = "button";
+        unpublish.className = "unpublish-button";
+        unpublish.textContent = "Unpublish";
+        unpublish.disabled = !publishedCategory;
+        unpublish.title = publishedCategory ? "Remove from " + publishedCategory : "This file is not published";
+        unpublish.addEventListener("click", () => unpublishGoogleDriveFile(file, category.value || publishedCategory, unpublish));
+        const canPublishDriveFile = ALLOWED_TYPES.has(file.mimeType);
+        category.hidden = !currentPermissions.has("vault.publish") || !canPublishDriveFile;
+        publish.hidden = !currentPermissions.has("vault.publish") || !canPublishDriveFile;
+        unpublish.hidden = !currentPermissions.has("vault.publish") || !canPublishDriveFile;
         const remove = document.createElement("button");
         remove.type = "button";
         remove.className = "delete-button";
         remove.textContent = "Delete";
         remove.addEventListener("click", () => deleteGoogleDriveFile(file, item, remove));
-        actions.append(download, remove);
+        remove.hidden = !currentPermissions.has("drive.delete");
+        actions.append(download, category, publish, unpublish, remove);
         item.append(info, actions);
         googleDriveFileList.append(item);
       });
@@ -227,6 +277,61 @@ const firebaseConfig = {
       setDriveFilesStatus(error.message || "Google Drive listing failed.", true);
     } finally {
       if (googleDriveRefreshButton) googleDriveRefreshButton.disabled = !googleDriveConnected;
+    }
+  }
+
+  async function publishGoogleDriveFile(file, category, button) {
+    if (!currentPermissions.has("vault.publish")) {
+      setDriveFilesStatus("Your role cannot publish documents.", true);
+      return;
+    }
+    if (!category || !PUBLIC_CATEGORIES.includes(category)) {
+      setDriveFilesStatus("Choose a public category before publishing.", true);
+      return;
+    }
+    if (!window.confirm("Publish " + (file.name || "this Drive file") + " publicly in " + category.replace(/-/g, " ") + "? Anyone with the public library link can access it.")) return;
+    button.disabled = true;
+    try {
+      setDriveFilesStatus("Downloading from Google Drive for publishing…");
+      const response = await googleDriveRequest("download", { query: { id: file.id } });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || "Could not download the Drive file.");
+      }
+      const blob = await response.blob();
+      const publicPath = category + "/" + currentUserUid + "-" + safeFileName(file.name || "drive-file");
+      const { error } = await supabaseClient.storage.from(PUBLIC_BUCKET).upload(publicPath, blob, {
+        cacheControl: "60",
+        contentType: file.mimeType || blob.type || "application/octet-stream",
+        upsert: true
+      });
+      if (error) throw error;
+      setDriveFilesStatus("Published " + (file.name || "Drive file") + " in " + category.replace(/-/g, " ") + ".");
+      await loadGoogleDriveFiles();
+    } catch (error) {
+      setDriveFilesStatus("Drive publish failed: " + (error.message || "Storage upload failed."), true);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function unpublishGoogleDriveFile(file, category, button) {
+    if (!category || !PUBLIC_CATEGORIES.includes(category)) {
+      setDriveFilesStatus("Choose the category where this Drive file was published.", true);
+      return;
+    }
+    if (!window.confirm("Remove this Drive file from the public library? The Google Drive original will remain unchanged.")) return;
+    button.disabled = true;
+    try {
+      const publicPath = category + "/" + currentUserUid + "-" + safeFileName(file.name || "drive-file");
+      const { error } = await supabaseClient.storage.from(PUBLIC_BUCKET).remove([publicPath]);
+      if (error) throw error;
+      setDriveFilesStatus("Removed from public library. The Google Drive original is unchanged.");
+      await loadGoogleDriveFiles();
+    } catch (error) {
+      setDriveFilesStatus("Drive unpublish failed: " + (error.message || "Storage removal failed."), true);
+    } finally {
+      button.disabled = false;
     }
   }
 
@@ -463,7 +568,7 @@ const firebaseConfig = {
       item.append(marker, details);
       activityList.append(item);
     });
-    activityStatus.textContent = "Showing up to 6 real files from connected storage. This is file activity, not a full admin audit log.";
+    activityStatus.textContent = "Showing " + Math.min(validEntries.length, 6) + " of " + validEntries.length + " available files. This is file activity, not a full admin audit log.";
   }
 
   function showEmpty(message) {
@@ -477,14 +582,33 @@ const firebaseConfig = {
     return storedName.replace(/^\\d{10,}-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, "");
   }
 
+  async function getPublishedFilesIndex() {
+    const published = new Map();
+    if (!supabaseClient || !currentUserUid || !currentPermissions.has("vault.read")) return published;
+    const results = await Promise.all(PUBLIC_CATEGORIES.map(async category => {
+      const { data, error } = await supabaseClient.storage.from(PUBLIC_BUCKET).list(category, {
+        limit: 100, offset: 0, sortBy: { column: "created_at", order: "desc" }
+      });
+      if (error) throw error;
+      return (data || []).filter(file => file.name && !file.name.endsWith("/"))
+        .map(file => ({ name: file.name, category }));
+    }));
+    results.flat().forEach(file => {
+      if (file.name.startsWith(currentUserUid + "-")) {
+        published.set(file.name.slice(currentUserUid.length + 1), file.category);
+      }
+    });
+    return published;
+  }
+
   async function loadFiles() {
-    if (!supabaseClient || !auth.currentUser || auth.currentUser.uid !== ADMIN_UID) return;
+    if (!supabaseClient || !auth.currentUser || !currentPermissions.has("vault.read")) return;
     refreshButton.disabled = true;
     setVaultStatus("Loading private documents…");
     try {
       const { data, error } = await supabaseClient.storage
         .from(BUCKET)
-        .list(ADMIN_UID, {
+        .list(currentUserUid, {
           limit: 100,
           offset: 0,
           sortBy: { column: "created_at", order: "desc" }
@@ -492,6 +616,9 @@ const firebaseConfig = {
       if (error) throw error;
       const files = (data || []).filter(item => item.name && !item.name.endsWith("/"));
       currentFiles = files;
+      let publishedFiles = new Map();
+      try { publishedFiles = await getPublishedFilesIndex(); }
+      catch (publishError) { setVaultStatus("Private files loaded; published status could not be checked: " + (publishError.message || "Storage access error"), true); }
       updateStats(files);
       updateDashboardActivity();
       if (!files.length) {
@@ -499,7 +626,7 @@ const firebaseConfig = {
       } else {
         fileList.replaceChildren();
         files.forEach(item => {
-          const path = ADMIN_UID + "/" + item.name;
+          const path = currentUserUid + "/" + item.name;
           const li = document.createElement("li");
           li.className = "file-item";
           const info = document.createElement("div");
@@ -532,10 +659,12 @@ const firebaseConfig = {
             option.textContent = value.replace(/-/g, " ").replace(/\\b\\w/g, char => char.toUpperCase());
             category.append(option);
           });
+          const publishedCategory = publishedFiles.get(item.name);
+          if (publishedCategory) category.value = publishedCategory;
           const publish = document.createElement("button");
           publish.type = "button";
           publish.className = "publish-button";
-          publish.textContent = "Publish";
+          publish.textContent = publishedCategory ? "Republish" : "Publish";
           publish.addEventListener("click", () => publishFile(path, item.name, category.value, publish));
           const remove = document.createElement("button");
           remove.type = "button";
@@ -546,7 +675,13 @@ const firebaseConfig = {
           unpublish.type = "button";
           unpublish.className = "unpublish-button";
           unpublish.textContent = "Unpublish";
-          unpublish.addEventListener("click", () => unpublishFile(item.name, category.value, unpublish));
+          unpublish.addEventListener("click", () => unpublishFile(item.name, category.value || publishedCategory, unpublish));
+          unpublish.disabled = !publishedCategory;
+          unpublish.title = publishedCategory ? "Remove from " + publishedCategory : "This file is not published";
+          category.hidden = !currentPermissions.has("vault.publish");
+          publish.hidden = !currentPermissions.has("vault.publish");
+          unpublish.hidden = !currentPermissions.has("vault.publish");
+          remove.hidden = !currentPermissions.has("vault.delete");
           actions.append(download, category, publish, unpublish, remove);
           li.append(info, actions);
           fileList.append(li);
@@ -571,7 +706,7 @@ const firebaseConfig = {
     try {
       const { data: downloaded, error: downloadError } = await supabaseClient.storage.from(BUCKET).download(privatePath);
       if (downloadError) throw downloadError;
-      const publicPath = category + "/" + ADMIN_UID + "-" + fileName;
+      const publicPath = category + "/" + currentUserUid + "-" + fileName;
       const { error: uploadError } = await supabaseClient.storage.from(PUBLIC_BUCKET).upload(publicPath, downloaded, {
         cacheControl: "60",
         contentType: downloaded.type || "application/octet-stream",
@@ -580,6 +715,7 @@ const firebaseConfig = {
       if (uploadError) throw uploadError;
       setVaultStatus("Published publicly in " + category.replace(/-/g, " ") + ". The private original remains private.");
       button.textContent = "Published";
+      await loadFiles();
     } catch (error) {
       setVaultStatus("Publish failed: " + (error.message || "Check public bucket and its write policies."), true);
     } finally {
@@ -595,10 +731,11 @@ const firebaseConfig = {
     if (!window.confirm("Remove this file from the public website? The private original will remain in your vault.")) return;
     button.disabled = true;
     try {
-      const publicPath = category + "/" + ADMIN_UID + "-" + fileName;
+      const publicPath = category + "/" + currentUserUid + "-" + fileName;
       const { error } = await supabaseClient.storage.from(PUBLIC_BUCKET).remove([publicPath]);
       if (error) throw error;
       setVaultStatus("Removed from public library. The private original is unchanged.");
+      await loadFiles();
     } catch (error) {
       setVaultStatus("Unpublish failed: " + (error.message || "Check public bucket policies."), true);
     } finally {
@@ -648,8 +785,8 @@ const firebaseConfig = {
     return new Promise(async (resolve, reject) => {
       try {
         const user = auth.currentUser;
-        if (!user || user.uid !== ADMIN_UID) {
-          reject(new Error("Admin session expired. Sign in again."));
+        if (!user || !currentPermissions.has("vault.write")) {
+          reject(new Error("Your account does not have upload permission."));
           return;
         }
         const token = await user.getIdToken();
@@ -697,8 +834,8 @@ const firebaseConfig = {
       setVaultStatus("Choose a PDF, JPG or PNG file first.", true);
       return;
     }
-    if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
-      setVaultStatus("Admin session is not valid. Sign in again.", true);
+    if (!auth.currentUser || !currentPermissions.has("vault.write")) {
+      setVaultStatus("Your account does not have upload permission.", true);
       return;
     }
     if (!supabaseClient) {
@@ -723,7 +860,7 @@ const firebaseConfig = {
     setVaultStatus("Uploading privately…");
     try {
       const objectName = Date.now() + "-" + crypto.randomUUID() + "-" + safeFileName(file.name);
-      const objectPath = ADMIN_UID + "/" + objectName;
+      const objectPath = currentUserUid + "/" + objectName;
       await uploadLargeFile(BUCKET, objectPath, file);
       fileInput.value = "";
       setVaultStatus("Upload successful. Refreshing document list…");
@@ -752,19 +889,189 @@ const firebaseConfig = {
 
 
 
+  async function managementRequest(action, options = {}) {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Please sign in again.");
+    const headers = { "Authorization": "Bearer " + await user.getIdToken() };
+    if (options.body) headers["Content-Type"] = "application/json";
+    const response = await fetch(SUPABASE_URL + "/functions/v1/user-management?action=" + encodeURIComponent(action), {
+      method: options.method || "GET", headers, body: options.body ? JSON.stringify(options.body) : undefined
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "User-management request failed.");
+    return payload;
+  }
+
+  function setUsersStatus(message, isError = false) {
+    if (!usersStatus) return;
+    usersStatus.textContent = message;
+    usersStatus.style.color = isError ? "#a23c32" : "#53617b";
+  }
+
+  async function loadUsersAndPermissions() {
+    if (!currentPermissions.has("users.manage")) return;
+    setUsersStatus("Loading workspace users…");
+    try {
+      const payload = await managementRequest("list");
+      renderUsers(payload.users || []);
+      renderPermissions(payload.permissions || []);
+      setUsersStatus((payload.users || []).length + " user account(s) registered.");
+    } catch (error) {
+      setUsersStatus(error.message || "Could not load users.", true);
+    }
+  }
+
+  function renderUsers(users) {
+    if (!usersTableBody) return;
+    usersTableBody.replaceChildren();
+    if (!users.length) {
+      const row = document.createElement("tr");
+      row.innerHTML = '<td colspan="4" class="empty-state">No users are registered.</td>';
+      usersTableBody.append(row);
+      return;
+    }
+    users.forEach(user => {
+      const row = document.createElement("tr");
+      const email = document.createElement("td");
+      email.textContent = user.email || user.uid;
+      const roleCell = document.createElement("td");
+      const role = document.createElement("select");
+      ["admin", "editor", "viewer"].forEach(value => {
+        const option = document.createElement("option");
+        option.value = value; option.textContent = value[0].toUpperCase() + value.slice(1);
+        role.append(option);
+      });
+      role.value = user.role;
+      role.disabled = user.uid === ADMIN_UID || user.uid === currentUserUid;
+      roleCell.append(role);
+      const stateCell = document.createElement("td");
+      stateCell.textContent = user.status;
+      const actionCell = document.createElement("td");
+      const save = document.createElement("button");
+      save.type = "button"; save.textContent = "Save role"; save.disabled = user.uid === ADMIN_UID || user.uid === currentUserUid;
+      save.addEventListener("click", async () => {
+        save.disabled = true;
+        try { await managementRequest("set-role", { method: "POST", body: { uid: user.uid, role: role.value } }); await loadUsersAndPermissions(); }
+        catch (error) { setUsersStatus(error.message, true); save.disabled = false; }
+      });
+      const toggle = document.createElement("button");
+      toggle.type = "button"; toggle.className = user.status === "active" ? "danger" : "";
+      toggle.textContent = user.status === "active" ? "Suspend" : "Reactivate";
+      toggle.disabled = user.uid === ADMIN_UID || user.uid === currentUserUid;
+      toggle.addEventListener("click", async () => {
+        toggle.disabled = true;
+        try { await managementRequest("set-status", { method: "POST", body: { uid: user.uid, status: user.status === "active" ? "suspended" : "active" } }); await loadUsersAndPermissions(); }
+        catch (error) { setUsersStatus(error.message, true); toggle.disabled = false; }
+      });
+      actionCell.append(save, toggle);
+      row.append(email, roleCell, stateCell, actionCell);
+      usersTableBody.append(row);
+    });
+  }
+
+  function renderPermissions(permissions) {
+    if (!permissionsTableBody) return;
+    permissionsTableBody.replaceChildren();
+    const names = [...new Set(permissions.map(item => item.permission))].sort();
+    names.forEach(permission => {
+      const row = document.createElement("tr");
+      const label = document.createElement("td"); label.textContent = permission;
+      row.append(label);
+      ["admin", "editor", "viewer"].forEach(roleName => {
+        const cell = document.createElement("td");
+        const record = permissions.find(item => item.role === roleName && item.permission === permission);
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox"; checkbox.className = "permission-toggle";
+        checkbox.checked = Boolean(record && record.allowed);
+        checkbox.disabled = (roleName === "admin" && ["users.manage", "roles.manage", "dashboard.view"].includes(permission)) || (roleName !== "admin" && ["users.manage", "roles.manage"].includes(permission));
+        checkbox.setAttribute("aria-label", roleName + " " + permission);
+        checkbox.addEventListener("change", async () => {
+          checkbox.disabled = true;
+          try { await managementRequest("set-permission", { method: "POST", body: { role: roleName, permission, allowed: checkbox.checked } }); setUsersStatus("Permission updated."); }
+          catch (error) { checkbox.checked = !checkbox.checked; setUsersStatus(error.message, true); }
+          finally { checkbox.disabled = false; }
+        });
+        cell.append(checkbox); row.append(cell);
+      });
+      permissionsTableBody.append(row);
+    });
+  }
+
+  async function createWorkspaceUser(event) {
+    event.preventDefault();
+    const email = newUserEmail.value.trim().toLowerCase();
+    const role = newUserRole.value;
+    if (!email || !currentPermissions.has("users.manage")) return;
+    createUserButton.disabled = true;
+    setUsersStatus("Creating Firebase account…");
+    let provisioner = null;
+    let createdUser = null;
+    try {
+      const appName = "PixelForgeProvisioner";
+      provisioner = firebase.apps.find(app => app.name === appName) || firebase.initializeApp(firebaseConfig, appName);
+      const provisionerAuth = provisioner.auth();
+      const temporaryPassword = crypto.randomUUID() + "Aa1!";
+      const credential = await provisionerAuth.createUserWithEmailAndPassword(email, temporaryPassword);
+      createdUser = credential.user;
+      await managementRequest("assign", { method: "POST", body: { uid: createdUser.uid, email, role } });
+      await provisionerAuth.sendPasswordResetEmail(email);
+      await provisionerAuth.signOut();
+      userCreateForm.reset();
+      setUsersStatus("User created as " + role + ". A password-setup email was sent to " + email + ".");
+      await loadUsersAndPermissions();
+    } catch (error) {
+      if (createdUser) {
+        try {
+          await managementRequest("set-status", { method: "POST", body: { uid: createdUser.uid, status: "suspended" } });
+        } catch (_) {}
+        try { await createdUser.delete(); } catch (_) {}
+      }
+      setUsersStatus(error.message || "Could not create user.", true);
+    } finally {
+      createUserButton.disabled = false;
+    }
+  }
+
+  async function loadRoleSession(user) {
+    const session = await managementRequest("session");
+    currentUserUid = session.uid;
+    currentUserRole = session.role;
+    currentPermissions = new Set(session.permissions || []);
+    if (!currentPermissions.has("dashboard.view")) throw new Error("Dashboard access is not permitted.");
+    if (usersNavLink) usersNavLink.hidden = !currentPermissions.has("users.manage");
+    if (googleDriveNavLink) googleDriveNavLink.hidden = !currentPermissions.has("drive.read");
+    syncSidebarNavigation();
+    if (googleDriveButton) googleDriveButton.hidden = currentUserUid !== ADMIN_UID;
+    if (googleDriveUploadButton) googleDriveUploadButton.hidden = !currentPermissions.has("drive.write");
+    const uploadPanel = document.querySelector(".upload-panel");
+    if (uploadPanel) uploadPanel.hidden = !currentPermissions.has("vault.write");
+    const roleLabel = document.querySelector(".account-chip > span:nth-child(2)");
+    if (roleLabel) roleLabel.textContent = currentUserRole[0].toUpperCase() + currentUserRole.slice(1);
+    document.querySelectorAll("[data-permission]").forEach(element => {
+      element.hidden = !currentPermissions.has(element.getAttribute("data-permission"));
+    });
+    showAdminSession(true);
+    if (currentPermissions.has("drive.read")) refreshGoogleDriveStatus();
+    if (currentPermissions.has("users.manage")) loadUsersAndPermissions();
+  }
+
+  if (userCreateForm) userCreateForm.addEventListener("submit", createWorkspaceUser);
+  const refreshUsersButton = document.getElementById("refresh-users");
+  if (refreshUsersButton) refreshUsersButton.addEventListener("click", loadUsersAndPermissions);
+
   auth.onAuthStateChanged(async (user) => {
     if (!user) {
+      currentUserUid = null; currentUserRole = null; currentPermissions = new Set();
       showAdminSession(false);
       return;
     }
-    if (user.uid === ADMIN_UID) {
-      showAdminSession(true);
-      refreshGoogleDriveStatus();
-      return;
+    try {
+      await loadRoleSession(user);
+    } catch (error) {
+      showAdminSession(false);
+      status.textContent = error.message || "This account has no active PixelForge access.";
+      try { await auth.signOut(); } catch (_) {}
     }
-    showAdminSession(false);
-    status.textContent = "This account is not authorized for PixelForge administration.";
-    try { await auth.signOut(); } catch (_) {}
   });
 
   form.addEventListener("submit", async (event) => {
@@ -776,10 +1083,7 @@ const firebaseConfig = {
     const password = document.getElementById("password").value;
     try {
       const credential = await auth.signInWithEmailAndPassword(email, password);
-      if (credential.user.uid !== ADMIN_UID) {
-        await auth.signOut();
-        status.textContent = "This account is not authorized for PixelForge administration.";
-      }
+      await loadRoleSession(credential.user);
     } catch (error) {
       const safeMessages = {
         "auth/invalid-credential": "Email or password is incorrect.",

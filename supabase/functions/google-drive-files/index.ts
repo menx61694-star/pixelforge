@@ -6,6 +6,7 @@ const allowedOrigins = new Set([
 ]);
 const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024;
 const MAX_CHUNK_SIZE = 5 * 1024 * 1024;
+const FIREBASE_PROJECT_ID = "pixelforge-66f0c";
 
 function corsHeaders(request: Request) {
   const origin = request.headers.get("Origin") ?? "";
@@ -33,18 +34,25 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   new Uint8Array(buffer).set(bytes);
   return buffer;
 }
-async function verifyFirebaseAdmin(request: Request): Promise<boolean> {
+async function verifyFirebaseUser(request: Request): Promise<string | null> {
   const authorization = request.headers.get("Authorization") ?? "";
   const match = authorization.match(/^Bearer\s+(.+)$/i);
-  if (!match) return false;
+  if (!match) return null;
   const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(required("FIREBASE_WEB_API_KEY"))}`, {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ idToken: match[1] }),
   });
-  if (!response.ok) return false;
+  if (!response.ok) return null;
   const payload = await response.json();
   const account = payload.users?.[0];
-  return account?.localId === required("PIXELFORGE_ADMIN_UID") && account.disabled !== true;
+  if (!account || account.disabled === true) return null;
+  const tokenPayload = match[1].split(".")[1];
+  if (!tokenPayload) return null;
+  const normalized = tokenPayload.replace(/-/g, "+").replace(/_/g, "/");
+  const claims = JSON.parse(atob(normalized + "=".repeat((4 - normalized.length % 4) % 4)));
+  if (claims.iss !== "https://securetoken.google.com/" + FIREBASE_PROJECT_ID ||
+      claims.aud !== FIREBASE_PROJECT_ID || claims.sub !== account.localId) return null;
+  return account.localId as string;
 }
 function supabaseAdmin() {
   return createClient(required("SUPABASE_URL"), required("SUPABASE_SERVICE_ROLE_KEY"), {
@@ -85,6 +93,17 @@ async function getAccessToken() {
   }
   return payload.access_token as string;
 }
+async function hasDrivePermission(uid: string, permission: string): Promise<boolean> {
+  const db = supabaseAdmin();
+  const { data: user, error: userError } = await db.from("pixel_forge_users")
+    .select("role,status").eq("uid", uid).maybeSingle();
+  if (userError) throw userError;
+  if (!user || user.status !== "active") return false;
+  const { data, error } = await db.from("pixel_forge_role_permissions")
+    .select("allowed").eq("role", user.role).eq("permission", permission).maybeSingle();
+  if (error) throw error;
+  return data?.allowed === true;
+}
 function safeUploadUrl(value: string): URL {
   const url = new URL(value);
   if (url.protocol !== "https:" || url.hostname !== "www.googleapis.com" ||
@@ -99,10 +118,16 @@ Deno.serve(async (request) => {
   try {
     const origin = request.headers.get("Origin") ?? "";
     if (!allowedOrigins.has(origin)) return json({ error: "Origin is not allowed." }, 403, request);
-    if (!(await verifyFirebaseAdmin(request))) return json({ error: "Administrator authentication required." }, 401, request);
+    const uid = await verifyFirebaseUser(request);
+    if (!uid) return json({ error: "Firebase authentication required." }, 401, request);
 
     const url = new URL(request.url);
     const action = url.searchParams.get("action");
+    const requiredPermission = action === "delete" ? "drive.delete"
+      : ["create-upload-session", "upload-chunk"].includes(action ?? "") ? "drive.write" : "drive.read";
+    if (!(await hasDrivePermission(uid, requiredPermission))) {
+      return json({ error: "Your role does not allow this Google Drive action." }, 403, request);
+    }
     if (request.method === "GET" && action === "status") {
       const { data, error } = await supabaseAdmin().from("google_drive_oauth_tokens")
         .select("connected_at").eq("id", "pixelForge-owner").maybeSingle();
