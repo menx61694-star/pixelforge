@@ -58,6 +58,10 @@ async function authenticate(request: Request) {
     .select("role,status").eq("uid", identity.uid).maybeSingle();
   if (error) throw error;
   if (!data || data.status !== "active") return null;
+  if (identity.uid === OWNER_UID && identity.email) {
+    await dbAdmin().from("pixel_forge_users").update({ email: identity.email })
+      .eq("uid", OWNER_UID).is("email", null);
+  }
   return { ...identity, role: data.role as string };
 }
 async function requireAdmin(request: Request) {
