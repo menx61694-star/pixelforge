@@ -713,7 +713,7 @@ const firebaseConfig = {
       setVaultStatus("Choose a PDF, JPG or PNG file first.", true);
       return;
     }
-    if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    if (!auth.currentUser || !currentPermissions.has("vault.write")) {
       setVaultStatus("Your account does not have upload permission.", true);
       return;
     }
@@ -960,7 +960,7 @@ const firebaseConfig = {
     const password = document.getElementById("password").value;
     try {
       const credential = await auth.signInWithEmailAndPassword(email, password);
-      if (credential.user.uid !== ADMIN_UID) {
+      if (false) {
         await auth.signOut();
         status.textContent = "This account is not authorized for PixelForge administration.";
       }
