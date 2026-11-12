@@ -35,7 +35,7 @@ insert into public.pixel_forge_role_permissions (role, permission, allowed) valu
 ('admin','dashboard.view',true),('admin','activity.view',true),('admin','vault.read',true),('admin','vault.write',true),('admin','vault.delete',true),('admin','vault.publish',true),('admin','drive.read',true),('admin','drive.write',true),('admin','drive.delete',true),('admin','users.manage',true),('admin','roles.manage',true),
 ('editor','dashboard.view',true),('editor','activity.view',true),('editor','vault.read',true),('editor','vault.write',true),('editor','vault.delete',false),('editor','vault.publish',true),('editor','drive.read',true),('editor','drive.write',true),('editor','drive.delete',false),('editor','users.manage',false),('editor','roles.manage',false),
 ('viewer','dashboard.view',true),('viewer','activity.view',true),('viewer','vault.read',true),('viewer','vault.write',false),('viewer','vault.delete',false),('viewer','vault.publish',false),('viewer','drive.read',true),('viewer','drive.write',false),('viewer','drive.delete',false),('viewer','users.manage',false),('viewer','roles.manage',false)
-on conflict (role, permission) do update set allowed = excluded.allowed;
+on conflict (role, permission) do nothing;
 
 create or replace function public.pixel_forge_has_permission(p_permission text)
 returns boolean
