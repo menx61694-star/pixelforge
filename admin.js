@@ -492,6 +492,25 @@ const firebaseConfig = {
     return storedName.replace(/^\\d{10,}-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, "");
   }
 
+  async function getPublishedFilesIndex() {
+    const published = new Map();
+    if (!supabaseClient || !currentUserUid || !currentPermissions.has("vault.read")) return published;
+    const results = await Promise.all(PUBLIC_CATEGORIES.map(async category => {
+      const { data, error } = await supabaseClient.storage.from(PUBLIC_BUCKET).list(category, {
+        limit: 100, offset: 0, sortBy: { column: "created_at", order: "desc" }
+      });
+      if (error) throw error;
+      return (data || []).filter(file => file.name && !file.name.endsWith("/"))
+        .map(file => ({ name: file.name, category }));
+    }));
+    results.flat().forEach(file => {
+      if (file.name.startsWith(currentUserUid + "-")) {
+        published.set(file.name.slice(currentUserUid.length + 1), file.category);
+      }
+    });
+    return published;
+  }
+
   async function loadFiles() {
     if (!supabaseClient || !auth.currentUser || !currentPermissions.has("vault.read")) return;
     refreshButton.disabled = true;
@@ -507,6 +526,9 @@ const firebaseConfig = {
       if (error) throw error;
       const files = (data || []).filter(item => item.name && !item.name.endsWith("/"));
       currentFiles = files;
+      let publishedFiles = new Map();
+      try { publishedFiles = await getPublishedFilesIndex(); }
+      catch (publishError) { setVaultStatus("Private files loaded; published status could not be checked: " + (publishError.message || "Storage access error"), true); }
       updateStats(files);
       updateDashboardActivity();
       if (!files.length) {
@@ -547,10 +569,12 @@ const firebaseConfig = {
             option.textContent = value.replace(/-/g, " ").replace(/\\b\\w/g, char => char.toUpperCase());
             category.append(option);
           });
+          const publishedCategory = publishedFiles.get(item.name);
+          if (publishedCategory) category.value = publishedCategory;
           const publish = document.createElement("button");
           publish.type = "button";
           publish.className = "publish-button";
-          publish.textContent = "Publish";
+          publish.textContent = publishedCategory ? "Republish" : "Publish";
           publish.addEventListener("click", () => publishFile(path, item.name, category.value, publish));
           const remove = document.createElement("button");
           remove.type = "button";
@@ -561,7 +585,9 @@ const firebaseConfig = {
           unpublish.type = "button";
           unpublish.className = "unpublish-button";
           unpublish.textContent = "Unpublish";
-          unpublish.addEventListener("click", () => unpublishFile(item.name, category.value, unpublish));
+          unpublish.addEventListener("click", () => unpublishFile(item.name, category.value || publishedCategory, unpublish));
+          unpublish.disabled = !publishedCategory;
+          unpublish.title = publishedCategory ? "Remove from " + publishedCategory : "This file is not published";
           category.hidden = !currentPermissions.has("vault.publish");
           publish.hidden = !currentPermissions.has("vault.publish");
           unpublish.hidden = !currentPermissions.has("vault.publish");
@@ -599,6 +625,7 @@ const firebaseConfig = {
       if (uploadError) throw uploadError;
       setVaultStatus("Published publicly in " + category.replace(/-/g, " ") + ". The private original remains private.");
       button.textContent = "Published";
+      await loadFiles();
     } catch (error) {
       setVaultStatus("Publish failed: " + (error.message || "Check public bucket and its write policies."), true);
     } finally {
@@ -618,6 +645,7 @@ const firebaseConfig = {
       const { error } = await supabaseClient.storage.from(PUBLIC_BUCKET).remove([publicPath]);
       if (error) throw error;
       setVaultStatus("Removed from public library. The private original is unchanged.");
+      await loadFiles();
     } catch (error) {
       setVaultStatus("Unpublish failed: " + (error.message || "Check public bucket policies."), true);
     } finally {
