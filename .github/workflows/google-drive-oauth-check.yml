@@ -14,11 +14,9 @@ on:
       - "supabase/functions/google-drive-files/**"
       - "supabase/functions/user-management/**"
       - "supabase/functions/analytics/**"
-      - "supabase/phase-4-analytics.sql"
-      - "supabase/functions/analytics/**"
-      - "supabase/phase-4-analytics.sql"
       - "supabase/config.toml"
       - "supabase/phase-2-users-roles.sql"
+      - "supabase/phase-4-analytics.sql"
       - "admin.js"
       - "vault-storage-utils.js"
       - "tests/vault-storage.test.js"
@@ -33,8 +31,11 @@ on:
       - "supabase/functions/google-drive-oauth/**"
       - "supabase/functions/google-drive-files/**"
       - "supabase/functions/user-management/**"
+      - "supabase/functions/analytics/**"
       - "supabase/config.toml"
       - "supabase/phase-2-users-roles.sql"
+      - "supabase/phase-4-analytics.sql"
+      - "tests/analytics-contract.test.js"
       - "admin.js"
       - "admin.html"
       - "admin.css"
@@ -61,8 +62,10 @@ jobs:
           node --check admin.js
           node --check vault-storage-utils.js
 
-      - name: Run Private Vault storage regression tests
-        run: node --test tests/vault-storage.test.js
+      - name: Run regression and analytics contract tests
+        run: |
+          node --test tests/vault-storage.test.js
+          node --test tests/analytics-contract.test.js
 
       - name: Type-check Edge Functions
         run: |
