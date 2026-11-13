@@ -9,3 +9,6 @@ verify_jwt = false
 
 [functions.analytics]
 verify_jwt = false
+
+[functions.site-settings]
+verify_jwt = false

@@ -1,4 +1,4 @@
-name: Deploy PixelForge Phase 2 Edge Functions
+name: Deploy PixelForge Edge Functions
 
 on:
   workflow_dispatch:
@@ -11,6 +11,8 @@ on:
       - 'supabase/functions/user-management/**'
       - 'supabase/functions/google-drive-files/**'
       - 'supabase/functions/analytics/**'
+      - 'supabase/functions/site-settings/**'
+      - 'supabase/phase-5-settings.sql'
       - 'supabase/config.toml'
       - 'supabase/phase-4-security-logs.sql'
       - 'supabase/dual-storage-publishing.sql'
@@ -24,7 +26,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy user-management, google-drive-files, and analytics
+    name: Deploy user-management, google-drive-files, analytics, and site-settings
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -58,6 +60,11 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: supabase functions deploy analytics --project-ref zeueivmdzhkhonkyllij --use-api --yes
 
+      - name: Deploy site-settings Edge Function
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy site-settings --project-ref zeueivmdzhkhonkyllij --use-api --yes
+
       - name: Smoke-test deployed endpoints reject unauthenticated requests
         run: |
           set -eu
@@ -74,8 +81,13 @@ jobs:
             "https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/google-drive-files?action=public-list")
           test "$PUBLIC_STATUS" = "200" || { cat /tmp/public-drive-response.json; echo "::error::Expected public Drive listing to return HTTP 200 after migration, got $PUBLIC_STATUS"; exit 1; }
 
+          SETTINGS_STATUS=$(curl --silent --show-error --output /tmp/site-settings-response.json --write-out "%{http_code}" \
+            --header "Origin: https://pixelforge.jo3.org" \
+            "https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=list")
+          test "$SETTINGS_STATUS" = "403" || { cat /tmp/site-settings-response.json; echo "::error::Expected site-settings to reject unauthenticated access with HTTP 403, got $SETTINGS_STATUS"; exit 1; }
+
           ANALYTICS_STATUS=$(curl --silent --show-error --output /tmp/analytics-summary-response.json --write-out "%{http_code}" \
             --header "Origin: https://pixelforge.jo3.org" \
             "https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/analytics?action=summary")
           test "$ANALYTICS_STATUS" = "401" || { cat /tmp/analytics-summary-response.json; echo "::error::Expected analytics summary to reject unauthenticated access with HTTP 401, got $ANALYTICS_STATUS"; exit 1; }
-          echo "Authenticated endpoints reject anonymous requests, public Drive listing is available, and analytics summary requires Firebase authentication."
+          echo "Authenticated endpoints reject anonymous requests, public Drive listing is available, and analytics summary and site settings require Firebase authentication."
