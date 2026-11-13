@@ -65,6 +65,11 @@ const firebaseConfig = {
   let currentPermissions = new Set();
   const usersNavLink = document.getElementById("users-nav-link");
   const analyticsNavLink = document.getElementById("analytics-nav-link");
+  const securityLogsNavLink = document.getElementById("security-logs-nav-link");
+  const securityLogsBody = document.getElementById("security-logs-body");
+  const securityLogsStatus = document.getElementById("security-logs-status");
+  const refreshSecurityLogsButton = document.getElementById("refresh-security-logs");
+  const deleteSecurityLogsButton = document.getElementById("delete-security-logs");
   const analyticsRange = document.getElementById("analytics-range");
   let analyticsLoadSequence = 0;
   const googleDriveNavLink = document.getElementById("google-drive-nav-link");
@@ -77,16 +82,17 @@ const firebaseConfig = {
   const createUserButton = document.getElementById("create-user-button");
 
   const sidebarLinks = Array.from(document.querySelectorAll(".sidebar .nav-link"));
-  const dashboardPages = ["overview", "recent-activity", "documents", "google-drive", "analytics", "users"]
+  const dashboardPages = ["overview", "recent-activity", "documents", "google-drive", "analytics", "security-logs", "users"]
     .map(id => document.getElementById(id))
     .filter(Boolean);
   function syncSidebarNavigation() {
     const requestedPage = (window.location.hash || "#overview").slice(1);
     let activePage = dashboardPages.some(page => page.id === requestedPage) ? requestedPage : "overview";
-    const pagePermissions = { overview: "dashboard.view", "recent-activity": "activity.view", documents: "vault.read", "google-drive": "drive.read", analytics: "analytics.view", users: "users.manage" };
+    const pagePermissions = { overview: "dashboard.view", "recent-activity": "activity.view", documents: "vault.read", "google-drive": "drive.read", analytics: "analytics.view", "security-logs": "security.logs.view", users: "users.manage" };
     if (currentUserUid && !currentPermissions.has(pagePermissions[activePage])) activePage = "overview";
     dashboardPages.forEach(page => { page.hidden = page.id !== activePage; });
     if (activePage === "analytics" && currentPermissions.has("analytics.view")) loadAnalyticsDashboard();
+    if (activePage === "security-logs" && currentPermissions.has("security.logs.view")) loadSecurityLogs();
     sidebarLinks.forEach(link => {
       const isActive = link.getAttribute("href") === "#" + activePage;
       link.classList.toggle("active", isActive);
@@ -1100,6 +1106,68 @@ const firebaseConfig = {
 
   if (analyticsRange) analyticsRange.addEventListener("change", loadAnalyticsDashboard);
 
+
+  function setSecurityLogsStatus(message, isError = false) {
+    if (!securityLogsStatus) return;
+    securityLogsStatus.textContent = message;
+    securityLogsStatus.style.color = isError ? "#a23c32" : "#53617b";
+  }
+
+  async function securityLogsRequest(action, options = {}) {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Please sign in again.");
+    const headers = { "Authorization": "Bearer " + await user.getIdToken() };
+    if (options.body) headers["Content-Type"] = "application/json";
+    const response = await fetch(SUPABASE_URL + "/functions/v1/analytics?action=" + encodeURIComponent(action), {
+      method: options.method || "GET", headers, body: options.body ? JSON.stringify(options.body) : undefined
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Security logs request failed.");
+    return payload;
+  }
+
+  async function loadSecurityLogs() {
+    if (!currentPermissions.has("security.logs.view") || !securityLogsBody) return;
+    setSecurityLogsStatus("Loading encrypted security logs…");
+    try {
+      const payload = await securityLogsRequest("security-logs");
+      securityLogsBody.replaceChildren();
+      if (!payload.logs || !payload.logs.length) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.colSpan = 4; cell.className = "empty-state"; cell.textContent = "No security logs recorded yet.";
+        row.append(cell); securityLogsBody.append(row);
+      } else {
+        payload.logs.forEach(log => {
+          const row = document.createElement("tr");
+          [log.ipAddress, log.eventType, log.pagePath, new Date(log.createdAt).toLocaleString() + " UTC"].forEach(value => {
+            const cell = document.createElement("td"); cell.textContent = String(value ?? "—"); row.append(cell);
+          });
+          securityLogsBody.append(row);
+        });
+      }
+      setSecurityLogsStatus((payload.logs || []).length + " recent log(s) loaded · 90-day automatic retention.");
+    } catch (error) {
+      setSecurityLogsStatus(error.message || "Could not load security logs.", true);
+    }
+  }
+
+  if (refreshSecurityLogsButton) refreshSecurityLogsButton.addEventListener("click", loadSecurityLogs);
+  if (deleteSecurityLogsButton) deleteSecurityLogsButton.addEventListener("click", async () => {
+    if (!currentPermissions.has("security.logs.delete")) return;
+    if (!window.confirm("Delete ALL currently stored visitor security logs? This cannot be undone.")) return;
+    deleteSecurityLogsButton.disabled = true;
+    try {
+      const result = await securityLogsRequest("delete-security-logs", { method: "POST", body: {} });
+      setSecurityLogsStatus("Manually deleted " + Number(result.deletedCount || 0).toLocaleString() + " security log(s).");
+      await loadSecurityLogs();
+    } catch (error) {
+      setSecurityLogsStatus(error.message || "Could not delete security logs.", true);
+    } finally {
+      deleteSecurityLogsButton.disabled = false;
+    }
+  });
+
   function setUsersStatus(message, isError = false) {
     if (!usersStatus) return;
     usersStatus.textContent = message;
@@ -1240,6 +1308,8 @@ const firebaseConfig = {
     if (!currentPermissions.has("dashboard.view")) throw new Error("Dashboard access is not permitted.");
     if (usersNavLink) usersNavLink.hidden = !currentPermissions.has("users.manage");
     if (analyticsNavLink) analyticsNavLink.hidden = !currentPermissions.has("analytics.view");
+    if (securityLogsNavLink) securityLogsNavLink.hidden = !currentPermissions.has("security.logs.view");
+    if (deleteSecurityLogsButton) deleteSecurityLogsButton.hidden = !currentPermissions.has("security.logs.delete");
     if (googleDriveNavLink) googleDriveNavLink.hidden = !currentPermissions.has("drive.read");
     syncSidebarNavigation();
     if (googleDriveButton) googleDriveButton.hidden = currentUserUid !== ADMIN_UID;
