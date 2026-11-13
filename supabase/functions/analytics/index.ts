@@ -88,9 +88,10 @@ function getClientIp(request: Request): string | null {
   const candidate = request.headers.get("cf-connecting-ip") ?? request.headers.get("x-real-ip");
   if (!candidate || candidate.length > 64) return null;
   const ip = candidate.trim();
-  const ipv4 = /^(?:(?:25[0-5]|2[0-4]\\d|1?\\d?\\d)\\.){3}(?:25[0-5]|2[0-4]\\d|1?\\d?\\d)$/;
-  const ipv6 = /^[0-9a-f:]+$/i;
-  return (ipv4.test(ip) || (ip.includes(":") && ipv6.test(ip))) ? ip : null;
+  const ipv4Parts = ip.split(".");
+  const validIpv4 = ipv4Parts.length === 4 && ipv4Parts.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255);
+  const validIpv6 = ip.includes(":") && /^[0-9a-f:]+$/i.test(ip) && ip.split(":").length >= 3;
+  return (validIpv4 || validIpv6) ? ip : null;
 }
 function ipEncryptionKey(): Promise<CryptoKey> {
   const raw = required("ANALYTICS_IP_ENCRYPTION_KEY");
