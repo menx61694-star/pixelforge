@@ -72,6 +72,6 @@ test("settings permissions are admin-only in both role seed and permission manag
 test("settings API has a strict origin allowlist and exposes only the minimal public maintenance status", () => {
   assert.match(edge, /allowedOrigins\.has\(origin\)/);
   assert.match(edge, /Access-Control-Allow-Origin/);
-  assert.match(edge, /authorize\(request, permission\)/);
+  assert.match(edge, /authorize\(request, permission\)/);\n  assert.match(edge, /action === "public-status"/);\n  assert.match(edge, /maintenance\\.enabled/);\n  assert.match(edge, /maintenance\\.message/);
   assert.doesNotMatch(edge, /SUPABASE_ANON_KEY|SUPABASE_PUBLISHABLE_KEY/);
 });
