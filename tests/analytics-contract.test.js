@@ -174,6 +174,8 @@ test("admin Security Logs page is permission-gated and manual deletion requires 
   assert.match(adminJs, /securityLogsRequest\("security-logs"\)/);
   assert.match(adminJs, /window\.confirm\("Delete ALL currently stored visitor security logs/);
   assert.match(adminJs, /securityLogsRequest\("delete-security-logs"/);
+  assert.ok(adminJs.includes('timeZone: "Asia/Kolkata"'));
+  assert.ok(adminJs.includes('" IST"'));
 });
 
 test("security logs trust only edge client IP and reject private address ranges", () => {
