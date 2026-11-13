@@ -42,6 +42,7 @@
         <a class="nav-link" href="#recent-activity"><span class="nav-icon">◷</span> Recent activity</a>
         <a class="nav-link" href="#documents"><span class="nav-icon">▤</span> Private vault</a>
         <a class="nav-link" href="#google-drive" id="google-drive-nav-link" hidden><span class="nav-icon">G</span> Google Drive</a>
+        <a class="nav-link" href="#analytics" id="analytics-nav-link" data-permission="analytics.view" hidden><span class="nav-icon">▥</span> Analytics</a>
         <a class="nav-link" href="#users" id="users-nav-link" hidden><span class="nav-icon">♙</span> Users &amp; roles</a>
         <div class="sidebar-bottom">
           <div class="secure-card"><span class="secure-icon">✓</span><div><strong>Private by design</strong><small>Role-based document access</small></div></div>
@@ -127,6 +128,37 @@
               <ul id="google-drive-file-list" class="file-list" aria-live="polite"><li class="empty-state">Google Drive files will appear here.</li></ul>
             </div>
           </section>
+        </div>
+
+
+        <div class="dashboard-content dashboard-page" id="analytics" hidden>
+          <section class="panel analytics-panel">
+            <div class="panel-heading">
+              <div><p class="eyebrow">PUBLIC WEBSITE</p><h2>Traffic analytics</h2></div>
+              <label class="analytics-range-label" for="analytics-range">Date range
+                <select id="analytics-range">
+                  <option value="7">Last 7 days</option>
+                  <option value="30" selected>Last 30 days</option>
+                  <option value="90">Last 90 days</option>
+                </select>
+              </label>
+            </div>
+            <p id="analytics-status" class="panel-copy" role="status" aria-live="polite">Loading website analytics…</p>
+            <div class="analytics-stats">
+              <article class="stat-card"><span class="stat-icon violet">◷</span><p>Page views</p><strong id="analytics-total-views">—</strong><small>Selected date range</small></article>
+            </div>
+          </section>
+          <section class="analytics-grid">
+            <article class="panel">
+              <div class="panel-heading"><div><p class="eyebrow">TREND</p><h2>Daily page views</h2></div></div>
+              <div id="analytics-daily-chart" class="analytics-chart" aria-label="Daily page views chart"></div>
+            </article>
+            <article class="panel">
+              <div class="panel-heading"><div><p class="eyebrow">MOST VISITED</p><h2>Popular pages</h2></div></div>
+              <ol id="analytics-top-pages" class="analytics-top-pages"><li class="empty-state">Loading page statistics…</li></ol>
+            </article>
+          </section>
+          <p class="analytics-privacy-note">Privacy-first reporting: anonymous page views only. No visitor profiles, raw IP addresses, document names or referrer URLs are stored.</p>
         </div>
 
         <div class="dashboard-content dashboard-page" id="users" hidden>

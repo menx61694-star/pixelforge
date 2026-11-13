@@ -7,16 +7,22 @@ on:
       - feature/phase-2-users-roles
       - feature/phase-3-vault-drive
       - fix/phase-2-drive-publish-activity
+      - feature/phase4-privacy-first-analytics
       - main
     paths:
       - "supabase/functions/google-drive-oauth/**"
       - "supabase/functions/google-drive-files/**"
       - "supabase/functions/user-management/**"
+      - "supabase/functions/analytics/**"
       - "supabase/config.toml"
       - "supabase/phase-2-users-roles.sql"
+      - "supabase/phase-4-analytics.sql"
       - "admin.js"
+      - "script.js"
+      - "library.js"
       - "vault-storage-utils.js"
       - "tests/vault-storage.test.js"
+      - "tests/analytics-contract.test.js"
       - "admin.html"
       - "admin.css"
       - ".github/workflows/google-drive-oauth-check.yml"
@@ -27,9 +33,14 @@ on:
       - "supabase/functions/google-drive-oauth/**"
       - "supabase/functions/google-drive-files/**"
       - "supabase/functions/user-management/**"
+      - "supabase/functions/analytics/**"
       - "supabase/config.toml"
       - "supabase/phase-2-users-roles.sql"
+      - "supabase/phase-4-analytics.sql"
+      - "tests/analytics-contract.test.js"
       - "admin.js"
+      - "script.js"
+      - "library.js"
       - "admin.html"
       - "admin.css"
       - ".github/workflows/google-drive-oauth-check.yml"
@@ -53,13 +64,18 @@ jobs:
       - name: Check admin JavaScript syntax
         run: |
           node --check admin.js
+          node --check script.js
+          node --check library.js
           node --check vault-storage-utils.js
 
-      - name: Run Private Vault storage regression tests
-        run: node --test tests/vault-storage.test.js
+      - name: Run regression and analytics contract tests
+        run: |
+          node --test tests/vault-storage.test.js
+          node --test tests/analytics-contract.test.js
 
       - name: Type-check Edge Functions
         run: |
           deno check supabase/functions/google-drive-oauth/index.ts
           deno check supabase/functions/google-drive-files/index.ts
           deno check supabase/functions/user-management/index.ts
+          deno check supabase/functions/analytics/index.ts

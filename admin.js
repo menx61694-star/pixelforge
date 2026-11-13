@@ -58,6 +58,9 @@ const firebaseConfig = {
   let currentUserRole = null;
   let currentPermissions = new Set();
   const usersNavLink = document.getElementById("users-nav-link");
+  const analyticsNavLink = document.getElementById("analytics-nav-link");
+  const analyticsRange = document.getElementById("analytics-range");
+  let analyticsLoadSequence = 0;
   const googleDriveNavLink = document.getElementById("google-drive-nav-link");
   const userCreateForm = document.getElementById("user-create-form");
   const usersStatus = document.getElementById("users-status");
@@ -68,15 +71,16 @@ const firebaseConfig = {
   const createUserButton = document.getElementById("create-user-button");
 
   const sidebarLinks = Array.from(document.querySelectorAll(".sidebar .nav-link"));
-  const dashboardPages = ["overview", "recent-activity", "documents", "google-drive", "users"]
+  const dashboardPages = ["overview", "recent-activity", "documents", "google-drive", "analytics", "users"]
     .map(id => document.getElementById(id))
     .filter(Boolean);
   function syncSidebarNavigation() {
     const requestedPage = (window.location.hash || "#overview").slice(1);
     let activePage = dashboardPages.some(page => page.id === requestedPage) ? requestedPage : "overview";
-    const pagePermissions = { overview: "dashboard.view", "recent-activity": "activity.view", documents: "vault.read", "google-drive": "drive.read", users: "users.manage" };
+    const pagePermissions = { overview: "dashboard.view", "recent-activity": "activity.view", documents: "vault.read", "google-drive": "drive.read", analytics: "analytics.view", users: "users.manage" };
     if (currentUserUid && !currentPermissions.has(pagePermissions[activePage])) activePage = "overview";
     dashboardPages.forEach(page => { page.hidden = page.id !== activePage; });
+    if (activePage === "analytics" && currentPermissions.has("analytics.view")) loadAnalyticsDashboard();
     sidebarLinks.forEach(link => {
       const isActive = link.getAttribute("href") === "#" + activePage;
       link.classList.toggle("active", isActive);
@@ -936,6 +940,91 @@ const firebaseConfig = {
     return payload;
   }
 
+
+  async function loadAnalyticsDashboard() {
+    if (!currentPermissions.has("analytics.view") || !auth.currentUser) return;
+    const statusElement = document.getElementById("analytics-status");
+    const totalElement = document.getElementById("analytics-total-views");
+    const chart = document.getElementById("analytics-daily-chart");
+    const topPages = document.getElementById("analytics-top-pages");
+    if (!statusElement || !totalElement || !chart || !topPages) return;
+    const sequence = ++analyticsLoadSequence;
+    const days = analyticsRange ? analyticsRange.value : "30";
+    statusElement.textContent = "Loading website analytics…";
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch(SUPABASE_URL + "/functions/v1/analytics?action=summary&days=" + encodeURIComponent(days), {
+        headers: { "Authorization": "Bearer " + token }
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Analytics could not be loaded.");
+      if (sequence !== analyticsLoadSequence) return;
+      totalElement.textContent = Number(payload.totalPageViews || 0).toLocaleString();
+      statusElement.textContent = "Showing the last " + payload.days + " days · Updated just now.";
+      renderAnalyticsChart(Array.isArray(payload.daily) ? payload.daily : [], chart);
+      renderAnalyticsTopPages(Array.isArray(payload.topPages) ? payload.topPages : [], topPages);
+    } catch (error) {
+      if (sequence !== analyticsLoadSequence) return;
+      statusElement.textContent = error.message || "Analytics could not be loaded.";
+      totalElement.textContent = "—";
+      chart.replaceChildren();
+      topPages.replaceChildren();
+      const empty = document.createElement("li");
+      empty.className = "empty-state";
+      empty.textContent = "Analytics are unavailable until the database setup and Edge Function deployment are complete.";
+      topPages.append(empty);
+    }
+  }
+
+  function renderAnalyticsChart(days, root) {
+    root.replaceChildren();
+    if (!days.length) {
+      const empty = document.createElement("p");
+      empty.className = "empty-state";
+      empty.textContent = "No page views recorded in this date range yet.";
+      root.append(empty);
+      return;
+    }
+    const max = Math.max(1, ...days.map(item => Number(item.views) || 0));
+    days.forEach(item => {
+      const column = document.createElement("div");
+      column.className = "analytics-bar-column";
+      const value = document.createElement("span");
+      value.className = "analytics-bar-value";
+      value.textContent = Number(item.views || 0).toLocaleString();
+      const bar = document.createElement("div");
+      bar.className = "analytics-bar";
+      bar.style.height = Math.max(3, (Number(item.views || 0) / max) * 120) + "px";
+      bar.title = item.date + ": " + value.textContent + " views";
+      const label = document.createElement("small");
+      label.textContent = String(item.date || "").slice(5);
+      column.append(value, bar, label);
+      root.append(column);
+    });
+  }
+
+  function renderAnalyticsTopPages(pages, root) {
+    root.replaceChildren();
+    if (!pages.length) {
+      const empty = document.createElement("li");
+      empty.className = "empty-state";
+      empty.textContent = "No page views recorded yet.";
+      root.append(empty);
+      return;
+    }
+    pages.forEach(item => {
+      const li = document.createElement("li");
+      const path = document.createElement("span");
+      path.textContent = item.path;
+      const views = document.createElement("strong");
+      views.textContent = Number(item.views || 0).toLocaleString();
+      li.append(path, views);
+      root.append(li);
+    });
+  }
+
+  if (analyticsRange) analyticsRange.addEventListener("change", loadAnalyticsDashboard);
+
   function setUsersStatus(message, isError = false) {
     if (!usersStatus) return;
     usersStatus.textContent = message;
@@ -1073,6 +1162,7 @@ const firebaseConfig = {
     currentPermissions = new Set(session.permissions || []);
     if (!currentPermissions.has("dashboard.view")) throw new Error("Dashboard access is not permitted.");
     if (usersNavLink) usersNavLink.hidden = !currentPermissions.has("users.manage");
+    if (analyticsNavLink) analyticsNavLink.hidden = !currentPermissions.has("analytics.view");
     if (googleDriveNavLink) googleDriveNavLink.hidden = !currentPermissions.has("drive.read");
     syncSidebarNavigation();
     if (googleDriveButton) googleDriveButton.hidden = currentUserUid !== ADMIN_UID;
