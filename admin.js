@@ -294,19 +294,19 @@ const firebaseConfig = {
     button.disabled = true;
     try {
       setDriveFilesStatus("Publishing Drive reference…");
-      const { error } = await supabaseClient.from("pixel_forge_published_documents").upsert({
-        source: "google_drive",
-        owner_uid: currentUserUid,
-        drive_file_id: file.id,
-        storage_path: null,
-        category,
-        title: file.name || "Drive document",
-        mime_type: file.mimeType || "application/octet-stream",
-        size_bytes: Number(file.size || 0) || null,
-        published: true,
-        updated_at: new Date().toISOString()
-      }, { onConflict: "source,drive_file_id" });
-      if (error) throw error;
+      const response = await googleDriveRequest("publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileId: file.id,
+          category,
+          title: file.name || "Drive document",
+          mimeType: file.mimeType || "application/octet-stream",
+          sizeBytes: Number(file.size || 0) || null
+        })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Could not publish Drive file.");
       setDriveFilesStatus("Published " + (file.name || "Drive file") + " in " + category.replace(/-/g, " ") + ". No duplicate upload was created.");
       await loadGoogleDriveFiles();
     } catch (error) {
@@ -324,12 +324,13 @@ const firebaseConfig = {
     if (!window.confirm("Remove this Drive file from the public library? The Google Drive original will remain unchanged.")) return;
     button.disabled = true;
     try {
-      const { error } = await supabaseClient.from("pixel_forge_published_documents")
-        .delete()
-        .eq("source", "google_drive")
-        .eq("drive_file_id", file.id)
-        .eq("owner_uid", currentUserUid);
-      if (error) throw error;
+      const response = await googleDriveRequest("unpublish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileId: file.id })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Could not unpublish Drive file.");
       setDriveFilesStatus("Removed from public library. The Google Drive original is unchanged.");
       await loadGoogleDriveFiles();
     } catch (error) {
@@ -637,14 +638,10 @@ const firebaseConfig = {
         published.set(file.name.slice(currentUserUid.length + 1), file.category);
       }
     });
-    const { data: drivePublished, error: drivePublishError } = await supabaseClient
-      .from("pixel_forge_published_documents")
-      .select("drive_file_id,category,title")
-      .eq("source", "google_drive")
-      .eq("owner_uid", currentUserUid)
-      .eq("published", true);
-    if (drivePublishError) throw drivePublishError;
-    (drivePublished || []).forEach(item => {
+    const driveResponse = await googleDriveRequest("published-list");
+    const drivePayload = await driveResponse.json();
+    if (!driveResponse.ok) throw new Error(drivePayload.error || "Could not load published Drive files.");
+    (drivePayload.documents || []).forEach(item => {
       if (item.drive_file_id) published.set(item.drive_file_id, item.category);
     });
     return published;
