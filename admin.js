@@ -992,9 +992,11 @@ const firebaseConfig = {
     if (!currentPermissions.has("analytics.view") || !auth.currentUser) return;
     const statusElement = document.getElementById("analytics-status");
     const totalElement = document.getElementById("analytics-total-views");
+    const visitorsElement = document.getElementById("analytics-total-visitors");
+    const locationsElement = document.getElementById("analytics-locations");
     const chart = document.getElementById("analytics-daily-chart");
     const topPages = document.getElementById("analytics-top-pages");
-    if (!statusElement || !totalElement || !chart || !topPages) return;
+    if (!statusElement || !totalElement || !chart || !topPages || !visitorsElement || !locationsElement) return;
     const sequence = ++analyticsLoadSequence;
     const days = analyticsRange ? analyticsRange.value : "30";
     statusElement.textContent = "Loading website analytics…";
@@ -1007,15 +1009,19 @@ const firebaseConfig = {
       if (!response.ok) throw new Error(payload.error || "Analytics could not be loaded.");
       if (sequence !== analyticsLoadSequence) return;
       totalElement.textContent = Number(payload.totalPageViews || 0).toLocaleString();
+      visitorsElement.textContent = Number(payload.uniqueVisitors || 0).toLocaleString();
       statusElement.textContent = "Showing the last " + payload.days + " days · Updated just now.";
       renderAnalyticsChart(Array.isArray(payload.daily) ? payload.daily : [], chart);
       renderAnalyticsTopPages(Array.isArray(payload.topPages) ? payload.topPages : [], topPages);
+      renderAnalyticsLocations(Array.isArray(payload.locations) ? payload.locations : [], locationsElement);
     } catch (error) {
       if (sequence !== analyticsLoadSequence) return;
       statusElement.textContent = error.message || "Analytics could not be loaded.";
       totalElement.textContent = "—";
+      visitorsElement.textContent = "—";
       chart.replaceChildren();
       topPages.replaceChildren();
+      locationsElement.replaceChildren();
       const empty = document.createElement("li");
       empty.className = "empty-state";
       empty.textContent = "Analytics are unavailable until the database setup and Edge Function deployment are complete.";
@@ -1066,6 +1072,28 @@ const firebaseConfig = {
       const views = document.createElement("strong");
       views.textContent = Number(item.views || 0).toLocaleString();
       li.append(path, views);
+      root.append(li);
+    });
+  }
+
+
+  function renderAnalyticsLocations(locations, root) {
+    root.replaceChildren();
+    if (!locations.length) {
+      const empty = document.createElement("li");
+      empty.className = "empty-state";
+      empty.textContent = "Location data is not available from the hosting edge headers yet.";
+      root.append(empty);
+      return;
+    }
+    locations.forEach(item => {
+      const li = document.createElement("li");
+      const label = document.createElement("span");
+      const country = item.country || "Unknown";
+      label.textContent = item.region ? country + " · " + item.region : country;
+      const visitors = document.createElement("strong");
+      visitors.textContent = Number(item.visitors || 0).toLocaleString();
+      li.append(label, visitors);
       root.append(li);
     });
   }

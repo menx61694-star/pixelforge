@@ -15,6 +15,16 @@ create index if not exists pixel_forge_analytics_events_created_at_idx
   on public.pixel_forge_analytics_events (created_at desc);
 create index if not exists pixel_forge_analytics_events_path_created_idx
   on public.pixel_forge_analytics_events (page_path, created_at desc);
+alter table public.pixel_forge_analytics_events
+  add column if not exists visitor_hash text,
+  add column if not exists country_code text,
+  add column if not exists region_name text;
+
+create index if not exists pixel_forge_analytics_events_visitor_created_idx
+  on public.pixel_forge_analytics_events (visitor_hash, created_at desc);
+create index if not exists pixel_forge_analytics_events_location_created_idx
+  on public.pixel_forge_analytics_events (country_code, region_name, created_at desc);
+
 
 alter table public.pixel_forge_analytics_events enable row level security;
 revoke all on public.pixel_forge_analytics_events from public, anon, authenticated;
@@ -80,10 +90,13 @@ set search_path = ''
 as $$
   select jsonb_build_object(
     'totalPageViews', count(*),
+    'uniqueVisitors', count(distinct e.visitor_hash),
     'daily', coalesce((
-      select jsonb_agg(jsonb_build_object('date', d.day, 'views', d.views) order by d.day)
+      select jsonb_agg(jsonb_build_object('date', d.day, 'views', d.views, 'visitors', d.visitors) order by d.day)
       from (
-        select (e.created_at at time zone 'UTC')::date as day, count(*)::bigint as views
+        select (e.created_at at time zone 'UTC')::date as day,
+          count(*)::bigint as views,
+          count(distinct e.visitor_hash)::bigint as visitors
         from public.pixel_forge_analytics_events e
         where e.created_at >= p_from and e.created_at < p_to
         group by 1
@@ -99,6 +112,19 @@ as $$
         order by views desc, e.page_path
         limit 10
       ) p
+    ), '[]'::jsonb),
+    'locations', coalesce((
+      select jsonb_agg(jsonb_build_object('country', l.country_code, 'region', l.region_name, 'visitors', l.visitors)
+        order by l.visitors desc, l.country_code, l.region_name)
+      from (
+        select e.country_code, e.region_name, count(distinct e.visitor_hash)::bigint as visitors
+        from public.pixel_forge_analytics_events e
+        where e.created_at >= p_from and e.created_at < p_to
+          and e.country_code is not null
+        group by e.country_code, e.region_name
+        order by visitors desc, e.country_code, e.region_name
+        limit 20
+      ) l
     ), '[]'::jsonb)
   )
   from public.pixel_forge_analytics_events e
@@ -114,4 +140,4 @@ insert into public.pixel_forge_role_permissions (role, permission, allowed) valu
 on conflict (role, permission) do nothing;
 
 comment on table public.pixel_forge_analytics_events is
-  'Anonymous allowlisted page views only; no IP, visitor identifier, referrer, query string, or document metadata. Events older than 90 days are purged during collection.';
+  'Anonymous page views with HMAC-hashed tab-session identifiers and trusted edge country/region headers only; no raw IP, referrer, query string, or document metadata. Events older than 90 days are purged during collection.';

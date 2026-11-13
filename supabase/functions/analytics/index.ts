@@ -63,16 +63,25 @@ async function hasAnalyticsPermission(uid: string): Promise<boolean> {
   if (error) throw error;
   return data?.allowed === true;
 }
-async function rateLimitKey(request: Request): Promise<string | null> {
-  const forwarded = request.headers.get("cf-connecting-ip") ?? request.headers.get("x-real-ip");
-  if (!forwarded) return null;
+async function hmacHash(value: string): Promise<string> {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw", encoder.encode(required("SUPABASE_SERVICE_ROLE_KEY")),
     { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
   );
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(forwarded));
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(value));
   return Array.from(new Uint8Array(signature), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+async function rateLimitKey(request: Request): Promise<string | null> {
+  const forwarded = request.headers.get("cf-connecting-ip") ?? request.headers.get("x-real-ip");
+  return forwarded ? await hmacHash("rate:" + forwarded) : null;
+}
+function getTrustedLocation(request: Request) {
+  const rawCountry = request.headers.get("cf-ipcountry") ?? "";
+  const countryCode = /^[A-Za-z]{2}$/.test(rawCountry) ? rawCountry.toUpperCase() : null;
+  const rawRegion = request.headers.get("cf-region") ?? "";
+  const regionName = rawRegion.trim().slice(0, 80) || null;
+  return { countryCode, regionName };
 }
 
 Deno.serve(async (request) => {
@@ -90,7 +99,11 @@ Deno.serve(async (request) => {
     if (request.method === "POST" && action === "collect") {
       const input = await request.json().catch(() => null);
       const pagePath = input && typeof input.pagePath === "string" ? input.pagePath : "";
-      if (!allowedPaths.has(pagePath) || Object.keys(input ?? {}).some((key) => key !== "pagePath")) {
+      const visitorSessionId = input && typeof input.visitorSessionId === "string" ? input.visitorSessionId : "";
+      const validSessionId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(visitorSessionId);
+      if (!allowedPaths.has(pagePath) ||
+          Object.keys(input ?? {}).some((key) => key !== "pagePath" && key !== "visitorSessionId") ||
+          (visitorSessionId !== "" && !validSessionId)) {
         return json({ error: "Invalid analytics event." }, 400, request);
       }
       const keyHash = await rateLimitKey(request);
@@ -103,7 +116,14 @@ Deno.serve(async (request) => {
       });
       if (rateError) throw rateError;
       if (permitted !== true) return json({ error: "Rate limit exceeded." }, 429, request);
-      const { error } = await db.from("pixel_forge_analytics_events").insert({ page_path: pagePath });
+      const visitorHash = validSessionId ? await hmacHash("visitor:" + visitorSessionId) : null;
+      const location = getTrustedLocation(request);
+      const { error } = await db.from("pixel_forge_analytics_events").insert({
+        page_path: pagePath,
+        visitor_hash: visitorHash,
+        country_code: location.countryCode,
+        region_name: location.regionName,
+      });
       if (error) throw error;
       return json({ recorded: true }, 202, request);
     }

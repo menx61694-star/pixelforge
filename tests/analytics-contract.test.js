@@ -16,8 +16,9 @@ test("analytics Edge Function is registered with platform JWT verification disab
 test("public collection accepts only the allowlisted page_path and rejects extra event fields", () => {
   assert.match(edge, /const allowedPaths = new Set\(/);
   assert.match(edge, /!allowedPaths\.has\(pagePath\)/);
-  assert.match(edge, /Object\.keys\(input \?\? \{\}\)\.some\(\(key\) => key !== "pagePath"\)/);
-  assert.match(edge, /insert\(\{ page_path: pagePath \}\)/);
+  assert.match(edge, /key !== "pagePath" && key !== "visitorSessionId"/);
+  assert.match(edge, /visitor_hash: visitorHash/);
+  assert.match(edge, /insert\(\{[\s\S]*page_path: pagePath/);
 });
 
 test("event and rate-limit tables deny direct client access and enable RLS", () => {
@@ -59,6 +60,8 @@ test("public homepage and library send allowlisted page paths without visitor cr
   const homepage = read("script.js");
   const library = read("library.js");
   assert.match(homepage, /trackPixelForgePageView\(\);/);
+  assert.match(homepage, /sessionStorage\.getItem\(key\)/);
+  assert.match(homepage, /visitorSessionId/);
   assert.match(homepage, /credentials: "omit"/);
   assert.match(library, /analytics\?action=collect/);
   assert.match(library, /credentials: "omit"/);
@@ -94,4 +97,35 @@ test("overview shortcuts and optional metrics respect existing role permissions"
   assert.match(adminHtml, /data-permission="analytics.view"/);
   assert.match(adminHtml, /data-permission="users.manage"/);
   assert.match(read("admin.js"), /querySelectorAll\("\[data-permission\]"\)/);
+});
+
+test("refreshes reuse the same tab session ID and summary reports unique visitors separately", () => {
+  const homepage = read("script.js");
+  const library = read("library.js");
+  assert.match(homepage, /sessionStorage\.getItem\(key\)/);
+  assert.match(homepage, /sessionStorage\.setItem\(key, id\)/);
+  assert.match(library, /sessionStorage\.getItem\(key\)/);
+  assert.match(edge, /hmacHash\("visitor:" \+ visitorSessionId\)/);
+  assert.match(sql, /count\(distinct e\.visitor_hash\)/i);
+  assert.match(sql, /'uniqueVisitors'/);
+});
+
+test("location reporting accepts only edge-provided country and region headers and stores aggregates", () => {
+  assert.match(edge, /cf-ipcountry/);
+  assert.match(edge, /cf-region/);
+  assert.match(edge, /country_code: location\.countryCode/);
+  assert.match(sql, /add column if not exists country_code text/i);
+  assert.match(sql, /add column if not exists region_name text/i);
+  assert.match(sql, /'locations'/);
+  assert.doesNotMatch(sql.match(/create table if not exists public\.pixel_forge_analytics_events \(([\s\S]*?)\n\);/i)?.[1] ?? "", /ip_address/i);
+});
+
+test("admin analytics separates page views, unique visitors, and location reports", () => {
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  assert.match(adminHtml, /id="analytics-total-visitors"/);
+  assert.match(adminHtml, /id="analytics-locations"/);
+  assert.match(adminHtml, /Unique visitors/);
+  assert.match(adminJs, /payload\.uniqueVisitors/);
+  assert.match(adminJs, /renderAnalyticsLocations/);
 });

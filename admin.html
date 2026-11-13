@@ -170,7 +170,8 @@
             </div>
             <p id="analytics-status" class="panel-copy" role="status" aria-live="polite">Loading website analytics…</p>
             <div class="analytics-stats">
-              <article class="stat-card"><span class="stat-icon violet">◷</span><p>Page views</p><strong id="analytics-total-views">—</strong><small>Selected date range</small></article>
+              <article class="stat-card"><span class="stat-icon violet">◷</span><p>Page views</p><strong id="analytics-total-views">—</strong><small>Includes refreshes and repeat page loads</small></article>
+              <article class="stat-card"><span class="stat-icon green">♙</span><p>Unique visitors</p><strong id="analytics-total-visitors">—</strong><small>Browser tab sessions · selected range</small></article>
             </div>
           </section>
           <section class="analytics-grid">
@@ -182,8 +183,13 @@
               <div class="panel-heading"><div><p class="eyebrow">MOST VISITED</p><h2>Popular pages</h2></div></div>
               <ol id="analytics-top-pages" class="analytics-top-pages"><li class="empty-state">Loading page statistics…</li></ol>
             </article>
+            <article class="panel analytics-location-panel">
+              <div class="panel-heading"><div><p class="eyebrow">VISITOR GEO</p><h2>Country &amp; region</h2></div></div>
+              <p class="panel-copy">Approximate aggregate location from trusted edge headers. No visitor IP address is displayed or stored.</p>
+              <ol id="analytics-locations" class="analytics-top-pages"><li class="empty-state">Loading visitor locations…</li></ol>
+            </article>
           </section>
-          <p class="analytics-privacy-note">Privacy-first reporting: anonymous page views only. No visitor profiles, raw IP addresses, document names or referrer URLs are stored.</p>
+          <p class="analytics-privacy-note">Page views count every page load, including refreshes. Unique visitors count one browser-tab session once. Country/region is shown only when trusted edge location headers are available; raw IP addresses are never stored.</p>
         </div>
 
         <div class="dashboard-content dashboard-page" id="users" hidden>
