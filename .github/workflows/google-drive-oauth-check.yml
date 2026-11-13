@@ -17,6 +17,7 @@ on:
       - "supabase/config.toml"
       - "supabase/phase-2-users-roles.sql"
       - "supabase/phase-4-analytics.sql"
+      - "supabase/phase-4-security-logs.sql"
       - "admin.js"
       - "script.js"
       - "library.js"
