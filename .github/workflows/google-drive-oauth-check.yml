@@ -18,6 +18,8 @@ on:
       - "supabase/phase-2-users-roles.sql"
       - "supabase/phase-4-analytics.sql"
       - "admin.js"
+      - "script.js"
+      - "library.js"
       - "vault-storage-utils.js"
       - "tests/vault-storage.test.js"
       - "tests/analytics-contract.test.js"
@@ -37,6 +39,8 @@ on:
       - "supabase/phase-4-analytics.sql"
       - "tests/analytics-contract.test.js"
       - "admin.js"
+      - "script.js"
+      - "library.js"
       - "admin.html"
       - "admin.css"
       - ".github/workflows/google-drive-oauth-check.yml"
@@ -60,6 +64,8 @@ jobs:
       - name: Check admin JavaScript syntax
         run: |
           node --check admin.js
+          node --check script.js
+          node --check library.js
           node --check vault-storage-utils.js
 
       - name: Run regression and analytics contract tests
