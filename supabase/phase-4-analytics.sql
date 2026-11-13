@@ -59,6 +59,8 @@ begin
   -- Opportunistic cleanup; the table retains at most a short history per active key.
   delete from public.pixel_forge_analytics_rate_limits
   where window_start < now() - interval '2 days';
+  delete from public.pixel_forge_analytics_events
+  where created_at < now() - interval '90 days';
 
   return v_count <= p_max_requests;
 end;
@@ -112,4 +114,4 @@ insert into public.pixel_forge_role_permissions (role, permission, allowed) valu
 on conflict (role, permission) do nothing;
 
 comment on table public.pixel_forge_analytics_events is
-  'Anonymous allowlisted page views only; no IP, visitor identifier, referrer, query string, or document metadata.';
+  'Anonymous allowlisted page views only; no IP, visitor identifier, referrer, query string, or document metadata. Events older than 90 days are purged during collection.';
