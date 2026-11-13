@@ -81,8 +81,8 @@ jobs:
             "https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/google-drive-files?action=public-list")
           test "$PUBLIC_STATUS" = "200" || { cat /tmp/public-drive-response.json; echo "::error::Expected public Drive listing to return HTTP 200 after migration, got $PUBLIC_STATUS"; exit 1; }
 
-          SETTINGS_STATUS=$(curl --silent --show-error --output /tmp/site-settings-response.json --write-out "%{http_code}" \\
-            --header "Origin: https://pixelforge.jo3.org" \\
+          SETTINGS_STATUS=$(curl --silent --show-error --output /tmp/site-settings-response.json --write-out "%{http_code}" \
+            --header "Origin: https://pixelforge.jo3.org" \
             "https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=list")
           test "$SETTINGS_STATUS" = "403" || { cat /tmp/site-settings-response.json; echo "::error::Expected site-settings to reject unauthenticated access with HTTP 403, got $SETTINGS_STATUS"; exit 1; }
 
