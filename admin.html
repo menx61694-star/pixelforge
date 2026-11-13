@@ -45,6 +45,7 @@
         <a class="nav-link" href="#analytics" id="analytics-nav-link" data-permission="analytics.view" hidden><span class="nav-icon">▥</span> Analytics</a>
         <a class="nav-link" href="#security-logs" id="security-logs-nav-link" data-permission="security.logs.view" hidden><span class="nav-icon">⌑</span> Security logs</a>
         <a class="nav-link" href="#users" id="users-nav-link" hidden><span class="nav-icon">♙</span> Users &amp; roles</a>
+        <a class="nav-link" href="#settings" id="settings-nav-link" data-permission="settings.view" hidden><span class="nav-icon">⚙</span> Settings</a>
         <div class="sidebar-bottom">
           <div class="secure-card"><span class="secure-icon">✓</span><div><strong>Private by design</strong><small>Role-based document access</small></div></div>
           <button id="logout-button" class="logout-button" type="button">↪ <span>Sign out</span></button>
@@ -212,6 +213,42 @@
               </table>
             </div>
             <p class="analytics-privacy-note">Observed public IPs are encrypted with AES-256-GCM before storage and decrypted only for authorized admins. Only the hosting edge cf-connecting-ip header is trusted. Local/private LAN IP is shown only when a visitor explicitly consents and their browser exposes it via WebRTC. It is browser-reported and unverified; many browsers mask it. VPNs, carrier NAT and proxies may affect the observed public IP. Manual deletion removes all current security logs; automatic retention removes logs older than 90 days.</p>
+          </section>
+        </div>
+
+
+        <div class="dashboard-content dashboard-page" id="settings" hidden>
+          <section class="panel settings-panel">
+            <div class="panel-heading"><div><p class="eyebrow">WORKSPACE CONFIGURATION</p><h2>Site settings</h2></div><button id="refresh-settings" class="refresh-button" type="button">↻ Refresh</button></div>
+            <p id="settings-status" class="panel-copy" role="status" aria-live="polite">Settings are loaded securely for administrators.</p>
+            <div class="settings-grid">
+              <article class="settings-card">
+                <h3>Website identity</h3>
+                <label for="setting-site-name">Site name</label><input id="setting-site-name" type="text" maxlength="80">
+                <label for="setting-site-description">Description</label><textarea id="setting-site-description" rows="3" maxlength="300"></textarea>
+                <label for="setting-contact-email">Contact email</label><input id="setting-contact-email" type="email" maxlength="254">
+                <button type="button" data-setting-save="site.identity">Save website identity</button>
+              </article>
+              <article class="settings-card">
+                <h3>Maintenance mode</h3>
+                <label class="settings-toggle"><input id="setting-maintenance-enabled" type="checkbox"><span>Enable public maintenance mode</span></label>
+                <label for="setting-maintenance-message">Visitor message</label><textarea id="setting-maintenance-message" rows="3" maxlength="500"></textarea>
+                <button type="button" data-setting-save="maintenance">Save maintenance settings</button>
+                <p class="settings-help">When enabled, the public homepage and Document Library show the maintenance screen.</p>
+              </article>
+              <article class="settings-card">
+                <h3>Automatic sync preferences</h3>
+                <label class="settings-toggle"><input id="setting-drive-auto" type="checkbox"><span>Google Drive auto-sync enabled</span></label>
+                <label class="settings-toggle"><input id="setting-vault-auto" type="checkbox"><span>Private Vault auto-sync enabled</span></label>
+                <button type="button" data-setting-save="sync">Save sync preferences</button>
+                <p class="settings-help">These preferences are stored only; they do not independently start background sync jobs.</p>
+              </article>
+            </div>
+          </section>
+          <section class="panel settings-panel">
+            <div class="panel-heading"><div><p class="eyebrow">CHANGE HISTORY</p><h2>Settings audit log</h2></div></div>
+            <p id="settings-audit-status" class="panel-copy">Loading recent changes…</p>
+            <div class="users-table-wrap"><table class="users-table"><thead><tr><th>Setting</th><th>Previous value</th><th>New value</th><th>Actor</th><th>Time (UTC)</th></tr></thead><tbody id="settings-audit-body"><tr><td colspan="5" class="empty-state">Loading audit history…</td></tr></tbody></table></div>
           </section>
         </div>
 

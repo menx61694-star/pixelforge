@@ -64,6 +64,11 @@ const firebaseConfig = {
   let currentUserRole = null;
   let currentPermissions = new Set();
   const usersNavLink = document.getElementById("users-nav-link");
+  const settingsNavLink = document.getElementById("settings-nav-link");
+  const settingsStatus = document.getElementById("settings-status");
+  const settingsAuditStatus = document.getElementById("settings-audit-status");
+  const settingsAuditBody = document.getElementById("settings-audit-body");
+  const refreshSettingsButton = document.getElementById("refresh-settings");
   const analyticsNavLink = document.getElementById("analytics-nav-link");
   const securityLogsNavLink = document.getElementById("security-logs-nav-link");
   const securityLogsBody = document.getElementById("security-logs-body");
@@ -82,17 +87,18 @@ const firebaseConfig = {
   const createUserButton = document.getElementById("create-user-button");
 
   const sidebarLinks = Array.from(document.querySelectorAll(".sidebar .nav-link"));
-  const dashboardPages = ["overview", "recent-activity", "documents", "google-drive", "analytics", "security-logs", "users"]
+  const dashboardPages = ["overview", "recent-activity", "documents", "google-drive", "analytics", "security-logs", "users", "settings"]
     .map(id => document.getElementById(id))
     .filter(Boolean);
   function syncSidebarNavigation() {
     const requestedPage = (window.location.hash || "#overview").slice(1);
     let activePage = dashboardPages.some(page => page.id === requestedPage) ? requestedPage : "overview";
-    const pagePermissions = { overview: "dashboard.view", "recent-activity": "activity.view", documents: "vault.read", "google-drive": "drive.read", analytics: "analytics.view", "security-logs": "security.logs.view", users: "users.manage" };
+    const pagePermissions = { overview: "dashboard.view", "recent-activity": "activity.view", documents: "vault.read", "google-drive": "drive.read", analytics: "analytics.view", "security-logs": "security.logs.view", users: "users.manage", settings: "settings.view" };
     if (currentUserUid && !currentPermissions.has(pagePermissions[activePage])) activePage = "overview";
     dashboardPages.forEach(page => { page.hidden = page.id !== activePage; });
     if (activePage === "analytics" && currentPermissions.has("analytics.view")) loadAnalyticsDashboard();
     if (activePage === "security-logs" && currentPermissions.has("security.logs.view")) loadSecurityLogs();
+    if (activePage === "settings" && currentPermissions.has("settings.view")) loadSettings();
     sidebarLinks.forEach(link => {
       const isActive = link.getAttribute("href") === "#" + activePage;
       link.classList.toggle("active", isActive);
@@ -976,6 +982,110 @@ const firebaseConfig = {
 
 
 
+
+  async function settingsRequest(action, options = {}) {
+    const user = auth.currentUser;
+    if (!user || !currentPermissions.has(options.method === "POST" ? "settings.manage" : "settings.view")) {
+      throw new Error("Administrator settings permission is required.");
+    }
+    const headers = { "Authorization": "Bearer " + await user.getIdToken() };
+    if (options.body) headers["Content-Type"] = "application/json";
+    const response = await fetch(SUPABASE_URL + "/functions/v1/site-settings?action=" + encodeURIComponent(action), {
+      method: options.method || "GET", headers, body: options.body ? JSON.stringify(options.body) : undefined
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Settings request failed.");
+    return payload;
+  }
+
+  function setSettingsStatus(message, isError = false) {
+    if (!settingsStatus) return;
+    settingsStatus.textContent = message;
+    settingsStatus.style.color = isError ? "#a23c32" : "#53617b";
+  }
+
+  async function loadSettings() {
+    if (!currentPermissions.has("settings.view")) return;
+    setSettingsStatus("Loading secure site settings…");
+    try {
+      const [payload, auditPayload] = await Promise.all([
+        settingsRequest("list"), settingsRequest("audit")
+      ]);
+      const values = Object.fromEntries((payload.settings || []).map(item => [item.setting_key, item.setting_value]));
+      const setValue = (id, value) => { const el = document.getElementById(id); if (el) el.value = value ?? ""; };
+      const setChecked = (id, value) => { const el = document.getElementById(id); if (el) el.checked = value === true; };
+      setValue("setting-site-name", values["site.name"]);
+      setValue("setting-site-description", values["site.description"]);
+      setValue("setting-contact-email", values["site.contact_email"]);
+      setChecked("setting-maintenance-enabled", values["maintenance.enabled"]);
+      setValue("setting-maintenance-message", values["maintenance.message"]);
+      setChecked("setting-drive-auto", values["sync.drive.auto_enabled"]);
+      setChecked("setting-vault-auto", values["sync.vault.auto_enabled"]);
+      renderSettingsAudit(auditPayload.audit || []);
+      document.querySelectorAll("[data-setting-save]").forEach(button => {
+        button.hidden = !currentPermissions.has("settings.manage");
+        button.disabled = !currentPermissions.has("settings.manage");
+      });
+      document.querySelectorAll("#settings input, #settings textarea").forEach(input => {
+        input.disabled = !currentPermissions.has("settings.manage");
+      });
+      setSettingsStatus("Settings loaded. Changes are saved individually and recorded in the audit log.");
+    } catch (error) {
+      setSettingsStatus(error.message || "Could not load settings.", true);
+    }
+  }
+
+  function renderSettingsAudit(entries) {
+    if (!settingsAuditBody) return;
+    settingsAuditBody.replaceChildren();
+    if (!entries.length) {
+      const row = document.createElement("tr"); const cell = document.createElement("td");
+      cell.colSpan = 5; cell.className = "empty-state"; cell.textContent = "No settings changes recorded yet.";
+      row.append(cell); settingsAuditBody.append(row);
+    } else {
+      entries.forEach(entry => {
+        const row = document.createElement("tr");
+        [entry.setting_key, JSON.stringify(entry.old_value), JSON.stringify(entry.new_value), entry.actor_uid,
+          entry.created_at ? new Date(entry.created_at).toISOString().replace("T", " ").slice(0, 19) + " UTC" : "—"
+        ].forEach(value => { const cell = document.createElement("td"); cell.textContent = String(value ?? "—"); row.append(cell); });
+        settingsAuditBody.append(row);
+      });
+    }
+    if (settingsAuditStatus) settingsAuditStatus.textContent = entries.length + " recent settings change(s).";
+  }
+
+  async function saveSetting(key, value, button) {
+    if (!currentPermissions.has("settings.manage")) return;
+    button.disabled = true;
+    setSettingsStatus("Saving " + key + "…");
+    try {
+      await settingsRequest("update", { method: "POST", body: { key, value } });
+      setSettingsStatus("Saved " + key + ". Audit history updated.");
+      const audit = await settingsRequest("audit");
+      renderSettingsAudit(audit.audit || []);
+    } catch (error) {
+      setSettingsStatus(error.message || "Could not save setting.", true);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  document.querySelectorAll("[data-setting-save]").forEach(button => button.addEventListener("click", () => {
+    const group = button.getAttribute("data-setting-save");
+    if (group === "site.identity") {
+      saveSetting("site.name", document.getElementById("setting-site-name").value, button)
+        .then(() => saveSetting("site.description", document.getElementById("setting-site-description").value, button))
+        .then(() => saveSetting("site.contact_email", document.getElementById("setting-contact-email").value, button));
+    } else if (group === "maintenance") {
+      saveSetting("maintenance.message", document.getElementById("setting-maintenance-message").value, button)
+        .then(() => saveSetting("maintenance.enabled", document.getElementById("setting-maintenance-enabled").checked, button));
+    } else if (group === "sync") {
+      saveSetting("sync.drive.auto_enabled", document.getElementById("setting-drive-auto").checked, button)
+        .then(() => saveSetting("sync.vault.auto_enabled", document.getElementById("setting-vault-auto").checked, button));
+    }
+  }));
+  if (refreshSettingsButton) refreshSettingsButton.addEventListener("click", loadSettings);
+
   async function loadOverviewAnalytics() {
     if (!currentPermissions.has("analytics.view") || !auth.currentUser || !overviewPageViewsStat) return;
     overviewPageViewsStat.textContent = "…";
@@ -1307,6 +1417,7 @@ const firebaseConfig = {
     currentPermissions = new Set(session.permissions || []);
     if (!currentPermissions.has("dashboard.view")) throw new Error("Dashboard access is not permitted.");
     if (usersNavLink) usersNavLink.hidden = !currentPermissions.has("users.manage");
+    if (settingsNavLink) settingsNavLink.hidden = !currentPermissions.has("settings.view");
     if (analyticsNavLink) analyticsNavLink.hidden = !currentPermissions.has("analytics.view");
     if (securityLogsNavLink) securityLogsNavLink.hidden = !currentPermissions.has("security.logs.view");
     if (deleteSecurityLogsButton) deleteSecurityLogsButton.hidden = !currentPermissions.has("security.logs.delete");
