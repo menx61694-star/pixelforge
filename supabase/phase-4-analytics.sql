@@ -27,6 +27,8 @@ create table if not exists public.pixel_forge_analytics_rate_limits (
   request_count integer not null default 0 check (request_count >= 0),
   primary key (key_hash, window_start)
 );
+create index if not exists pixel_forge_analytics_rate_limits_window_idx
+  on public.pixel_forge_analytics_rate_limits (window_start);
 alter table public.pixel_forge_analytics_rate_limits enable row level security;
 revoke all on public.pixel_forge_analytics_rate_limits from public, anon, authenticated;
 grant all on public.pixel_forge_analytics_rate_limits to service_role;
