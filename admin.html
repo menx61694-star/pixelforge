@@ -43,6 +43,7 @@
         <a class="nav-link" href="#documents"><span class="nav-icon">▤</span> Private vault</a>
         <a class="nav-link" href="#google-drive" id="google-drive-nav-link" hidden><span class="nav-icon">G</span> Google Drive</a>
         <a class="nav-link" href="#analytics" id="analytics-nav-link" data-permission="analytics.view" hidden><span class="nav-icon">▥</span> Analytics</a>
+        <a class="nav-link" href="#security-logs" id="security-logs-nav-link" data-permission="security.logs.view" hidden><span class="nav-icon">⌑</span> Security logs</a>
         <a class="nav-link" href="#users" id="users-nav-link" hidden><span class="nav-icon">♙</span> Users &amp; roles</a>
         <div class="sidebar-bottom">
           <div class="secure-card"><span class="secure-icon">✓</span><div><strong>Private by design</strong><small>Role-based document access</small></div></div>
@@ -190,6 +191,28 @@
             </article>
           </section>
           <p class="analytics-privacy-note">Page views count every page load, including refreshes. Unique visitors count one browser-tab session once. Country/region is shown only when trusted edge location headers are available; raw IP addresses are never stored.</p>
+        </div>
+
+
+        <div class="dashboard-content dashboard-page" id="security-logs" hidden>
+          <section class="panel security-logs-panel">
+            <div class="panel-heading">
+              <div><p class="eyebrow">RESTRICTED SECURITY DATA</p><h2>Visitor security logs</h2></div>
+              <div class="security-log-actions">
+                <button type="button" class="secondary-button" id="refresh-security-logs">Refresh logs</button>
+                <button type="button" class="danger-button" id="delete-security-logs" data-permission="security.logs.delete" hidden>Delete all logs</button>
+              </div>
+            </div>
+            <p class="panel-copy">Encrypted visitor IP addresses and page-view timestamps. Logs are automatically deleted after 90 days. Access is restricted to authorized administrators.</p>
+            <p id="security-logs-status" class="panel-copy" role="status" aria-live="polite">Loading security logs…</p>
+            <div class="table-wrap">
+              <table class="data-table security-log-table">
+                <thead><tr><th>IP address</th><th>Event</th><th>Page</th><th>Time (UTC)</th></tr></thead>
+                <tbody id="security-logs-body"><tr><td colspan="4" class="empty-state">Loading logs…</td></tr></tbody>
+              </table>
+            </div>
+            <p class="analytics-privacy-note">IP addresses are encrypted with AES-256-GCM before storage. They are decrypted only for this permission-protected admin view. Manual deletion removes all current security logs; automatic retention removes logs older than 90 days.</p>
+          </section>
         </div>
 
         <div class="dashboard-content dashboard-page" id="users" hidden>
