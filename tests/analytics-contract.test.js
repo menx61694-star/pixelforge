@@ -193,6 +193,30 @@ test("security logs explain local LAN IP is unavailable and show IP source", () 
   assert.match(adminHtml, /Observed public IP/);
   assert.match(adminHtml, /Local\/private LAN IPs are not available/);
   assert.match(adminJs, /Cloudflare edge/);
-  assert.match(adminJs, /Not available/);
+  assert.match(adminJs, /Not shared/);
   assert.match(securitySql, /ip_source text/);
+});
+
+test("local IP diagnostic requires explicit consent, accepts only private addresses, and encrypts before persistence", () => {
+  assert.match(edge, /action === "local-ip-diagnostic"/);
+  assert.match(edge, /input\?\.consent !== true/);
+  assert.match(edge, /isPrivateLocalIp\(localIp\)/);
+  assert.match(edge, /local_ip_ciphertext: localEncrypted\.ip_ciphertext/);
+  assert.match(edge, /local_ip_source: "browser-webrtc-explicit-consent"/);
+  assert.match(edge, /local_ip_ciphertext,local_ip_iv,local_ip_source/);
+  assert.match(edge, /localIpAddress: row\.local_ip_ciphertext/);
+  assert.match(read("supabase/phase-4-security-logs.sql"), /local_ip_ciphertext text/);
+  assert.match(read("supabase/phase-4-security-logs.sql"), /'local_ip_diagnostic'/);
+});
+
+test("public local IP diagnostic is user-initiated, disclosed and does not auto-run", () => {
+  const script = read("script.js");
+  const index = read("index.html");
+  assert.match(index, /Check &amp; share local IP \(optional\)/);
+  assert.match(index, /Nothing is checked or shared unless you choose/);
+  assert.match(script, /window\.confirm\("Consent to check/);
+  assert.match(script, /RTCPeerConnection/);
+  assert.match(script, /action=local-ip-diagnostic/);
+  assert.doesNotMatch(script.slice(0, script.indexOf("async function getPixelForgePrivateLocalIp")), /getPixelForgePrivateLocalIp\(\)/);
+  assert.match(read("admin.js"), /browser-reported/);
 });

@@ -207,11 +207,11 @@
             <p id="security-logs-status" class="panel-copy" role="status" aria-live="polite">Loading security logs…</p>
             <div class="table-wrap">
               <table class="data-table security-log-table">
-                <thead><tr><th>Observed public IP</th><th>IP family</th><th>Source</th><th>Local IP</th><th>Event</th><th>Page</th><th>Time (UTC)</th></tr></thead>
+                <thead><tr><th>Observed public IP</th><th>IP family</th><th>Source</th><th>Local IP (consented)</th><th>Event</th><th>Page</th><th>Time (UTC)</th></tr></thead>
                 <tbody id="security-logs-body"><tr><td colspan="7" class="empty-state">Loading logs…</td></tr></tbody>
               </table>
             </div>
-            <p class="analytics-privacy-note">Observed public IPs are encrypted with AES-256-GCM before storage and decrypted only for authorized admins. Only the hosting edge cf-connecting-ip header is trusted. Local/private LAN IP is not exposed by normal browser requests. VPNs, carrier NAT and proxies may affect the observed public IP. Manual deletion removes all current security logs; automatic retention removes logs older than 90 days.</p>
+            <p class="analytics-privacy-note">Observed public IPs are encrypted with AES-256-GCM before storage and decrypted only for authorized admins. Only the hosting edge cf-connecting-ip header is trusted. Local/private LAN IP is shown only when a visitor explicitly consents and their browser exposes it via WebRTC. It is browser-reported and unverified; many browsers mask it. VPNs, carrier NAT and proxies may affect the observed public IP. Manual deletion removes all current security logs; automatic retention removes logs older than 90 days.</p>
           </section>
         </div>
 

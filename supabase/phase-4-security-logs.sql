@@ -13,9 +13,21 @@ create table if not exists public.pixel_forge_security_logs (
   ip_ciphertext text not null,
   ip_iv text not null,
   ip_source text,
+  local_ip_ciphertext text,
+  local_ip_iv text,
+  local_ip_source text,
   created_at timestamptz not null default now()
 );
 alter table public.pixel_forge_security_logs add column if not exists ip_source text;
+alter table public.pixel_forge_security_logs add column if not exists local_ip_ciphertext text;
+alter table public.pixel_forge_security_logs add column if not exists local_ip_iv text;
+alter table public.pixel_forge_security_logs add column if not exists local_ip_source text;
+
+alter table public.pixel_forge_security_logs
+  drop constraint if exists pixel_forge_security_logs_event_type_check;
+alter table public.pixel_forge_security_logs
+  add constraint pixel_forge_security_logs_event_type_check
+  check (event_type in ('page_view', 'local_ip_diagnostic'));
 
 create index if not exists pixel_forge_security_logs_created_idx
   on public.pixel_forge_security_logs (created_at desc);

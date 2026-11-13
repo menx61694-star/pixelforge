@@ -102,6 +102,21 @@ function getClientIp(request: Request): { address: string; source: "cf-connectin
   }
   return { address: ip, source: "cf-connecting-ip" };
 }
+function isPrivateLocalIp(ip: string): boolean {
+  if (ip.length > 64) return false;
+  const parts = ip.split(".");
+  const ipv4 = parts.length === 4 && parts.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255);
+  if (ipv4) {
+    const [a, b] = parts.map(Number);
+    return a === 10 || (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) || (a === 169 && b === 254);
+  }
+  if (!ip.includes(":") || !/^[0-9a-f:]+$/i.test(ip)) return false;
+  const lower = ip.toLowerCase();
+  return lower.startsWith("fc") || lower.startsWith("fd") || lower.startsWith("fe8") ||
+    lower.startsWith("fe9") || lower.startsWith("fea") || lower.startsWith("feb");
+}
+
 function ipEncryptionKey(): Promise<CryptoKey> {
   const raw = required("ANALYTICS_IP_ENCRYPTION_KEY");
   let bytes: Uint8Array;
@@ -201,6 +216,42 @@ Deno.serve(async (request) => {
       return json({ recorded: true }, 202, request);
     }
 
+    if (request.method === "POST" && action === "local-ip-diagnostic") {
+      const input = await request.json().catch(() => null);
+      const pagePath = input && typeof input.pagePath === "string" ? input.pagePath : "";
+      const localIp = input && typeof input.localIp === "string" ? input.localIp.trim() : "";
+      if (!allowedPaths.has(pagePath) || input?.consent !== true ||
+          Object.keys(input ?? {}).some((key) => !["pagePath", "localIp", "consent"].includes(key)) ||
+          !isPrivateLocalIp(localIp)) {
+        return json({ error: "A valid private local IP and explicit consent are required." }, 400, request);
+      }
+      const observedIp = getClientIp(request);
+      if (!observedIp) return json({ error: "Observed public IP is unavailable from the trusted hosting edge." }, 422, request);
+      const keyHash = await rateLimitKey(request);
+      if (!keyHash) return json({ error: "Unable to apply request rate limit." }, 400, request);
+      const now = new Date();
+      const windowStart = new Date(Math.floor(now.getTime() / 60000) * 60000).toISOString();
+      const db = dbAdmin();
+      const { data: permitted, error: rateError } = await db.rpc("pixel_forge_analytics_consume_rate_limit", {
+        p_key_hash: keyHash, p_window_start: windowStart, p_max_requests: 60,
+      });
+      if (rateError) throw rateError;
+      if (permitted !== true) return json({ error: "Rate limit exceeded." }, 429, request);
+      const publicEncrypted = await encryptIp(observedIp.address);
+      const localEncrypted = await encryptIp(localIp);
+      const { error } = await db.from("pixel_forge_security_logs").insert({
+        ...publicEncrypted,
+        local_ip_ciphertext: localEncrypted.ip_ciphertext,
+        local_ip_iv: localEncrypted.ip_iv,
+        local_ip_source: "browser-webrtc-explicit-consent",
+        ip_source: observedIp.source,
+        event_type: "local_ip_diagnostic",
+        page_path: pagePath,
+      });
+      if (error) throw error;
+      return json({ recorded: true }, 202, request);
+    }
+
     if (request.method === "GET" && action === "summary") {
       const token = request.headers.get("Authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
       if (!token) return json({ error: "Firebase authentication required." }, 401, request);
@@ -251,12 +302,12 @@ Deno.serve(async (request) => {
         return json({ deletedCount }, 200, request);
       }
       const { data, error } = await db.from("pixel_forge_security_logs")
-        .select("id,event_type,page_path,ip_ciphertext,ip_iv,ip_source,created_at")
+        .select("id,event_type,page_path,ip_ciphertext,ip_iv,ip_source,local_ip_ciphertext,local_ip_iv,local_ip_source,created_at")
         .order("created_at", { ascending: false }).limit(200);
       if (error) throw error;
       const logs = await Promise.all((data ?? []).map(async (row) => ({
         id: row.id, eventType: row.event_type, pagePath: row.page_path,
-        ipAddress: await decryptIp(row.ip_ciphertext, row.ip_iv), ipSource: row.ip_source ?? "unknown (legacy log)", createdAt: row.created_at,
+        ipAddress: await decryptIp(row.ip_ciphertext, row.ip_iv), ipSource: row.ip_source ?? "unknown (legacy log)", localIpAddress: row.local_ip_ciphertext && row.local_ip_iv ? await decryptIp(row.local_ip_ciphertext, row.local_ip_iv) : null, localIpSource: row.local_ip_source ?? null, createdAt: row.created_at,
       })));
       return json({ logs, retentionDays: 90 }, 200, request);
     }
