@@ -18,7 +18,7 @@ test("public collection accepts only the allowlisted page_path and rejects extra
   assert.match(edge, /!allowedPaths\.has\(pagePath\)/);
   assert.match(edge, /key !== "pagePath" && key !== "visitorSessionId"/);
   assert.match(edge, /visitor_hash: visitorHash/);
-  assert.match(edge, /insert\(\{[\\s\\S]*page_path: pagePath/);
+  assert.match(edge, /insert\(\{[\s\S]*page_path: pagePath/);
 });
 
 test("event and rate-limit tables deny direct client access and enable RLS", () => {
