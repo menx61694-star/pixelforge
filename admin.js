@@ -1140,7 +1140,7 @@ const firebaseConfig = {
       } else {
         payload.logs.forEach(log => {
           const row = document.createElement("tr");
-          [log.ipAddress, log.ipAddress && log.ipAddress.includes(":") ? "IPv6" : "IPv4", log.ipSource === "cf-connecting-ip" ? "Cloudflare edge" : "Unknown / legacy", "Not available", log.eventType, log.pagePath, new Date(log.createdAt).toISOString().replace("T", " ").slice(0, 19) + " UTC"].forEach(value => {
+          [log.ipAddress, log.ipAddress && log.ipAddress.includes(":") ? "IPv6" : "IPv4", log.ipSource === "cf-connecting-ip" ? "Cloudflare edge" : "Unknown / legacy", (log.localIpAddress ? log.localIpAddress + " (browser-reported)" : "Not shared"), log.eventType, log.pagePath, new Date(log.createdAt).toISOString().replace("T", " ").slice(0, 19) + " UTC"].forEach(value => {
             const cell = document.createElement("td"); cell.textContent = String(value ?? "—"); row.append(cell);
           });
           securityLogsBody.append(row);
