@@ -166,7 +166,8 @@ Deno.serve(async (request) => {
 
     const uid = await verifyFirebaseUser(request);
     if (!uid) return json({ error: "Firebase authentication required." }, 401, request);
-    const requiredPermission = action === "delete" ? "drive.delete"
+    const requiredPermission = ["publish", "unpublish"].includes(action ?? "") ? "vault.publish"
+      : action === "delete" ? "drive.delete"
       : ["create-upload-session", "upload-chunk"].includes(action ?? "") ? "drive.write" : "drive.read";
     if (!(await hasDrivePermission(uid, requiredPermission))) {
       return json({ error: "Your role does not allow this Google Drive action." }, 403, request);
@@ -176,6 +177,38 @@ Deno.serve(async (request) => {
         .select("connected_at").eq("id", "pixelForge-owner").maybeSingle();
       if (error) throw error;
       return json({ connected: Boolean(data?.connected_at), connectedAt: data?.connected_at ?? null }, 200, request);
+    }
+    if (request.method === "GET" && action === "published-list") {
+      const { data, error } = await supabaseAdmin().from("pixel_forge_published_documents")
+        .select("drive_file_id,category,title")
+        .eq("source", "google_drive").eq("owner_uid", uid).eq("published", true);
+      if (error) throw error;
+      return json({ documents: data ?? [] }, 200, request);
+    }
+    if (request.method === "POST" && ["publish", "unpublish"].includes(action ?? "")) {
+      const input = await request.json();
+      const fileId = typeof input.fileId === "string" ? input.fileId : "";
+      if (!/^[a-zA-Z0-9_-]{10,200}$/.test(fileId)) return json({ error: "Invalid Drive file ID." }, 400, request);
+      const db = supabaseAdmin();
+      if (action === "unpublish") {
+        const { error } = await db.from("pixel_forge_published_documents").delete()
+          .eq("source", "google_drive").eq("drive_file_id", fileId).eq("owner_uid", uid);
+        if (error) throw error;
+        return json({ unpublished: true }, 200, request);
+      }
+      const category = typeof input.category === "string" ? input.category : "";
+      const allowedCategories = ["pdf-documents", "study-notes", "books-resources", "other-documents", "exam-materials", "technology-guides"];
+      const title = typeof input.title === "string" ? input.title.trim().slice(0, 240) : "";
+      const mimeType = typeof input.mimeType === "string" ? input.mimeType.slice(0, 160) : "application/octet-stream";
+      const sizeBytes = Number(input.sizeBytes);
+      if (!allowedCategories.includes(category) || !title) return json({ error: "A valid public category and document title are required." }, 400, request);
+      const { error } = await db.from("pixel_forge_published_documents").upsert({
+        source: "google_drive", owner_uid: uid, drive_file_id: fileId, storage_path: null,
+        category, title, mime_type: mimeType, size_bytes: Number.isSafeInteger(sizeBytes) && sizeBytes > 0 ? sizeBytes : null,
+        published: true, updated_at: new Date().toISOString()
+      }, { onConflict: "source,drive_file_id" });
+      if (error) throw error;
+      return json({ published: true }, 200, request);
     }
     const accessToken = await getAccessToken();
     const googleHeaders = { Authorization: "Bearer " + accessToken };
