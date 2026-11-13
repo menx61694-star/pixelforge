@@ -103,7 +103,9 @@ function ipEncryptionKey(): Promise<CryptoKey> {
     throw new Error("ANALYTICS_IP_ENCRYPTION_KEY must be base64 encoded.");
   }
   if (bytes.length !== 32) throw new Error("ANALYTICS_IP_ENCRYPTION_KEY must decode to exactly 32 bytes.");
-  return crypto.subtle.importKey("raw", bytes, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+  const keyBuffer = new ArrayBuffer(32);
+  new Uint8Array(keyBuffer).set(bytes);
+  return crypto.subtle.importKey("raw", keyBuffer, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
 }
 async function encryptIp(ip: string) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
