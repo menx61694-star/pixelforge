@@ -40,6 +40,12 @@ const firebaseConfig = {
   const driveCountNote = document.getElementById("stat-drive-count-note");
   const driveStatusStat = document.getElementById("stat-drive-status");
   const driveStatusNote = document.getElementById("stat-drive-status-note");
+  const publishedCountStat = document.getElementById("stat-published-count");
+  const userCountStat = document.getElementById("stat-user-count");
+  const overviewPageViewsStat = document.getElementById("stat-overview-page-views");
+  const overviewPageViewsNote = document.getElementById("stat-overview-page-views-note");
+  const overviewActivityList = document.getElementById("overview-activity-list");
+  const overviewActivityStatus = document.getElementById("overview-activity-status");
   const activityList = document.getElementById("activity-list");
   const activityStatus = document.getElementById("activity-status");
   const countLabel = document.getElementById("file-count-label");
@@ -574,6 +580,27 @@ const firebaseConfig = {
       if (!b.timestamp) return -1;
       return b.timestamp - a.timestamp;
     });
+    if (overviewActivityList) {
+      overviewActivityList.replaceChildren();
+      if (!validEntries.length) {
+        const empty = document.createElement("li");
+        empty.className = "empty-state";
+        empty.textContent = "No recent file updates.";
+        overviewActivityList.append(empty);
+        if (overviewActivityStatus) overviewActivityStatus.textContent = "Storage activity will appear here.";
+      } else {
+        validEntries.slice(0, 3).forEach(entry => {
+          const item = document.createElement("li");
+          const title = document.createElement("strong");
+          title.textContent = entry.name;
+          const meta = document.createElement("small");
+          meta.textContent = entry.source + (entry.timestamp ? " · " + entry.timestamp.toLocaleDateString() : "");
+          item.append(title, meta);
+          overviewActivityList.append(item);
+        });
+        if (overviewActivityStatus) overviewActivityStatus.textContent = "Latest " + Math.min(3, validEntries.length) + " storage file updates.";
+      }
+    }
     activityList.replaceChildren();
     if (!validEntries.length) {
       const empty = document.createElement("li");
@@ -663,6 +690,7 @@ const firebaseConfig = {
       try { publishedFiles = await getPublishedFilesIndex(); }
       catch (publishError) { publishStatusWarning = " Published status could not be checked: " + (publishError.message || "Storage access error"); }
       updateStats(files);
+      if (publishedCountStat) publishedCountStat.textContent = String(publishedFiles.size);
       updateDashboardActivity();
       if (!files.length) {
         showEmpty("No documents uploaded yet.");
@@ -941,6 +969,25 @@ const firebaseConfig = {
   }
 
 
+
+  async function loadOverviewAnalytics() {
+    if (!currentPermissions.has("analytics.view") || !auth.currentUser || !overviewPageViewsStat) return;
+    overviewPageViewsStat.textContent = "…";
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch(SUPABASE_URL + "/functions/v1/analytics?action=summary&days=7", {
+        headers: { "Authorization": "Bearer " + token }
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Unavailable");
+      overviewPageViewsStat.textContent = Number(payload.totalPageViews || 0).toLocaleString();
+      if (overviewPageViewsNote) overviewPageViewsNote.textContent = "Last " + payload.days + " days";
+    } catch (_) {
+      overviewPageViewsStat.textContent = "—";
+      if (overviewPageViewsNote) overviewPageViewsNote.textContent = "Analytics unavailable";
+    }
+  }
+
   async function loadAnalyticsDashboard() {
     if (!currentPermissions.has("analytics.view") || !auth.currentUser) return;
     const statusElement = document.getElementById("analytics-status");
@@ -1038,7 +1085,9 @@ const firebaseConfig = {
       const payload = await managementRequest("list");
       renderUsers(payload.users || []);
       renderPermissions(payload.permissions || []);
-      setUsersStatus((payload.users || []).length + " user account(s) registered.");
+      const totalUsers = (payload.users || []).length;
+      if (userCountStat) userCountStat.textContent = String(totalUsers);
+      setUsersStatus(totalUsers + " user account(s) registered.");
     } catch (error) {
       setUsersStatus(error.message || "Could not load users.", true);
     }
@@ -1177,6 +1226,7 @@ const firebaseConfig = {
     showAdminSession(true);
     if (currentPermissions.has("drive.read")) refreshGoogleDriveStatus();
     if (currentPermissions.has("users.manage")) loadUsersAndPermissions();
+    if (currentPermissions.has("analytics.view")) loadOverviewAnalytics();
   }
 
   if (userCreateForm) userCreateForm.addEventListener("submit", createWorkspaceUser);

@@ -71,6 +71,31 @@
             <article class="stat-card"><span class="stat-icon green">✓</span><p>Google Drive</p><strong id="stat-drive-status" class="secure-value">Checking</strong><small id="stat-drive-status-note">Connection status</small></article>
           </section>
 
+          <section class="stats-grid overview-extra-stats" aria-label="More workspace totals">
+            <article class="stat-card" data-permission="vault.read"><span class="stat-icon green">↗</span><p>Published documents</p><strong id="stat-published-count">—</strong><small>Available in the public Library</small></article>
+            <article class="stat-card" data-permission="users.manage"><span class="stat-icon violet">♙</span><p>Workspace members</p><strong id="stat-user-count">—</strong><small>Registered user accounts</small></article>
+            <article class="stat-card" data-permission="analytics.view"><span class="stat-icon orange">◷</span><p>Website page views</p><strong id="stat-overview-page-views">—</strong><small id="stat-overview-page-views-note">Last 7 days</small></article>
+          </section>
+
+          <section class="overview-bottom-grid">
+            <article class="panel overview-shortcuts">
+              <div class="panel-heading"><div><p class="eyebrow">QUICK ACCESS</p><h2>Workspace modules</h2></div></div>
+              <p class="panel-copy">Open a section to manage that part of PixelForge.</p>
+              <div class="overview-shortcut-links">
+                <a href="#documents" data-permission="vault.read"><span>▤</span><span><strong>Private vault</strong><small>Upload, publish and manage files</small></span><b>→</b></a>
+                <a href="#google-drive" data-permission="drive.read"><span>G</span><span><strong>Google Drive</strong><small>Connection and Drive documents</small></span><b>→</b></a>
+                <a href="#recent-activity" data-permission="activity.view"><span>◷</span><span><strong>Recent activity</strong><small>Latest file updates</small></span><b>→</b></a>
+                <a href="#analytics" data-permission="analytics.view"><span>▥</span><span><strong>Website analytics</strong><small>Traffic and popular pages</small></span><b>→</b></a>
+                <a href="#users" data-permission="users.manage"><span>♙</span><span><strong>Users &amp; roles</strong><small>Accounts and permissions</small></span><b>→</b></a>
+              </div>
+            </article>
+            <article class="panel overview-recent">
+              <div class="panel-heading"><div><p class="eyebrow">LATEST UPDATES</p><h2>Recent workspace activity</h2></div><a href="#recent-activity">View all →</a></div>
+              <p id="overview-activity-status" class="panel-copy">Loading recent file updates…</p>
+              <ul id="overview-activity-list" class="overview-activity-list"><li class="empty-state">Activity will appear here.</li></ul>
+            </article>
+          </section>
+
         </div>
 
         <div class="dashboard-content dashboard-page" id="recent-activity" hidden>

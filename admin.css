@@ -169,3 +169,24 @@ button:disabled{opacity:.6;cursor:wait}
 .analytics-privacy-note{margin:14px 2px;color:#8a94a8;font-size:10px;line-height:1.6}
 @media(max-width:900px){.analytics-grid{grid-template-columns:1fr}}
 @media(max-width:650px){.analytics-range-label{align-items:flex-start;flex-direction:column;gap:5px}.analytics-range-label select{width:100%}.analytics-stats{grid-template-columns:1fr}.analytics-chart{gap:6px}.analytics-bar-column{flex-basis:24px}}
+
+
+/* Expanded admin overview summary */
+.overview-extra-stats{margin-top:0}
+.overview-bottom-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin:16px 0 22px}
+.overview-shortcuts,.overview-recent{min-width:0}
+.overview-shortcut-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.overview-shortcut-links a{display:flex;align-items:center;gap:10px;min-width:0;padding:12px;border:1px solid var(--line);border-radius:10px;color:var(--ink);text-decoration:none;background:#fff}
+.overview-shortcut-links a>span:first-child{width:32px;height:32px;flex:0 0 32px;display:grid;place-items:center;border-radius:9px;background:#fff0e2;color:#c56812;font-weight:850}
+.overview-shortcut-links a>span:nth-child(2){display:grid;gap:4px;min-width:0}
+.overview-shortcut-links strong{font-size:10px}
+.overview-shortcut-links small{color:var(--muted);font-size:9px;line-height:1.35}
+.overview-shortcut-links a>b{margin-left:auto;color:#8b96aa}
+.overview-shortcut-links a:hover{border-color:#ffbd83;background:#fffaf5}
+.overview-recent .panel-heading>a{color:#c56812;font-size:10px;font-weight:750;text-decoration:none;white-space:nowrap}
+.overview-activity-list{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.overview-activity-list li:not(.empty-state){display:grid;gap:4px;padding:10px 11px;border:1px solid var(--line);border-radius:9px}
+.overview-activity-list strong{overflow:hidden;font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+.overview-activity-list small{color:var(--muted);font-size:9px}
+@media(max-width:900px){.overview-bottom-grid{grid-template-columns:1fr}}
+@media(max-width:650px){.overview-shortcut-links{grid-template-columns:1fr}.overview-bottom-grid{gap:10px}.overview-extra-stats{margin-top:0}}
