@@ -6,3 +6,6 @@ verify_jwt = false
 
 [functions.user-management]
 verify_jwt = false
+
+[functions.analytics]
+verify_jwt = false
