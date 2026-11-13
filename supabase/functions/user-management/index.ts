@@ -173,7 +173,7 @@ Deno.serve(async (request) => {
       const role = typeof input.role === "string" ? input.role : "";
       const permission = typeof input.permission === "string" ? input.permission : "";
       const allowed = input.allowed === true;
-      if (!validRoles.has(role) || !/^(dashboard|activity|vault|drive|users|roles|analytics|security)\.[a-z]+$/.test(permission)) {
+      if (!validRoles.has(role) || !/^(dashboard|activity|vault|drive|users|roles|analytics|security|settings)\.[a-z]+$/.test(permission)) {
         return json({ error: "Invalid role or permission." }, 400, request);
       }
       if (role === "admin" && ["users.manage", "roles.manage", "dashboard.view"].includes(permission) && !allowed) {
@@ -182,8 +182,8 @@ Deno.serve(async (request) => {
       if (role !== "admin" && ["users.manage", "roles.manage"].includes(permission) && allowed) {
         return json({ error: "User and role management are reserved for Admin accounts." }, 409, request);
       }
-      if (role !== "admin" && permission.startsWith("security.logs.") && allowed) {
-        return json({ error: "Security log access is reserved for Admin accounts." }, 409, request);
+      if (role !== "admin" && (permission.startsWith("security.logs.") || permission.startsWith("settings.")) && allowed) {
+        return json({ error: "Security log and site settings access are reserved for Admin accounts." }, 409, request);
       }
       const { error } = await db.from("pixel_forge_role_permissions").upsert({ role, permission, allowed });
       if (error) throw error;
