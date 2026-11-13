@@ -17,7 +17,8 @@ test("public collection accepts only the allowlisted page_path and rejects extra
   assert.match(edge, /const allowedPaths = new Set\(/);
   assert.match(edge, /!allowedPaths\.has\(pagePath\)/);
   assert.match(edge, /key !== "pagePath" && key !== "visitorSessionId"/);
-  assert.match(edge, /visitor_hash: visitorHash/);\n  assert.match(edge, /insert\(\{[\\s\\S]*page_path: pagePath/);
+  assert.match(edge, /visitor_hash: visitorHash/);
+  assert.match(edge, /insert\(\{[\\s\\S]*page_path: pagePath/);
 });
 
 test("event and rate-limit tables deny direct client access and enable RLS", () => {
@@ -58,7 +59,9 @@ test("analytics.view is an accepted role-permission namespace", () => {
 test("public homepage and library send allowlisted page paths without visitor credentials", () => {
   const homepage = read("script.js");
   const library = read("library.js");
-  assert.match(homepage, /trackPixelForgePageView\(\);/);\n  assert.match(homepage, /sessionStorage\.getItem\(key\)/);\n  assert.match(homepage, /visitorSessionId/);
+  assert.match(homepage, /trackPixelForgePageView\(\);/);
+  assert.match(homepage, /sessionStorage\.getItem\(key\)/);
+  assert.match(homepage, /visitorSessionId/);
   assert.match(homepage, /credentials: "omit"/);
   assert.match(library, /analytics\?action=collect/);
   assert.match(library, /credentials: "omit"/);
