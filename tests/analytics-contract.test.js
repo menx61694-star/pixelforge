@@ -52,5 +52,5 @@ test("stored page-view schema contains no raw visitor, IP, referrer, or document
 
 test("analytics.view is an accepted role-permission namespace", () => {
   const userManagement = read("supabase/functions/user-management/index.ts");
-  assert.match(userManagement, /analytics\)\\.[a-z]+\$/.source ? /analytics\)\\.[a-z]+\$/ : /analytics/);
+  assert.ok(userManagement.includes("roles|analytics)\\\\.[a-z]+$"));
 });
