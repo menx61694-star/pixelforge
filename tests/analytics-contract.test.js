@@ -220,3 +220,11 @@ test("public local IP diagnostic is user-initiated, disclosed and does not auto-
   assert.doesNotMatch(script.slice(0, script.indexOf("async function getPixelForgePrivateLocalIp")), /getPixelForgePrivateLocalIp\(\)/);
   assert.match(read("admin.js"), /browser-reported/);
 });
+
+ 
+test("security log timestamps are displayed in India Standard Time", () => {
+  const adminJs = read("admin.js");
+  assert.match(adminJs, /toLocaleString\("en-IN", \{ timeZone: "Asia\/Kolkata"/);
+  assert.match(adminJs, /\+ " IST"/);
+  assert.doesNotMatch(adminJs, /new Date\(log\.createdAt\)\.toISOString\(\)/);
+});
