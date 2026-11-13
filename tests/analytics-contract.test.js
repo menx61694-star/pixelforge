@@ -72,3 +72,26 @@ test("analytics page is gated by the dedicated role permission", () => {
   assert.match(adminJs, /analytics: "analytics\.view"/);
   assert.match(adminJs, /analytics\?action=summary/);
 });
+
+test("admin overview includes vault, Drive, publishing, members, traffic and activity summaries", () => {
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  for (const id of ["stat-doc-count", "stat-storage", "stat-drive-count", "stat-drive-status", "stat-published-count", "stat-user-count", "stat-overview-page-views", "overview-activity-list"]) {
+    assert.ok(adminHtml.includes('id="' + id + '"'), "overview element missing: " + id);
+  }
+  assert.match(adminHtml, /Workspace modules/);
+  assert.match(adminHtml, /Recent workspace activity/);
+  assert.match(adminJs, /publishedCountStat\.textContent = String\(publishedFiles\.size\)/);
+  assert.match(adminJs, /userCountStat\.textContent = String\(totalUsers\)/);
+  assert.match(adminJs, /loadOverviewAnalytics\(\)/);
+  assert.match(adminJs, /overviewActivityList\.append\(item\)/);
+});
+
+test("overview shortcuts and optional metrics respect existing role permissions", () => {
+  const adminHtml = read("admin.html");
+  assert.match(adminHtml, /data-permission="vault.read"/);
+  assert.match(adminHtml, /data-permission="drive.read"/);
+  assert.match(adminHtml, /data-permission="analytics.view"/);
+  assert.match(adminHtml, /data-permission="users.manage"/);
+  assert.match(read("admin.js"), /querySelectorAll\("\[data-permission\]"\)/);
+});
