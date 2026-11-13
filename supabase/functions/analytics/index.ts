@@ -128,7 +128,7 @@ async function hasSecurityPermission(uid: string, permission: "security.logs.vie
   return data?.allowed === true;
 }
 async function authenticatedUid(request: Request): Promise<string | null> {
-  const token = request.headers.get("Authorization")?.match(/^Bearer\\s+(.+)$/i)?.[1];
+  const token = request.headers.get("Authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
   return token ? await lookupFirebaseUser(token) : null;
 }
 async function storeSecurityLog(request: Request, pagePath: string, db: ReturnType<typeof dbAdmin>) {
