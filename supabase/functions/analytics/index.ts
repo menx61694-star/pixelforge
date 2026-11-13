@@ -111,7 +111,7 @@ Deno.serve(async (request) => {
     }
 
     if (request.method === "GET" && action === "summary") {
-  const tokenPayload = idToken.split(".")[1];
+      const token = request.headers.get("Authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
       if (!token) return json({ error: "Firebase authentication required." }, 401, request);
       const uid = await lookupFirebaseUser(token);
       if (!uid) return json({ error: "Firebase authentication required." }, 401, request);
