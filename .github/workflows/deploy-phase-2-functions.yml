@@ -5,10 +5,13 @@ on:
   push:
     branches:
       - feature/phase-2-users-roles
+      - main
     paths:
       - '.github/workflows/deploy-phase-2-functions.yml'
       - 'supabase/functions/user-management/**'
       - 'supabase/functions/google-drive-files/**'
+      - 'supabase/functions/analytics/**'
+      - 'supabase/config.toml'
       - 'supabase/dual-storage-publishing.sql'
 
 permissions:
@@ -20,7 +23,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy user-management and google-drive-files
+    name: Deploy user-management, google-drive-files, and analytics
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -48,6 +51,12 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: supabase functions deploy google-drive-files --project-ref zeueivmdzhkhonkyllij --use-api --yes
 
+
+      - name: Deploy analytics Edge Function
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy analytics --project-ref zeueivmdzhkhonkyllij --use-api --yes
+
       - name: Smoke-test deployed endpoints reject unauthenticated requests
         run: |
           set -eu
@@ -63,4 +72,9 @@ jobs:
             --header "Origin: https://pixelforge.jo3.org" \
             "https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/google-drive-files?action=public-list")
           test "$PUBLIC_STATUS" = "200" || { cat /tmp/public-drive-response.json; echo "::error::Expected public Drive listing to return HTTP 200 after migration, got $PUBLIC_STATUS"; exit 1; }
-          echo "Both authenticated endpoints reject anonymous requests and public Drive listing is available."
+
+          ANALYTICS_STATUS=$(curl --silent --show-error --output /tmp/analytics-summary-response.json --write-out "%{http_code}" \\
+            --header "Origin: https://pixelforge.jo3.org" \\
+            "https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/analytics?action=summary")
+          test "$ANALYTICS_STATUS" = "401" || { cat /tmp/analytics-summary-response.json; echo "::error::Expected analytics summary to reject unauthenticated access with HTTP 401, got $ANALYTICS_STATUS"; exit 1; }
+          echo "Authenticated endpoints reject anonymous requests, public Drive listing is available, and analytics summary requires Firebase authentication."
