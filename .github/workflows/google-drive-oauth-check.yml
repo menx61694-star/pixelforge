@@ -15,7 +15,7 @@ on:
       - "supabase/functions/google-drive-files/**"
       - "supabase/functions/user-management/**"
       - "supabase/functions/analytics/**"
-      - "supabase/functions/site-settings/**"
+      - "supabase/functions/site-settings/**"\n      - "maintenance-mode.js"\n      - "index.html"\n      - "library.html"\n      - "tests/maintenance-mode.test.js"
       - "supabase/config.toml"
       - "supabase/phase-2-users-roles.sql"
       - "supabase/phase-4-analytics.sql"
@@ -75,7 +75,7 @@ jobs:
       - name: Check admin JavaScript syntax
         run: |
           node --check admin.js
-          node --check script.js
+          node --check maintenance-mode.js\n          node --check script.js
           node --check library.js
           node --check vault-storage-utils.js
 
@@ -83,7 +83,7 @@ jobs:
         run: |
           node --test tests/vault-storage.test.js
           node --test tests/analytics-contract.test.js
-          node --test tests/settings-contract.test.js
+          node --test tests/settings-contract.test.js\n          node --test tests/maintenance-mode.test.js
 
       - name: Type-check Edge Functions
         run: |
