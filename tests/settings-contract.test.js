@@ -65,7 +65,7 @@ test("settings permissions are admin-only in both role seed and permission manag
   assert.match(sql, /\('admin', 'settings\.manage', true\)/);
   assert.match(sql, /\('editor', 'settings\.view', false\)/);
   assert.match(sql, /\('viewer', 'settings\.manage', false\)/);
-  assert.match(userManagement, /security\|settings\)\\\.[a-z\]\+/);
+  assert.ok(userManagement.includes("security|settings)\\.[a-z]+"));
   assert.match(userManagement, /permission\.startsWith\("settings\."\)/);
 });
 
