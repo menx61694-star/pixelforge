@@ -221,15 +221,15 @@ Deno.serve(async (request) => {
       if (request.method === "POST") {
         const input = await request.json().catch(() => ({}));
         if (Object.keys(input ?? {}).length !== 0) return json({ error: "Invalid deletion request." }, 400, request);
-        const { error } = await db.from("pixel_forge_security_logs").delete().lt(
-          "created_at", new Date(Date.now() - 90 * 86400000).toISOString(),
-        );
+        const { data: deletedRows, error } = await db.from("pixel_forge_security_logs")
+          .delete().gte("created_at", new Date(0).toISOString()).select("id");
         if (error) throw error;
-        const { error: allError } = await db.from("pixel_forge_security_logs").delete().gte(
-          "created_at", new Date(0).toISOString(),
-        ).lt("created_at", new Date(Date.now() - 90 * 86400000).toISOString());
-        if (allError) throw allError;
-        return json({ deletedOlderThanDays: 90 }, 200, request);
+        const deletedCount = deletedRows?.length ?? 0;
+        const { error: auditError } = await db.from("pixel_forge_security_log_admin_actions").insert({
+          actor_uid: uid, action: "manual_delete_all", deleted_count: deletedCount,
+        });
+        if (auditError) console.error("Security log deletion audit write failed:", auditError);
+        return json({ deletedCount }, 200, request);
       }
       const { data, error } = await db.from("pixel_forge_security_logs")
         .select("id,event_type,page_path,ip_ciphertext,ip_iv,created_at")
