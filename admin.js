@@ -580,6 +580,27 @@ const firebaseConfig = {
       if (!b.timestamp) return -1;
       return b.timestamp - a.timestamp;
     });
+    if (overviewActivityList) {
+      overviewActivityList.replaceChildren();
+      if (!validEntries.length) {
+        const empty = document.createElement("li");
+        empty.className = "empty-state";
+        empty.textContent = "No recent file updates.";
+        overviewActivityList.append(empty);
+        if (overviewActivityStatus) overviewActivityStatus.textContent = "Storage activity will appear here.";
+      } else {
+        validEntries.slice(0, 3).forEach(entry => {
+          const item = document.createElement("li");
+          const title = document.createElement("strong");
+          title.textContent = entry.name;
+          const meta = document.createElement("small");
+          meta.textContent = entry.source + (entry.timestamp ? " · " + entry.timestamp.toLocaleDateString() : "");
+          item.append(title, meta);
+          overviewActivityList.append(item);
+        });
+        if (overviewActivityStatus) overviewActivityStatus.textContent = "Latest " + Math.min(3, validEntries.length) + " storage file updates.";
+      }
+    }
     activityList.replaceChildren();
     if (!validEntries.length) {
       const empty = document.createElement("li");
