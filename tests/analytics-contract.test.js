@@ -177,7 +177,7 @@ test("admin Security Logs page is permission-gated and manual deletion requires 
 });
 
 test("security logs trust only edge client IP and reject private address ranges", () => {
-  const ipFn = edge.match(/function getClientIp[\\s\\S]*?\\n}/)?.[0] ?? "";
+  const ipFn = edge.match(/function getClientIp[\s\S]*?\n}/)?.[0] ?? "";
   assert.match(ipFn, /cf-connecting-ip/);
   assert.doesNotMatch(ipFn, /x-real-ip|x-forwarded-for/);
   assert.match(edge, /ip_source: observedIp.source/);
