@@ -78,3 +78,17 @@ test("settings API has a strict origin allowlist and exposes only the minimal pu
   assert.ok(edge.includes('"maintenance.message"'));
   assert.doesNotMatch(edge, /SUPABASE_ANON_KEY|SUPABASE_PUBLISHABLE_KEY/);
 });
+
+
+test("admin workspace exposes a permission-gated Settings page for the existing site-settings API", () => {
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  assert.match(adminHtml, /id="settings-nav-link"[^>]*data-permission="settings.view"/);
+  assert.match(adminHtml, /id="settings"/);
+  assert.match(adminHtml, /setting-maintenance-enabled/);
+  assert.match(adminHtml, /settings-audit-body/);
+  assert.match(adminJs, /"settings"]/);
+  assert.match(adminJs, /settingsNavLink.hidden = !currentPermissions.has("settings.view")/);
+  assert.match(adminJs, /settingsRequest("update", { method: "POST"/);
+  assert.match(adminJs, /settingsRequest("audit")/);
+});
