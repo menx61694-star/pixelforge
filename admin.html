@@ -203,15 +203,15 @@
                 <button type="button" class="danger-button" id="delete-security-logs" data-permission="security.logs.delete" hidden>Delete all logs</button>
               </div>
             </div>
-            <p class="panel-copy">Encrypted visitor IP addresses and page-view timestamps. Logs are automatically deleted after 90 days. Access is restricted to authorized administrators.</p>
+            <p class="panel-copy">Observed public IP from the hosting edge; it is not guaranteed to identify a device. Local/private LAN IPs are not available to this server and are not collected. Logs are automatically deleted after 90 days.</p>
             <p id="security-logs-status" class="panel-copy" role="status" aria-live="polite">Loading security logs…</p>
             <div class="table-wrap">
               <table class="data-table security-log-table">
-                <thead><tr><th>IP address</th><th>Event</th><th>Page</th><th>Time (UTC)</th></tr></thead>
-                <tbody id="security-logs-body"><tr><td colspan="4" class="empty-state">Loading logs…</td></tr></tbody>
+                <thead><tr><th>Observed public IP</th><th>IP family</th><th>Source</th><th>Local IP</th><th>Event</th><th>Page</th><th>Time (UTC)</th></tr></thead>
+                <tbody id="security-logs-body"><tr><td colspan="7" class="empty-state">Loading logs…</td></tr></tbody>
               </table>
             </div>
-            <p class="analytics-privacy-note">IP addresses are encrypted with AES-256-GCM before storage. They are decrypted only for this permission-protected admin view. Manual deletion removes all current security logs; automatic retention removes logs older than 90 days.</p>
+            <p class="analytics-privacy-note">Observed public IPs are encrypted with AES-256-GCM before storage and decrypted only for authorized admins. Only the hosting edge cf-connecting-ip header is trusted. Local/private LAN IP is not exposed by normal browser requests. VPNs, carrier NAT and proxies may affect the observed public IP. Manual deletion removes all current security logs; automatic retention removes logs older than 90 days.</p>
           </section>
         </div>
 
