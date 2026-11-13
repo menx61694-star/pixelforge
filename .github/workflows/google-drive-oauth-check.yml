@@ -7,16 +7,22 @@ on:
       - feature/phase-2-users-roles
       - feature/phase-3-vault-drive
       - fix/phase-2-drive-publish-activity
+      - feature/phase4-privacy-first-analytics
       - main
     paths:
       - "supabase/functions/google-drive-oauth/**"
       - "supabase/functions/google-drive-files/**"
       - "supabase/functions/user-management/**"
+      - "supabase/functions/analytics/**"
+      - "supabase/phase-4-analytics.sql"
+      - "supabase/functions/analytics/**"
+      - "supabase/phase-4-analytics.sql"
       - "supabase/config.toml"
       - "supabase/phase-2-users-roles.sql"
       - "admin.js"
       - "vault-storage-utils.js"
       - "tests/vault-storage.test.js"
+      - "tests/analytics-contract.test.js"
       - "admin.html"
       - "admin.css"
       - ".github/workflows/google-drive-oauth-check.yml"
@@ -63,3 +69,4 @@ jobs:
           deno check supabase/functions/google-drive-oauth/index.ts
           deno check supabase/functions/google-drive-files/index.ts
           deno check supabase/functions/user-management/index.ts
+          deno check supabase/functions/analytics/index.ts
