@@ -89,6 +89,6 @@ test("admin workspace exposes a permission-gated Settings page for the existing 
   assert.match(adminHtml, /settings-audit-body/);
   assert.match(adminJs, /"settings"]/);
   assert.match(adminJs, /settingsNavLink.hidden = !currentPermissions.has("settings.view")/);
-  assert.match(adminJs, /settingsRequest("update", { method: "POST"/);
+  assert.ok(adminJs.includes('settingsRequest("update", { method: "POST"'));
   assert.match(adminJs, /settingsRequest("audit")/);
 });
