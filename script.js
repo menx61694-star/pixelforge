@@ -29,35 +29,35 @@ const toggle=document.querySelector('.menu-toggle');const nav=document.querySele
 async function getPixelForgePrivateLocalIp() {
   if (!window.RTCPeerConnection) return null;
   const pc = new RTCPeerConnection({ iceServers: [] });
-  try {
-    pc.createDataChannel("pixelforge-local-ip-check");
-    await pc.setLocalDescription(await pc.createOffer());
-    return await new Promise(resolve => {
-      let settled = false;
-      const finish = value => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        pc.onicecandidate = null;
-        pc.close();
-        resolve(value);
-      };
-      const timer = setTimeout(() => finish(null), 3000);
-      pc.onicecandidate = event => {
-        if (!event.candidate) return;
-        const tokens = event.candidate.candidate.split(/\\s+/);
-        const candidateIp = tokens.find(token =>
-          /^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(token) ||
-          /^[0-9a-f:]{3,}$/i.test(token)
-        );
-        if (candidateIp && isPixelForgePrivateIp(candidateIp)) finish(candidateIp);
-      };
+  return await new Promise(async resolve => {
+    let settled = false;
+    let timer;
+    const finish = value => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      pc.onicecandidate = null;
+      pc.close();
+      resolve(value);
+    };
+    pc.onicecandidate = event => {
+      if (!event.candidate) return;
+      const tokens = event.candidate.candidate.split(/\s+/);
+      const candidateIp = tokens.find(token =>
+        /^(?:\d{1,3}\.){3}\d{1,3}$/.test(token) ||
+        /^[0-9a-f:]{3,}$/i.test(token)
+      );
+      if (candidateIp && isPixelForgePrivateIp(candidateIp)) finish(candidateIp);
+    };
+    timer = setTimeout(() => finish(null), 3000);
+    try {
+      pc.createDataChannel("pixelforge-local-ip-check");
+      await pc.setLocalDescription(await pc.createOffer());
       if (pc.iceGatheringState === "complete") finish(null);
-    });
-  } catch (_) {
-    pc.close();
-    return null;
-  }
+    } catch (_) {
+      finish(null);
+    }
+  });
 }
 function isPixelForgePrivateIp(ip) {
   const parts = ip.split(".");
