@@ -84,14 +84,23 @@ function getTrustedLocation(request: Request) {
   return { countryCode, regionName };
 }
 
-function getClientIp(request: Request): string | null {
-  const candidate = request.headers.get("cf-connecting-ip") ?? request.headers.get("x-real-ip");
-  if (!candidate || candidate.length > 64) return null;
+function getClientIp(request: Request): { address: string; source: "cf-connecting-ip" } | null {
+  // Only trust the hosting edge client-IP header; never use client-supplied fallback headers.
+  const candidate = request.headers.get("cf-connecting-ip");
+  if (!candidate || candidate.length > 64 || candidate.includes(",")) return null;
   const ip = candidate.trim();
-  const ipv4Parts = ip.split(".");
-  const validIpv4 = ipv4Parts.length === 4 && ipv4Parts.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255);
-  const validIpv6 = ip.includes(":") && /^[0-9a-f:]+$/i.test(ip) && ip.split(":").length >= 3;
-  return (validIpv4 || validIpv6) ? ip : null;
+  const parts = ip.split(".");
+  const ipv4 = parts.length === 4 && parts.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255);
+  const ipv6 = ip.includes(":") && /^[0-9a-f:]+$/i.test(ip) && ip.split(":").length >= 3;
+  if (!ipv4 && !ipv6) return null;
+  if (ipv4) {
+    const [a, b] = parts.map(Number);
+    if (a === 0 || a === 10 || a === 127 || a >= 224 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 198 && (b === 18 || b === 19))) return null;
+  } else {
+    const lower = ip.toLowerCase();
+    if (lower === "::" || lower === "::1" || lower.startsWith("fc") || lower.startsWith("fd") || lower.startsWith("fe8") || lower.startsWith("fe9") || lower.startsWith("fea") || lower.startsWith("feb") || lower.startsWith("ff")) return null;
+  }
+  return { address: ip, source: "cf-connecting-ip" };
 }
 function ipEncryptionKey(): Promise<CryptoKey> {
   const raw = required("ANALYTICS_IP_ENCRYPTION_KEY");
@@ -134,12 +143,12 @@ async function authenticatedUid(request: Request): Promise<string | null> {
   return token ? await lookupFirebaseUser(token) : null;
 }
 async function storeSecurityLog(request: Request, pagePath: string, db: ReturnType<typeof dbAdmin>) {
-  const ip = getClientIp(request);
-  if (!ip) return;
+  const observedIp = getClientIp(request);
+  if (!observedIp) return;
   try {
-    const encrypted = await encryptIp(ip);
+    const encrypted = await encryptIp(observedIp.address);
     const { error } = await db.from("pixel_forge_security_logs").insert({
-      ...encrypted, event_type: "page_view", page_path: pagePath,
+      ...encrypted, ip_source: observedIp.source, event_type: "page_view", page_path: pagePath,
     });
     if (error) throw error;
   } catch (error) {
@@ -242,12 +251,12 @@ Deno.serve(async (request) => {
         return json({ deletedCount }, 200, request);
       }
       const { data, error } = await db.from("pixel_forge_security_logs")
-        .select("id,event_type,page_path,ip_ciphertext,ip_iv,created_at")
+        .select("id,event_type,page_path,ip_ciphertext,ip_iv,ip_source,created_at")
         .order("created_at", { ascending: false }).limit(200);
       if (error) throw error;
       const logs = await Promise.all((data ?? []).map(async (row) => ({
         id: row.id, eventType: row.event_type, pagePath: row.page_path,
-        ipAddress: await decryptIp(row.ip_ciphertext, row.ip_iv), createdAt: row.created_at,
+        ipAddress: await decryptIp(row.ip_ciphertext, row.ip_iv), ipSource: row.ip_source ?? "unknown (legacy log)", createdAt: row.created_at,
       })));
       return json({ logs, retentionDays: 90 }, 200, request);
     }
