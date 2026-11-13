@@ -12,8 +12,11 @@ create table if not exists public.pixel_forge_security_logs (
   )),
   ip_ciphertext text not null,
   ip_iv text not null,
+  ip_source text,
   created_at timestamptz not null default now()
 );
+alter table public.pixel_forge_security_logs add column if not exists ip_source text;
+
 create index if not exists pixel_forge_security_logs_created_idx
   on public.pixel_forge_security_logs (created_at desc);
 alter table public.pixel_forge_security_logs enable row level security;
