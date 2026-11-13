@@ -74,7 +74,7 @@ test("settings API has a strict origin allowlist and exposes only the minimal pu
   assert.match(edge, /Access-Control-Allow-Origin/);
   assert.match(edge, /authorize\(request, permission\)/);
   assert.match(edge, /action === "public-status"/);
-  assert.match(edge, /maintenance\\.enabled/);
-  assert.match(edge, /maintenance\\.message/);
+  assert.ok(edge.includes('"maintenance.enabled"'));
+  assert.ok(edge.includes('"maintenance.message"'));
   assert.doesNotMatch(edge, /SUPABASE_ANON_KEY|SUPABASE_PUBLISHABLE_KEY/);
 });
