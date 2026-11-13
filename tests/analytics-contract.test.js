@@ -54,3 +54,21 @@ test("analytics.view is an accepted role-permission namespace", () => {
   const userManagement = read("supabase/functions/user-management/index.ts");
   assert.ok(userManagement.includes("|analytics)"));
 });
+
+test("public homepage and library send allowlisted page paths without visitor credentials", () => {
+  const homepage = read("script.js");
+  const library = read("library.js");
+  assert.match(homepage, /trackPixelForgePageView\(\);/);
+  assert.match(homepage, /credentials: "omit"/);
+  assert.match(library, /analytics\?action=collect/);
+  assert.match(library, /credentials: "omit"/);
+});
+
+test("analytics page is gated by the dedicated role permission", () => {
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  assert.match(adminHtml, /id="analytics" hidden/);
+  assert.match(adminHtml, /data-permission="analytics\.view"/);
+  assert.match(adminJs, /analytics: "analytics\.view"/);
+  assert.match(adminJs, /analytics\?action=summary/);
+});
