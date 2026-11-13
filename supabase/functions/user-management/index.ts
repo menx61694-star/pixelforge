@@ -182,6 +182,9 @@ Deno.serve(async (request) => {
       if (role !== "admin" && ["users.manage", "roles.manage"].includes(permission) && allowed) {
         return json({ error: "User and role management are reserved for Admin accounts." }, 409, request);
       }
+      if (role !== "admin" && permission.startsWith("security.logs.") && allowed) {
+        return json({ error: "Security log access is reserved for Admin accounts." }, 409, request);
+      }
       const { error } = await db.from("pixel_forge_role_permissions").upsert({ role, permission, allowed });
       if (error) throw error;
       return json({ updated: true }, 200, request);
