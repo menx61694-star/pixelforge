@@ -193,7 +193,7 @@ test("security logs explain local LAN IP is unavailable and show IP source", () 
   assert.match(adminHtml, /Observed public IP/);
   assert.match(adminHtml, /Local\/private LAN IPs are not available/);
   assert.match(adminJs, /Cloudflare edge/);
-  assert.match(adminJs, /Not available/);
+  assert.match(adminJs, /Not shared/);
   assert.match(securitySql, /ip_source text/);
 });
 
