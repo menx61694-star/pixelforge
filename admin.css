@@ -190,3 +190,8 @@ button:disabled{opacity:.6;cursor:wait}
 .overview-activity-list small{color:var(--muted);font-size:9px}
 @media(max-width:900px){.overview-bottom-grid{grid-template-columns:1fr}}
 @media(max-width:650px){.overview-shortcut-links{grid-template-columns:1fr}.overview-bottom-grid{gap:10px}.overview-extra-stats{margin-top:0}}
+
+
+.analytics-stats{grid-template-columns:repeat(2,minmax(180px,260px))}
+.analytics-location-panel{margin-top:16px}
+@media(max-width:650px){.analytics-stats{grid-template-columns:1fr}}
