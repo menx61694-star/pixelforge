@@ -53,7 +53,7 @@ test("stored page-view schema contains no raw visitor, IP, referrer, or document
 
 test("analytics.view is an accepted role-permission namespace", () => {
   const userManagement = read("supabase/functions/user-management/index.ts");
-  assert.ok(userManagement.includes("|analytics)"));
+  assert.ok(userManagement.includes("analytics|security)"));
 });
 
 test("public homepage and library send allowlisted page paths without visitor credentials", () => {
@@ -128,4 +128,50 @@ test("admin analytics separates page views, unique visitors, and location report
   assert.match(adminHtml, /Unique visitors/);
   assert.match(adminJs, /payload\.uniqueVisitors/);
   assert.match(adminJs, /renderAnalyticsLocations/);
+});
+
+test("security logs encrypt raw IP addresses with AES-GCM before persistence", () => {
+  assert.match(edge, /ANALYTICS_IP_ENCRYPTION_KEY/);
+  assert.match(edge, /name: "AES-GCM"/);
+  assert.match(edge, /ip_ciphertext/);
+  assert.match(edge, /ip_iv/);
+  assert.match(edge, /storeSecurityLog\(request, pagePath, db\)/);
+  assert.match(edge, /decryptIp\(row\.ip_ciphertext, row\.ip_iv\)/);
+});
+
+test("security logs table denies public and authenticated direct access and has 90-day scheduled retention", () => {
+  const securitySql = read("supabase/phase-4-security-logs.sql");
+  assert.match(securitySql, /create table if not exists public\.pixel_forge_security_logs/i);
+  assert.match(securitySql, /enable row level security/i);
+  assert.match(securitySql, /revoke all on public\.pixel_forge_security_logs from public, anon, authenticated/i);
+  assert.match(securitySql, /grant all on public\.pixel_forge_security_logs to service_role/i);
+  assert.match(securitySql, /interval '90 days'/i);
+  assert.match(securitySql, /cron\.schedule/i);
+  assert.match(securitySql, /17 3 \* \* \*/);
+});
+
+test("security log endpoints enforce dedicated Firebase role permissions and audit manual deletion", () => {
+  assert.match(edge, /security\.logs\.view/);
+  assert.match(edge, /security\.logs\.delete/);
+  assert.match(edge, /hasSecurityPermission\(uid, permission\)/);
+  assert.match(edge, /manual_delete_all/);
+  assert.match(edge, /actor_uid: uid/);
+  const userManagement = read("supabase/functions/user-management/index.ts");
+  assert.ok(userManagement.includes("analytics|security)"));
+  assert.ok(userManagement.includes('permission.startsWith("security.logs.") && allowed'));
+  const securitySql = read("supabase/phase-4-security-logs.sql");
+  assert.match(securitySql, /\('admin', 'security\.logs\.view', true\)/);
+  assert.match(securitySql, /\('admin', 'security\.logs\.delete', true\)/);
+  assert.match(securitySql, /\('viewer', 'security\.logs\.delete', false\)/);
+});
+
+test("admin Security Logs page is permission-gated and manual deletion requires confirmation", () => {
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  assert.match(adminHtml, /id="security-logs-nav-link" data-permission="security\.logs\.view"/);
+  assert.match(adminHtml, /id="security-logs" hidden/);
+  assert.match(adminHtml, /id="delete-security-logs" data-permission="security\.logs\.delete"/);
+  assert.match(adminJs, /securityLogsRequest\("security-logs"\)/);
+  assert.match(adminJs, /window\.confirm\("Delete ALL currently stored visitor security logs/);
+  assert.match(adminJs, /securityLogsRequest\("delete-security-logs"/);
 });

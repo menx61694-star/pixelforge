@@ -195,3 +195,15 @@ button:disabled{opacity:.6;cursor:wait}
 .analytics-stats{grid-template-columns:repeat(2,minmax(180px,260px))}
 .analytics-location-panel{margin-top:16px}
 @media(max-width:650px){.analytics-stats{grid-template-columns:1fr}}
+
+
+/* Restricted security log management */
+.security-log-actions{display:flex;gap:8px;flex-wrap:wrap}
+.security-log-actions button{min-height:38px;padding:0 13px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-size:11px;font-weight:700;cursor:pointer}
+.security-log-actions .danger-button{border-color:#f0c5c0;background:#fff7f6;color:#a23c32}
+.security-log-actions button:disabled{opacity:.55;cursor:not-allowed}
+.security-log-table{width:100%;border-collapse:collapse}
+.security-log-table th,.security-log-table td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:left;font-size:11px;white-space:nowrap}
+.security-log-table th{color:#7c879d;font-weight:700}
+.security-log-table td{color:#34415e}
+@media(max-width:700px){.security-logs-panel .panel-heading{align-items:flex-start;flex-direction:column}.security-log-table{min-width:650px}.security-logs-panel .table-wrap{overflow-x:auto}}

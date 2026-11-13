@@ -8,6 +8,7 @@ on:
       - feature/phase-3-vault-drive
       - fix/phase-2-drive-publish-activity
       - feature/phase4-privacy-first-analytics
+      - feature/security-logs-ip-retention-90d
       - main
     paths:
       - "supabase/functions/google-drive-oauth/**"
@@ -17,6 +18,7 @@ on:
       - "supabase/config.toml"
       - "supabase/phase-2-users-roles.sql"
       - "supabase/phase-4-analytics.sql"
+      - "supabase/phase-4-security-logs.sql"
       - "admin.js"
       - "script.js"
       - "library.js"
@@ -37,6 +39,8 @@ on:
       - "supabase/config.toml"
       - "supabase/phase-2-users-roles.sql"
       - "supabase/phase-4-analytics.sql"
+      - "supabase/phase-4-security-logs.sql"
+      - "supabase/SECURITY-LOGS-SETUP.md"
       - "tests/analytics-contract.test.js"
       - "admin.js"
       - "script.js"
