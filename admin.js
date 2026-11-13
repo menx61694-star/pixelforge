@@ -1162,6 +1162,7 @@ const firebaseConfig = {
     currentPermissions = new Set(session.permissions || []);
     if (!currentPermissions.has("dashboard.view")) throw new Error("Dashboard access is not permitted.");
     if (usersNavLink) usersNavLink.hidden = !currentPermissions.has("users.manage");
+    if (analyticsNavLink) analyticsNavLink.hidden = !currentPermissions.has("analytics.view");
     if (googleDriveNavLink) googleDriveNavLink.hidden = !currentPermissions.has("drive.read");
     syncSidebarNavigation();
     if (googleDriveButton) googleDriveButton.hidden = currentUserUid !== ADMIN_UID;
