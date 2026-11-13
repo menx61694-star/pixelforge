@@ -15,16 +15,19 @@ on:
       - "supabase/functions/google-drive-files/**"
       - "supabase/functions/user-management/**"
       - "supabase/functions/analytics/**"
+      - "supabase/functions/site-settings/**"
       - "supabase/config.toml"
       - "supabase/phase-2-users-roles.sql"
       - "supabase/phase-4-analytics.sql"
       - "supabase/phase-4-security-logs.sql"
+      - "supabase/phase-5-settings.sql"
       - "admin.js"
       - "script.js"
       - "library.js"
       - "vault-storage-utils.js"
       - "tests/vault-storage.test.js"
       - "tests/analytics-contract.test.js"
+      - "tests/settings-contract.test.js"
       - "admin.html"
       - "admin.css"
       - ".github/workflows/google-drive-oauth-check.yml"
@@ -76,6 +79,7 @@ jobs:
         run: |
           node --test tests/vault-storage.test.js
           node --test tests/analytics-contract.test.js
+          node --test tests/settings-contract.test.js
 
       - name: Type-check Edge Functions
         run: |
@@ -83,3 +87,4 @@ jobs:
           deno check supabase/functions/google-drive-files/index.ts
           deno check supabase/functions/user-management/index.ts
           deno check supabase/functions/analytics/index.ts
+          deno check supabase/functions/site-settings/index.ts
