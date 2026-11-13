@@ -64,9 +64,7 @@ async function hasAnalyticsPermission(uid: string): Promise<boolean> {
   return data?.allowed === true;
 }
 async function rateLimitKey(request: Request): Promise<string | null> {
-  const forwarded = request.headers.get("cf-connecting-ip") ??
-    request.headers.get("x-real-ip") ??
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const forwarded = request.headers.get("cf-connecting-ip") ?? request.headers.get("x-real-ip");
   if (!forwarded) return null;
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
