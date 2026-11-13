@@ -44,8 +44,7 @@ insert into public.pixel_forge_role_permissions (role, permission, allowed) valu
 on conflict (role, permission) do update set allowed = excluded.allowed;
 
 -- Daily automatic deletion. pg_cron is supported by Supabase; job replacement keeps this migration idempotent.
-create extension if not exists pg_cron with schema pg_catalog;
--- Supabase manages privileges on the cron schema; do not alter its grants here.
+-- pg_cron is already enabled on this Supabase project; preserve the existing managed extension and job.
 do $$
 declare
   existing_job record;
