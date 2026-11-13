@@ -106,6 +106,23 @@ Deno.serve(async (request) => {
   try {
     const url = new URL(request.url);
     const action = url.searchParams.get("action") ?? "";
+    if (request.method === "GET" && action === "public-status") {
+      const db = createClient(required("SUPABASE_URL"), required("SUPABASE_SERVICE_ROLE_KEY"), {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { data, error } = await db.from("pixel_forge_site_settings")
+        .select("setting_key,setting_value")
+        .in("setting_key", ["maintenance.enabled", "maintenance.message"]);
+      if (error) throw error;
+      const values = Object.fromEntries((data ?? []).map((row) => [row.setting_key, row.setting_value]));
+      return json({
+        maintenance: values["maintenance.enabled"] === true,
+        message: typeof values["maintenance.message"] === "string"
+          ? values["maintenance.message"]
+          : "We are performing scheduled maintenance. Please check back soon.",
+      }, 200, request);
+    }
+
     const permission = request.method === "GET" ? "settings.view" : "settings.manage";
     const actor = await authorize(request, permission);
     if (!actor) return json({ error: "Active administrator permission is required." }, 403, request);
