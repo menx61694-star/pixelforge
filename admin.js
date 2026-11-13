@@ -1140,7 +1140,7 @@ const firebaseConfig = {
       } else {
         payload.logs.forEach(log => {
           const row = document.createElement("tr");
-          [log.ipAddress, log.eventType, log.pagePath, new Date(log.createdAt).toLocaleString() + " UTC"].forEach(value => {
+          [log.ipAddress, log.eventType, log.pagePath, new Date(log.createdAt).toISOString().replace("T", " ").slice(0, 19) + " UTC"].forEach(value => {
             const cell = document.createElement("td"); cell.textContent = String(value ?? "—"); row.append(cell);
           });
           securityLogsBody.append(row);
