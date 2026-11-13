@@ -219,6 +219,13 @@ Deno.serve(async (request) => {
         return json({ error: "Security log permission is required." }, 403, request);
       }
       const db = dbAdmin();
+      if (request.method === "GET") {
+        try {
+          await ipEncryptionKey();
+        } catch (_) {
+          return json({ error: "Security log encryption is not configured. Add ANALYTICS_IP_ENCRYPTION_KEY to Supabase Edge Function secrets." }, 503, request);
+        }
+      }
       if (request.method === "POST") {
         const input = await request.json().catch(() => ({}));
         if (Object.keys(input ?? {}).length !== 0) return json({ error: "Invalid deletion request." }, 400, request);
