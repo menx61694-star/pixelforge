@@ -73,8 +73,8 @@ jobs:
             "https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/google-drive-files?action=public-list")
           test "$PUBLIC_STATUS" = "200" || { cat /tmp/public-drive-response.json; echo "::error::Expected public Drive listing to return HTTP 200 after migration, got $PUBLIC_STATUS"; exit 1; }
 
-          ANALYTICS_STATUS=$(curl --silent --show-error --output /tmp/analytics-summary-response.json --write-out "%{http_code}" \\
-            --header "Origin: https://pixelforge.jo3.org" \\
+          ANALYTICS_STATUS=$(curl --silent --show-error --output /tmp/analytics-summary-response.json --write-out "%{http_code}" \
+            --header "Origin: https://pixelforge.jo3.org" \
             "https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/analytics?action=summary")
           test "$ANALYTICS_STATUS" = "401" || { cat /tmp/analytics-summary-response.json; echo "::error::Expected analytics summary to reject unauthenticated access with HTTP 401, got $ANALYTICS_STATUS"; exit 1; }
           echo "Authenticated endpoints reject anonymous requests, public Drive listing is available, and analytics summary requires Firebase authentication."
