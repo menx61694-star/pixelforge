@@ -45,8 +45,7 @@ on conflict (role, permission) do update set allowed = excluded.allowed;
 
 -- Daily automatic deletion. pg_cron is supported by Supabase; job replacement keeps this migration idempotent.
 create extension if not exists pg_cron with schema pg_catalog;
-grant usage on schema cron to postgres;
-grant all privileges on all tables in schema cron to postgres;
+-- Supabase manages privileges on the cron schema; do not alter its grants here.
 do $$
 declare
   existing_job record;
