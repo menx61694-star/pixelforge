@@ -12,6 +12,7 @@ on:
       - 'supabase/functions/google-drive-files/**'
       - 'supabase/functions/analytics/**'
       - 'supabase/config.toml'
+      - 'supabase/phase-4-security-logs.sql'
       - 'supabase/dual-storage-publishing.sql'
 
 permissions:
