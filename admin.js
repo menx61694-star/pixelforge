@@ -1135,12 +1135,12 @@ const firebaseConfig = {
       if (!payload.logs || !payload.logs.length) {
         const row = document.createElement("tr");
         const cell = document.createElement("td");
-        cell.colSpan = 4; cell.className = "empty-state"; cell.textContent = "No security logs recorded yet.";
+        cell.colSpan = 7; cell.className = "empty-state"; cell.textContent = "No security logs recorded yet.";
         row.append(cell); securityLogsBody.append(row);
       } else {
         payload.logs.forEach(log => {
           const row = document.createElement("tr");
-          [log.ipAddress, log.eventType, log.pagePath, new Date(log.createdAt).toISOString().replace("T", " ").slice(0, 19) + " UTC"].forEach(value => {
+          [log.ipAddress, log.ipAddress && log.ipAddress.includes(":") ? "IPv6" : "IPv4", log.ipSource === "cf-connecting-ip" ? "Cloudflare edge" : "Unknown / legacy", "Not available", log.eventType, log.pagePath, new Date(log.createdAt).toISOString().replace("T", " ").slice(0, 19) + " UTC"].forEach(value => {
             const cell = document.createElement("td"); cell.textContent = String(value ?? "—"); row.append(cell);
           });
           securityLogsBody.append(row);
