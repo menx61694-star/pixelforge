@@ -31,6 +31,7 @@ on:
       - "admin.html"
       - "admin.css"
       - ".github/workflows/google-drive-oauth-check.yml"
+      - ".github/workflows/deploy-phase-2-functions.yml"
   pull_request:
     branches:
       - main
