@@ -331,7 +331,7 @@ Deno.serve(async (request) => {
             const { data: publicUrl } = db.storage.from("public-documents").getPublicUrl(path);
             docs.set("supabase:" + path, {
               source: "supabase", storage_path: path,
-              title: file.name.replace(/\\.[^.]+$/, "").replace(/[_-]+/g, " "),
+              title: file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " "),
               category: categoryNames[category], size_bytes: Number(file.metadata?.size || 0),
               url: publicUrl.publicUrl, ext,
             });
@@ -550,7 +550,7 @@ Deno.serve(async (request) => {
         if (publishedError) throw publishedError;
         if (!published) return json({ error: "Resource is not publicly published." }, 404, request);
       } else {
-        const match = /^(pdf-documents|study-notes|books-resources|other-documents|exam-materials|technology-guides)\\/([^/]{1,255})$/.exec(input.resourceId);
+        const match = /^(pdf-documents|study-notes|books-resources|other-documents|exam-materials|technology-guides)\/([^/]{1,255})$/.exec(input.resourceId);
         if (!match || match[2].includes("..")) return json({ error: "Resource is not publicly published." }, 404, request);
         const { data: files, error: storageError } = await db.storage.from("public-documents").list(match[1], { search: match[2], limit: 100 });
         if (storageError) throw storageError;
