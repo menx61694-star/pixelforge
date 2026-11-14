@@ -413,6 +413,8 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
         categories.forEach(name => { const option = document.createElement("option"); option.value = name; option.textContent = name; category.append(option); });
         if (!categories.length) return;
         document.getElementById("feedback-name").required = config.allowAnonymous === false;
+        const privacyNote = document.querySelector(".feedback-privacy-note");
+        if (privacyNote && config.allowAnonymous === false) privacyNote.textContent = "Your name is required and may appear with an approved comment. Feedback is reviewed before publication.";
         section.hidden = false;
       } else {
         form.hidden = true;
@@ -439,7 +441,8 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
           category: category.value,
           rating: Number(document.getElementById("feedback-rating").value),
           message: document.getElementById("feedback-message").value.trim(),
-          website: document.getElementById("feedback-website").value
+          website: document.getElementById("feedback-website").value,
+          consent: document.getElementById("feedback-consent").checked
         })
       });
       const payload = await response.json().catch(() => ({}));
