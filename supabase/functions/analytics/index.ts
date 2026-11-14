@@ -7,7 +7,7 @@ const allowedOrigins = new Set([
 ]);
 const allowedPaths = new Set([
   "/", "/index.html", "/library.html", "/pdf-documents.html",
-  "/study-notes.html", "/books-resources.html", "/other-documents.html",
+  "/study-notes.html", "/books-resources.html", "/other-documents.html", "/tools.html",
   "/exam-materials.html", "/technology-guides.html",
 ]);
 

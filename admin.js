@@ -649,7 +649,7 @@ const firebaseConfig = {
   }
 
   function displayFileName(storedName) {
-    return storedName.replace(/^\\d{10,}-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, "");
+    return storedName.replace(/^\d{10,}-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, "");
   }
 
   async function listAllStorageFiles(bucketName, folderPath) {
@@ -1021,7 +1021,55 @@ const firebaseConfig = {
       setValue("setting-maintenance-message", values["maintenance.message"]);
       setChecked("setting-drive-auto", values["sync.drive.auto_enabled"]);
       setChecked("setting-vault-auto", values["sync.vault.auto_enabled"]);
+      setChecked("setting-knowledge-enabled", values["home.knowledge.enabled"]);
+      setChecked("setting-quiz-enabled", values["home.quiz.enabled"]);
+      setChecked("setting-tools-enabled", values["home.tools.enabled"]);
+      setChecked("setting-featured-enabled", values["home.featured.enabled"]);
+      setChecked("setting-announcements-enabled", values["home.announcements.enabled"]);
+      setChecked("setting-popular-enabled", values["home.popular.enabled"]);
+      setInputValue("setting-popular-max-items", values["home.popular.max_items"] ?? 6);
+      setInputValue("setting-popular-min-views", values["home.popular.min_views"] ?? 1);
+      setChecked("setting-popular-show-views", values["home.popular.show_views"] !== false);
+      setChecked("setting-layout-enabled", values["home.layout.enabled"]);
+      const layoutTextarea = document.getElementById("setting-layout-sections");
+      if (layoutTextarea) layoutTextarea.value = JSON.stringify(Array.isArray(values["home.layout.sections"]) ? values["home.layout.sections"] : [{"id":"smart-document-search","enabled":true,"title":"","subtitle":""},{"id":"discover","enabled":true,"title":"","subtitle":""},{"id":"user-feedback","enabled":true,"title":"","subtitle":""},{"id":"learning-corner","enabled":true,"title":"","subtitle":""},{"id":"announcements","enabled":true,"title":"","subtitle":""},{"id":"featured-resources","enabled":true,"title":"","subtitle":""},{"id":"popular-resources","enabled":true,"title":"","subtitle":""},{"id":"quick-tools","enabled":true,"title":"","subtitle":""},{"id":"knowledge","enabled":true,"title":"","subtitle":""},{"id":"daily-quiz","enabled":true,"title":"","subtitle":""},{"id":"about","enabled":true,"title":"","subtitle":""},{"id":"contact","enabled":true,"title":"","subtitle":""}], null, 2);
+      setChecked("setting-seo-enabled", values["home.seo.enabled"]);
+      setInputValue("setting-seo-title", values["home.seo.default_title"] ?? "PixelForge — Digital resources and learning tools");
+      setInputValue("setting-seo-description", values["home.seo.default_description"] ?? "Discover curated documents, study notes, digital tools and guided learning resources on PixelForge.");
+      setInputValue("setting-seo-keywords", values["home.seo.default_keywords"] ?? "study notes, documents, learning resources, digital tools");
+      setInputValue("setting-seo-canonical", values["home.seo.canonical_base"] ?? "");
+      setInputValue("setting-seo-og-image", values["home.seo.og_image"] ?? "");
+      const seoOverrides = document.getElementById("setting-seo-pages");
+      if (seoOverrides) seoOverrides.value = JSON.stringify(Array.isArray(values["home.seo.page_overrides"]) ? values["home.seo.page_overrides"] : [], null, 2);
+      setChecked("setting-feedback-enabled", values["home.feedback.enabled"]);
+      setChecked("setting-feedback-anonymous", values["home.feedback.allow_anonymous"]);
+      setChecked("setting-feedback-display", values["home.feedback.display_approved"]);
+      setInputValue("setting-feedback-max-display", values["home.feedback.max_display"] ?? 6);
+      const feedbackCategories = document.getElementById("setting-feedback-categories");
+      if (feedbackCategories) feedbackCategories.value = (Array.isArray(values["home.feedback.categories"]) ? values["home.feedback.categories"] : ["General","Website","Resources","Suggestion"]).join("\n");
+      setChecked("setting-learning-enabled", values["home.learning.enabled"]);
+      const learningTextarea = document.getElementById("setting-learning-items");
+      if (learningTextarea) learningTextarea.value = JSON.stringify(Array.isArray(values["home.learning.items"]) ? values["home.learning.items"] : [], null, 2);
+      setChecked("setting-search-enabled", values["home.search.enabled"]);
+      setChecked("setting-search-smart", values["home.search.smart_enabled"]);
+      setChecked("setting-search-filters", values["home.search.filters_enabled"]);
+      setInputValue("setting-search-max-results", values["home.search.max_results"] ?? 30);
+      setInputValue("setting-search-placeholder", values["home.search.placeholder"] ?? "Search documents, notes and guides…");
+      const announcementsTextarea = document.getElementById("setting-announcements-items");
+      if (announcementsTextarea) announcementsTextarea.value = JSON.stringify(Array.isArray(values["home.announcements.items"]) ? values["home.announcements.items"] : [], null, 2);
+      const featuredTextarea = document.getElementById("setting-featured-items");
+      if (featuredTextarea) featuredTextarea.value = JSON.stringify(Array.isArray(values["home.featured.items"]) ? values["home.featured.items"] : [], null, 2);
+      const toolsTextarea = document.getElementById("setting-tools-items");
+      if (toolsTextarea) toolsTextarea.value = (Array.isArray(values["home.tools.items"]) ? values["home.tools.items"] : ["calculator","percentage","word-counter","unit-converter"]).join("\n");
+      const quizTextarea = document.getElementById("setting-quiz-items");
+      if (quizTextarea) quizTextarea.value = JSON.stringify(Array.isArray(values["home.quiz.items"]) ? values["home.quiz.items"] : [], null, 2);
+      const knowledgeItems = Array.isArray(values["home.knowledge.items"]) ? values["home.knowledge.items"] : [];
+      const knowledgeTextarea = document.getElementById("setting-knowledge-items");
+      if (knowledgeTextarea) knowledgeTextarea.value = knowledgeItems.map(item =>
+        String(item.category || "GENERAL") + " | " + String(item.text || "")
+      ).join("\n");
       renderSettingsAudit(auditPayload.audit || []);
+      loadFeedbackInbox();
       document.querySelectorAll("[data-setting-save]").forEach(button => {
         button.hidden = !currentPermissions.has("settings.manage");
         button.disabled = !currentPermissions.has("settings.manage");
@@ -1082,6 +1130,217 @@ const firebaseConfig = {
     } else if (group === "sync") {
       saveSetting("sync.drive.auto_enabled", document.getElementById("setting-drive-auto").checked, button)
         .then(() => saveSetting("sync.vault.auto_enabled", document.getElementById("setting-vault-auto").checked, button));
+    } else if (group === "home.knowledge") {
+      const lines = document.getElementById("setting-knowledge-items").value.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+      const items = lines.map(line => {
+        const split = line.indexOf("|");
+        return split < 0 ? { category: "GENERAL", text: line } :
+          { category: line.slice(0, split).trim().slice(0, 32), text: line.slice(split + 1).trim() };
+      });
+      if (items.length > 50 || items.some(item => item.text.length < 8 || item.text.length > 240)) {
+        setSettingsStatus("Please add up to 50 facts, each 8–240 characters.", true);
+        return;
+      }
+      saveSetting("home.knowledge.items", items, button)
+        .then(() => saveSetting("home.knowledge.enabled", document.getElementById("setting-knowledge-enabled").checked, button));
+    } else if (group === "home.popular") {
+      const maxItems = Number(document.getElementById("setting-popular-max-items").value);
+      const minViews = Number(document.getElementById("setting-popular-min-views").value);
+      if (!Number.isInteger(maxItems) || maxItems < 3 || maxItems > 12 ||
+          !Number.isInteger(minViews) || minViews < 1 || minViews > 1000000) {
+        setSettingsStatus("Choose 3–12 resources and a minimum open threshold from 1 to 1,000,000.", true); return;
+      }
+      saveSetting("home.popular.max_items", maxItems, button)
+        .then(() => saveSetting("home.popular.min_views", minViews, button))
+        .then(() => saveSetting("home.popular.show_views", document.getElementById("setting-popular-show-views").checked, button))
+        .then(() => saveSetting("home.popular.enabled", document.getElementById("setting-popular-enabled").checked, button));
+    } else if (group === "home.layout") {
+      let sections;
+      try { sections = JSON.parse(document.getElementById("setting-layout-sections").value || "[]"); }
+      catch (_) { setSettingsStatus("Homepage layout must be valid JSON.", true); return; }
+      const allowed = new Set(["smart-document-search","discover","user-feedback","learning-corner","announcements","featured-resources","popular-resources","quick-tools","knowledge","daily-quiz","about","contact"]);
+      const valid = Array.isArray(sections) && sections.length === 12 && sections.every(item =>
+        item && typeof item === "object" && !Array.isArray(item) &&
+        Object.keys(item).every(key => ["id","enabled","title","subtitle"].includes(key)) &&
+        typeof item.id === "string" && allowed.has(item.id) &&
+        typeof item.enabled === "boolean" &&
+        typeof item.title === "string" && item.title.length <= 80 &&
+        typeof item.subtitle === "string" && item.subtitle.length <= 160
+      );
+      if (!valid || new Set(sections.map(item => item.id)).size !== 12) {
+        setSettingsStatus("Keep all 12 allowed section IDs exactly once. Check visibility and heading values.", true); return;
+      }
+      saveSetting("home.layout.sections", sections, button)
+        .then(() => saveSetting("home.layout.enabled", document.getElementById("setting-layout-enabled").checked, button));
+    } else if (group === "home.seo") {
+      const title = document.getElementById("setting-seo-title").value.trim();
+      const description = document.getElementById("setting-seo-description").value.trim();
+      const keywords = document.getElementById("setting-seo-keywords").value.trim();
+      const canonical = document.getElementById("setting-seo-canonical").value.trim();
+      const ogImage = document.getElementById("setting-seo-og-image").value.trim();
+      let overrides;
+      try { overrides = JSON.parse(document.getElementById("setting-seo-pages").value || "[]"); }
+      catch (_) { setSettingsStatus("SEO page overrides must be valid JSON.", true); return; }
+      const safeUrl = value => {
+        if (!value) return true;
+        try { const url = new URL(value); return url.protocol === "https:" && !url.username && !url.password; }
+        catch (_) { return false; }
+      };
+      const validOverrides = Array.isArray(overrides) && overrides.length <= 20 && overrides.every(item =>
+        item && typeof item === "object" && !Array.isArray(item) &&
+        Object.keys(item).every(key => ["page","title","description","keywords","robots","canonical"].includes(key)) &&
+        typeof item.page === "string" && /^\/[a-z0-9/._-]*$/i.test(item.page) && !item.page.includes("..") &&
+        typeof item.title === "string" && item.title.trim().length >= 5 && item.title.length <= 70 &&
+        typeof item.description === "string" && item.description.trim().length >= 50 && item.description.length <= 160 &&
+        typeof item.keywords === "string" && item.keywords.length <= 250 &&
+        ["index,follow","noindex,follow","noindex,nofollow"].includes(item.robots) &&
+        typeof item.canonical === "string" && item.canonical.length <= 1200 && safeUrl(item.canonical)
+      );
+      if (title.length < 5 || title.length > 70 || description.length < 50 || description.length > 160 ||
+          keywords.length > 250 || !safeUrl(canonical) || canonical.length > 300 || !safeUrl(ogImage) ||
+          ogImage.length > 1200 || !validOverrides || new Set(overrides.map(item => item.page)).size !== overrides.length) {
+        setSettingsStatus("Check SEO title/description lengths, HTTPS URLs and unique page override paths.", true); return;
+      }
+      saveSetting("home.seo.default_title", title, button)
+        .then(() => saveSetting("home.seo.default_description", description, button))
+        .then(() => saveSetting("home.seo.default_keywords", keywords, button))
+        .then(() => saveSetting("home.seo.canonical_base", canonical, button))
+        .then(() => saveSetting("home.seo.og_image", ogImage, button))
+        .then(() => saveSetting("home.seo.page_overrides", overrides, button))
+        .then(() => saveSetting("home.seo.enabled", document.getElementById("setting-seo-enabled").checked, button));
+    } else if (group === "home.feedback") {
+      const categories = document.getElementById("setting-feedback-categories").value.split(/\\r?\\n/).map(value => value.trim()).filter(Boolean);
+      const maxDisplay = Number(document.getElementById("setting-feedback-max-display").value);
+      if (!categories.length || categories.length > 8 || categories.some(value => value.length < 2 || value.length > 32) ||
+          new Set(categories.map(value => value.toLowerCase())).size !== categories.length ||
+          !Number.isInteger(maxDisplay) || maxDisplay < 1 || maxDisplay > 12) {
+        setSettingsStatus("Add 1–8 unique categories (2–32 characters) and choose 1–12 approved comments to display.", true); return;
+      }
+      saveSetting("home.feedback.categories", categories, button)
+        .then(() => saveSetting("home.feedback.allow_anonymous", document.getElementById("setting-feedback-anonymous").checked, button))
+        .then(() => saveSetting("home.feedback.display_approved", document.getElementById("setting-feedback-display").checked, button))
+        .then(() => saveSetting("home.feedback.max_display", maxDisplay, button))
+        .then(() => saveSetting("home.feedback.enabled", document.getElementById("setting-feedback-enabled").checked, button));
+    } else if (group === "home.learning") {
+      let items;
+      try { items = JSON.parse(document.getElementById("setting-learning-items").value || "[]"); }
+      catch (_) { setSettingsStatus("Learning paths must be valid JSON.", true); return; }
+      const valid = Array.isArray(items) && items.length <= 12 && items.every(path => {
+        if (!path || typeof path !== "object" || Array.isArray(path) ||
+            !Object.keys(path).every(key => ["id","title","description","topic","level","duration","published","steps"].includes(key)) ||
+            typeof path.id !== "string" || !path.id.trim() || path.id.length > 64 ||
+            typeof path.title !== "string" || !path.title.trim() || path.title.length > 100 ||
+            typeof path.description !== "string" || !path.description.trim() || path.description.length > 240 ||
+            typeof path.topic !== "string" || !path.topic.trim() || path.topic.length > 40 ||
+            !["beginner","intermediate","advanced"].includes(path.level) ||
+            typeof path.duration !== "string" || path.duration.length > 32 ||
+            typeof path.published !== "boolean" || !Array.isArray(path.steps) || path.steps.length < 1 || path.steps.length > 8) return false;
+        return path.steps.every(step => {
+          if (!step || typeof step !== "object" || Array.isArray(step) ||
+              !Object.keys(step).every(key => ["title","url"].includes(key)) ||
+              typeof step.title !== "string" || !step.title.trim() || step.title.length > 100 ||
+              typeof step.url !== "string" || step.url.length > 1200) return false;
+          try { const url = new URL(step.url); return url.protocol === "https:" && !url.username && !url.password; }
+          catch (_) { return false; }
+        });
+      });
+      if (!valid || new Set(items.map(path => path.id)).size !== items.length) {
+        setSettingsStatus("Add up to 12 valid paths with unique IDs and 1–8 HTTPS steps each.", true); return;
+      }
+      saveSetting("home.learning.items", items, button)
+        .then(() => saveSetting("home.learning.enabled", document.getElementById("setting-learning-enabled").checked, button));
+    } else if (group === "home.search") {
+      const maxResults = Number(document.getElementById("setting-search-max-results").value);
+      const placeholder = document.getElementById("setting-search-placeholder").value.trim();
+      if (!Number.isInteger(maxResults) || maxResults < 6 || maxResults > 100 || placeholder.length < 5 || placeholder.length > 100) {
+        setSettingsStatus("Results per page must be 6–100 and the placeholder must be 5–100 characters.", true); return;
+      }
+      saveSetting("home.search.enabled", document.getElementById("setting-search-enabled").checked, button)
+        .then(() => saveSetting("home.search.smart_enabled", document.getElementById("setting-search-smart").checked, button))
+        .then(() => saveSetting("home.search.filters_enabled", document.getElementById("setting-search-filters").checked, button))
+        .then(() => saveSetting("home.search.max_results", maxResults, button))
+        .then(() => saveSetting("home.search.placeholder", placeholder, button));
+    } else if (group === "home.announcements") {
+      let items;
+      try { items = JSON.parse(document.getElementById("setting-announcements-items").value || "[]"); }
+      catch (_) { setSettingsStatus("Announcements must be valid JSON.", true); return; }
+      const valid = Array.isArray(items) && items.length <= 20 && items.every(item => {
+        if (!item || typeof item !== "object" || Array.isArray(item) ||
+            !Object.keys(item).every(key => ["id","title","message","type","startDate","endDate","published","url","label"].includes(key)) ||
+            typeof item.id !== "string" || !item.id.trim() || item.id.length > 64 ||
+            typeof item.title !== "string" || !item.title.trim() || item.title.length > 120 ||
+            typeof item.message !== "string" || !item.message.trim() || item.message.length > 500 ||
+            !["info","update","important"].includes(item.type) ||
+            typeof item.startDate !== "string" || typeof item.endDate !== "string" ||
+            !/^\d{4}-\d{2}-\d{2}$/.test(item.startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(item.endDate) ||
+            Number.isNaN(Date.parse(item.startDate + "T00:00:00.000Z")) || Number.isNaN(Date.parse(item.endDate + "T00:00:00.000Z")) ||
+            new Date(item.startDate + "T00:00:00.000Z").toISOString().slice(0, 10) !== item.startDate ||
+            new Date(item.endDate + "T00:00:00.000Z").toISOString().slice(0, 10) !== item.endDate ||
+            item.startDate > item.endDate || typeof item.published !== "boolean" ||
+            typeof item.url !== "string" || item.url.length > 1200 ||
+            typeof item.label !== "string" || item.label.length > 32) return false;
+        if (!item.url) return item.label === "";
+        try { const url = new URL(item.url); return url.protocol === "https:" && !url.username && !url.password && item.label.trim().length > 0; }
+        catch (_) { return false; }
+      });
+      if (!valid || new Set(items.map(item => item.id)).size !== items.length) {
+        setSettingsStatus("Add up to 20 valid announcements with unique IDs and valid dates.", true); return;
+      }
+      saveSetting("home.announcements.items", items, button)
+        .then(() => saveSetting("home.announcements.enabled", document.getElementById("setting-announcements-enabled").checked, button));
+    } else if (group === "home.featured") {
+      let items;
+      try { items = JSON.parse(document.getElementById("setting-featured-items").value || "[]"); }
+      catch (_) { setSettingsStatus("Featured resources must be valid JSON.", true); return; }
+      const valid = Array.isArray(items) && items.length <= 12 && items.every(item => {
+        if (!item || typeof item !== "object" || Array.isArray(item) ||
+            !Object.keys(item).every(key => ["id","title","description","category","url","label","published"].includes(key)) ||
+            typeof item.id !== "string" || !item.id.trim() || item.id.length > 64 ||
+            typeof item.title !== "string" || !item.title.trim() || item.title.length > 100 ||
+            typeof item.description !== "string" || item.description.length > 240 ||
+            typeof item.category !== "string" || !item.category.trim() || item.category.length > 40 ||
+            typeof item.url !== "string" || item.url.length > 1200 ||
+            typeof item.label !== "string" || !item.label.trim() || item.label.length > 32 ||
+            typeof item.published !== "boolean") return false;
+        try { const url = new URL(item.url); return url.protocol === "https:" && !url.username && !url.password; }
+        catch (_) { return false; }
+      });
+      if (!valid || new Set(items.map(item => item.id)).size !== items.length) {
+        setSettingsStatus("Add up to 12 valid resources with unique IDs and HTTPS links.", true); return;
+      }
+      saveSetting("home.featured.items", items, button)
+        .then(() => saveSetting("home.featured.enabled", document.getElementById("setting-featured-enabled").checked, button));
+    } else if (group === "home.tools") {
+      const items = document.getElementById("setting-tools-items").value.split(/\r?\n/).map(item => item.trim()).filter(Boolean);
+      const allowed = new Set(["calculator","percentage","word-counter","unit-converter"]);
+      if (items.length > 4 || items.some(item => !allowed.has(item)) || new Set(items).size !== items.length) {
+        setSettingsStatus("Choose each allowed tool at most once. Keep the list to four tools.", true); return;
+      }
+      saveSetting("home.tools.items", items, button)
+        .then(() => saveSetting("home.tools.enabled", document.getElementById("setting-tools-enabled").checked, button));
+    } else if (group === "home.quiz") {
+      let items;
+      try { items = JSON.parse(document.getElementById("setting-quiz-items").value || "[]"); }
+      catch (_) { setSettingsStatus("Quiz questions must be valid JSON.", true); return; }
+      const valid = Array.isArray(items) && items.length <= 100 && items.every(item =>
+        item && typeof item === "object" && !Array.isArray(item) &&
+        Object.keys(item).every(key => ["id","category","publishDate","published","question","options","correctIndex","explanation"].includes(key)) &&
+        typeof item.id === "string" && item.id.trim().length > 0 && item.id.length <= 80 &&
+        typeof item.category === "string" && item.category.trim().length > 0 && item.category.length <= 32 &&
+        /^\d{4}-\d{2}-\d{2}$/.test(item.publishDate) && !Number.isNaN(Date.parse(item.publishDate + "T00:00:00.000Z")) && new Date(item.publishDate + "T00:00:00.000Z").toISOString().slice(0, 10) === item.publishDate &&
+        typeof item.published === "boolean" &&
+        typeof item.question === "string" && item.question.trim().length >= 10 && item.question.length <= 500 &&
+        Array.isArray(item.options) && item.options.length === 4 &&
+        item.options.every(option => typeof option === "string" && option.trim().length > 0 && option.length <= 160) &&
+        Number.isInteger(item.correctIndex) && item.correctIndex >= 0 && item.correctIndex <= 3 &&
+        typeof item.explanation === "string" && item.explanation.length <= 1000
+      );
+      if (!valid) {
+        setSettingsStatus("Each quiz question needs valid fields, four options and correctIndex 0–3. Maximum 100 questions.", true);
+        return;
+      }
+      saveSetting("home.quiz.items", items, button)
+        .then(() => saveSetting("home.quiz.enabled", document.getElementById("setting-quiz-enabled").checked, button));
     }
   }));
   if (refreshSettingsButton) refreshSettingsButton.addEventListener("click", loadSettings);
@@ -1494,4 +1753,52 @@ const firebaseConfig = {
       status.textContent = "Sign-out failed. Please retry.";
     }
   });
+
+
+  async function loadFeedbackInbox() {
+    const container = document.getElementById("feedback-inbox-list");
+    const status = document.getElementById("feedback-inbox-status");
+    if (!container || !currentPermissions.has("settings.view")) return;
+    try {
+      const payload = await settingsRequest("feedback-list");
+      container.replaceChildren();
+      const entries = Array.isArray(payload.feedback) ? payload.feedback : [];
+      if (!entries.length) {
+        const empty = document.createElement("p"); empty.className = "empty-state"; empty.textContent = "No feedback submissions yet."; container.append(empty);
+      } else {
+        entries.forEach(item => {
+          const card = document.createElement("article"); card.className = "feedback-inbox-card";
+          const heading = document.createElement("div"); heading.className = "feedback-inbox-heading";
+          const title = document.createElement("strong"); title.textContent = (item.name || "Anonymous") + " · " + item.category;
+          const meta = document.createElement("span"); meta.textContent = "★".repeat(Number(item.rating) || 0) + " · " + item.status;
+          heading.append(title, meta);
+          const message = document.createElement("p"); message.textContent = item.message;
+          const date = document.createElement("small"); date.textContent = item.created_at ? new Date(item.created_at).toLocaleString() : "";
+          card.append(heading, message, date);
+          if (item.status === "pending" && currentPermissions.has("settings.manage")) {
+            const actions = document.createElement("div"); actions.className = "feedback-inbox-actions";
+            ["approved","rejected"].forEach(nextStatus => {
+              const button = document.createElement("button"); button.type = "button"; button.textContent = nextStatus === "approved" ? "Approve" : "Reject";
+              button.dataset.feedbackAction = nextStatus; button.dataset.feedbackId = item.id;
+              actions.append(button);
+            });
+            card.append(actions);
+          }
+          container.append(card);
+        });
+      }
+      if (status) status.textContent = entries.length + " recent submission(s).";
+    } catch (error) { if (status) status.textContent = error.message || "Could not load feedback inbox."; }
+  }
+  document.getElementById("refresh-feedback")?.addEventListener("click", loadFeedbackInbox);
+  document.getElementById("feedback-inbox-list")?.addEventListener("click", async event => {
+    const button = event.target.closest("[data-feedback-action]");
+    if (!button) return;
+    button.disabled = true;
+    try {
+      await settingsRequest("feedback-moderate", { method: "POST", body: { id: button.dataset.feedbackId, status: button.dataset.feedbackAction } });
+      await loadFeedbackInbox();
+    } catch (error) { setSettingsStatus(error.message || "Could not moderate feedback.", true); button.disabled = false; }
+  });
+
 })();

@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="library.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="library.js" defer></script>
+  <script src="seo.js" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -27,10 +28,18 @@
     </section>
     <section class="library-wrap">
       <label class="library-search" for="library-search-input"><input id="library-search-input" type="search" placeholder="Search published documents…" autocomplete="off"><button type="button" onclick="document.getElementById('library-search-input').focus()">Search</button></label>
+      <div class="library-search-filters" id="library-search-filters" hidden>
+        <label for="library-category-filter">Category</label>
+        <select id="library-category-filter"><option value="all">All categories</option><option value="pdf-documents">PDF Documents</option><option value="study-notes">Study Notes</option><option value="books-resources">Books & Resources</option><option value="other-documents">Other Documents</option><option value="exam-materials">Exam Materials</option><option value="technology-guides">Technology Guides</option></select>
+        <label for="library-type-filter">File type</label>
+        <select id="library-type-filter"><option value="all">Any type</option><option value="pdf">PDF</option><option value="image">Images</option><option value="other">Other files</option></select>
+      </div>
+      <p class="library-search-hint" id="library-search-hint" hidden>Search across document titles and categories. Try a related keyword if you do not find a match.</p>
       <div class="library-heading"><h2>Browse categories</h2></div>
       <div class="category-grid" id="category-grid"></div>
       <div class="library-heading"><h2 id="documents-heading">Published documents</h2><span class="library-count" id="library-count"></span></div>
       <div class="document-grid" id="document-grid"><p class="library-state">Loading published documents…</p></div>
+      <button id="library-load-more" class="library-load-more" type="button" hidden>Show more results</button>
     </section>
   </main>
   <footer class="footer"><a class="brand footer-brand" href="index.html"><span class="brand-mark">P</span><span>PIXELFORGE</span></a><span>© <span id="year"></span> PixelForge.</span><a href="index.html">Home ↑</a></footer>

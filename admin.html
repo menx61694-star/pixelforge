@@ -237,6 +237,119 @@
                 <p class="settings-help">When enabled, the public homepage and Document Library show the maintenance screen.</p>
               </article>
               <article class="settings-card">
+                <h3>Homepage knowledge corner</h3>
+                <label class="settings-toggle"><input id="setting-knowledge-enabled" type="checkbox"><span>Show the “Did you know?” section</span></label>
+                <label for="setting-knowledge-items">Knowledge facts (one per line)</label>
+                <textarea id="setting-knowledge-items" rows="8" maxlength="12000" placeholder="SPACE | Light from the Sun takes about 8 minutes to reach Earth."></textarea>
+                <p class="settings-help">Use one fact per line in CATEGORY | FACT format. Up to 50 facts; each fact should be 8–240 characters. Visitors can request another fact with the refresh button.</p>
+                <button type="button" data-setting-save="home.knowledge">Save homepage knowledge</button>
+              </article>
+              <article class="settings-card">
+                <h3>Daily Quiz</h3>
+                <label class="settings-toggle"><input id="setting-quiz-enabled" type="checkbox"><span>Enable Question of the Day</span></label>
+                <label for="setting-quiz-items">Quiz questions (JSON)</label>
+                <textarea id="setting-quiz-items" rows="12" maxlength="18000" spellcheck="false" placeholder='[{"id":"q1","category":"Science","publishDate":"2026-11-15","published":true,"question":"Which planet is known as the Red Planet?","options":["Earth","Mars","Venus","Jupiter"],"correctIndex":1,"explanation":"Mars appears reddish because iron minerals in its soil oxidize."}]'></textarea>
+                <p class="settings-help">Add up to 100 questions. Each object needs id, category, publishDate (YYYY-MM-DD), published, question, exactly four options, correctIndex (0–3), and explanation. Only a published question scheduled for today's India date is shown publicly. Correct answers are checked by the server.</p>
+                <button type="button" data-setting-save="home.quiz">Save Daily Quiz</button>
+              </article>
+              <article class="settings-card">
+                <h3>Popular Resources</h3>
+                <label class="settings-toggle"><input id="setting-popular-enabled" type="checkbox"><span>Show Popular Resources on the homepage</span></label>
+                <label for="setting-popular-max-items">Number of resources to show (3–12)</label>
+                <input id="setting-popular-max-items" type="number" min="3" max="12" step="1" value="6">
+                <label for="setting-popular-min-views">Minimum unique opens required</label>
+                <input id="setting-popular-min-views" type="number" min="1" max="1000000" step="1" value="1">
+                <label class="settings-toggle"><input id="setting-popular-show-views" type="checkbox"><span>Display open counts beside resources</span></label>
+                <button type="button" data-setting-save="home.popular">Save Popular Resources Settings</button>
+                <p class="settings-help">Ranking uses real opens of published library documents. A browser session counts at most once per resource per day. Resources with no qualifying opens are not shown.</p>
+              </article>
+              <article class="settings-card">
+                <h3>Homepage Layout Manager</h3>
+                <label class="settings-toggle"><input id="setting-layout-enabled" type="checkbox"><span>Apply Admin-managed homepage layout</span></label>
+                <label for="setting-layout-sections">Homepage sections (JSON, array order = display order)</label>
+                <textarea id="setting-layout-sections" rows="14" maxlength="14000" spellcheck="false" placeholder='[{"id":"smart-document-search","enabled":true,"title":"","subtitle":""},{"id":"discover","enabled":true,"title":"","subtitle":""},{"id":"user-feedback","enabled":true,"title":"","subtitle":""},{"id":"learning-corner","enabled":true,"title":"","subtitle":""},{"id":"announcements","enabled":true,"title":"","subtitle":""},{"id":"featured-resources","enabled":true,"title":"","subtitle":""},{"id":"popular-resources","enabled":true,"title":"","subtitle":""},{"id":"quick-tools","enabled":true,"title":"","subtitle":""},{"id":"knowledge","enabled":true,"title":"","subtitle":""},{"id":"daily-quiz","enabled":true,"title":"","subtitle":""},{"id":"about","enabled":true,"title":"","subtitle":""},{"id":"contact","enabled":true,"title":"","subtitle":""}]'></textarea>
+                <p class="settings-help">Keep all 12 section IDs exactly once. Set enabled to false to hide a section. Optional title/subtitle overrides are plain text. Reorder objects in the array to change homepage order; the hero and highlights strip stay fixed at the top.</p>
+                <button type="button" data-setting-save="home.layout">Save Homepage Layout</button>
+              </article>
+              <article class="settings-card">
+                <h3>SEO Management</h3>
+                <label class="settings-toggle"><input id="setting-seo-enabled" type="checkbox"><span>Enable dynamic SEO metadata</span></label>
+                <label for="setting-seo-title">Default page title (5–70 characters)</label>
+                <input id="setting-seo-title" type="text" maxlength="70" value="PixelForge — Digital resources and learning tools">
+                <label for="setting-seo-description">Default meta description (50–160 characters)</label>
+                <textarea id="setting-seo-description" rows="3" maxlength="160">Discover curated documents, study notes, digital tools and guided learning resources on PixelForge.</textarea>
+                <label for="setting-seo-keywords">Default keywords (up to 250 characters)</label>
+                <input id="setting-seo-keywords" type="text" maxlength="250" value="study notes, documents, learning resources, digital tools">
+                <label for="setting-seo-canonical">Canonical base URL (optional HTTPS URL)</label>
+                <input id="setting-seo-canonical" type="url" maxlength="300" placeholder="https://your-domain.example">
+                <label for="setting-seo-og-image">Open Graph image URL (optional HTTPS URL)</label>
+                <input id="setting-seo-og-image" type="url" maxlength="1200" placeholder="https://your-domain.example/social-preview.png">
+                <label for="setting-seo-pages">Page-specific SEO overrides (JSON)</label>
+                <textarea id="setting-seo-pages" rows="10" maxlength="18000" spellcheck="false" placeholder='[{"page":"/library.html","title":"Document Library | PixelForge","description":"Browse published study notes, documents and learning resources on PixelForge.","keywords":"document library, study notes","robots":"index,follow","canonical":""}]'></textarea>
+                <p class="settings-help">Add up to 20 page overrides. Page paths must be local paths beginning with /. Robots options: index,follow; noindex,follow; noindex,nofollow. Titles and descriptions must meet the limits above.</p>
+                <button type="button" data-setting-save="home.seo">Save SEO Settings</button>
+              </article>
+              <article class="settings-card">
+                <h3>User Feedback</h3>
+                <label class="settings-toggle"><input id="setting-feedback-enabled" type="checkbox"><span>Enable the public feedback form</span></label>
+                <label class="settings-toggle"><input id="setting-feedback-anonymous" type="checkbox"><span>Allow anonymous feedback (name optional)</span></label>
+                <label class="settings-toggle"><input id="setting-feedback-display" type="checkbox"><span>Display approved feedback on the homepage</span></label>
+                <label for="setting-feedback-categories">Feedback categories (one per line)</label>
+                <textarea id="setting-feedback-categories" rows="5" maxlength="320">General
+Website
+Resources
+Suggestion</textarea>
+                <label for="setting-feedback-max-display">Approved feedback to display (1–12)</label>
+                <input id="setting-feedback-max-display" type="number" min="1" max="12" step="1" value="6">
+                <button type="button" data-setting-save="home.feedback">Save Feedback Settings</button>
+              </article>
+              <article class="settings-card">
+                <h3>Learning Corner</h3>
+                <label class="settings-toggle"><input id="setting-learning-enabled" type="checkbox"><span>Show Learning Corner on the homepage</span></label>
+                <label for="setting-learning-items">Guided learning paths (JSON)</label>
+                <textarea id="setting-learning-items" rows="12" maxlength="18000" spellcheck="false" placeholder='[{"id":"web-basics","title":"Web Development Basics","description":"A beginner-friendly path to understand how websites work.","topic":"WEB DEVELOPMENT","level":"beginner","duration":"2 weeks","published":true,"steps":[{"title":"Understand HTML","url":"https://example.com/html"},{"title":"Learn CSS","url":"https://example.com/css"}]}]'></textarea>
+                <p class="settings-help">Add up to 12 paths, each with 1–8 steps. Levels: beginner, intermediate or advanced. Every step needs a title and HTTPS URL. Reorder paths and steps in the JSON to change their display order.</p>
+                <button type="button" data-setting-save="home.learning">Save Learning Corner</button>
+              </article>
+              <article class="settings-card">
+                <h3>Smart Document Search</h3>
+                <label class="settings-toggle"><input id="setting-search-enabled" type="checkbox"><span>Enable Smart Document Search</span></label>
+                <label class="settings-toggle"><input id="setting-search-smart" type="checkbox"><span>Use relevance ranking and typo-tolerant matching</span></label>
+                <label class="settings-toggle"><input id="setting-search-filters" type="checkbox"><span>Show category and file-type filters</span></label>
+                <label for="setting-search-max-results">Results per page (6–100)</label>
+                <input id="setting-search-max-results" type="number" min="6" max="100" step="1" value="30">
+                <label for="setting-search-placeholder">Search placeholder</label>
+                <input id="setting-search-placeholder" type="text" maxlength="100" value="Search documents, notes and guides…">
+                <button type="button" data-setting-save="home.search">Save Search Settings</button>
+              </article>
+              <article class="settings-card">
+                <h3>Announcements</h3>
+                <label class="settings-toggle"><input id="setting-announcements-enabled" type="checkbox"><span>Show active announcements on the homepage</span></label>
+                <label for="setting-announcements-items">Announcements (JSON)</label>
+                <textarea id="setting-announcements-items" rows="12" maxlength="18000" spellcheck="false" placeholder='[{"id":"notice-1","title":"Welcome to PixelForge","message":"Explore the latest learning resources and digital tools.","type":"info","startDate":"2026-11-14","endDate":"2026-11-30","published":true,"url":"","label":""}]'></textarea>
+                <p class="settings-help">Add up to 20 notices. Type must be info, update or important. Use India dates (YYYY-MM-DD); only published notices within their start/end dates appear. Optional links must use HTTPS.</p>
+                <button type="button" data-setting-save="home.announcements">Save Announcements</button>
+              </article>
+              <article class="settings-card">
+                <h3>Featured Resources</h3>
+                <label class="settings-toggle"><input id="setting-featured-enabled" type="checkbox"><span>Show Featured Resources on the homepage</span></label>
+                <label for="setting-featured-items">Featured resources (JSON)</label>
+                <textarea id="setting-featured-items" rows="10" maxlength="18000" spellcheck="false" placeholder='[{"id":"resource-1","title":"Getting Started Guide","description":"A practical introduction for new visitors.","category":"GUIDES","url":"https://example.com/guide","label":"Read guide","published":true}]'></textarea>
+                <p class="settings-help">Add up to 12 resources in display order. Each needs a unique id, title, description, category, HTTPS URL, link label and published status. Set published to false to keep a draft hidden.</p>
+                <button type="button" data-setting-save="home.featured">Save Featured Resources</button>
+              </article>
+              <article class="settings-card">
+                <h3>Quick Digital Tools</h3>
+                <label class="settings-toggle"><input id="setting-tools-enabled" type="checkbox"><span>Show Quick Tools on the public website</span></label>
+                <label for="setting-tools-items">Visible tools (one ID per line, in display order)</label>
+                <textarea id="setting-tools-items" rows="5" maxlength="300" spellcheck="false">calculator
+percentage
+word-counter
+unit-converter</textarea>
+                <p class="settings-help">Allowed IDs: calculator, percentage, word-counter, unit-converter. Remove an ID to hide it; reorder lines to change display order. Tools run locally in the visitor’s browser.</p>
+                <button type="button" data-setting-save="home.tools">Save Quick Tools</button>
+              </article>
+              <article class="settings-card">
                 <h3>Automatic sync preferences</h3>
                 <label class="settings-toggle"><input id="setting-drive-auto" type="checkbox"><span>Google Drive auto-sync enabled</span></label>
                 <label class="settings-toggle"><input id="setting-vault-auto" type="checkbox"><span>Private Vault auto-sync enabled</span></label>
@@ -244,6 +357,11 @@
                 <p class="settings-help">These preferences are stored only; they do not independently start background sync jobs.</p>
               </article>
             </div>
+          </section>
+          <section class="panel settings-panel">
+            <div class="panel-heading"><div><p class="eyebrow">COMMUNITY MODERATION</p><h2>Feedback inbox</h2></div><button id="refresh-feedback" class="refresh-button" type="button">↻ Refresh</button></div>
+            <p id="feedback-inbox-status" class="panel-copy" role="status" aria-live="polite">Loading feedback submissions…</p>
+            <div id="feedback-inbox-list" class="feedback-inbox-list"><p class="empty-state">Loading feedback…</p></div>
           </section>
           <section class="panel settings-panel">
             <div class="panel-heading"><div><p class="eyebrow">CHANGE HISTORY</p><h2>Settings audit log</h2></div></div>

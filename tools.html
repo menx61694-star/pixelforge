@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#101d49">
+<meta name="description" content="Use PixelForge Quick Digital Tools for calculations, percentages, word counts and unit conversion.">
+<title>Quick Digital Tools — PixelForge</title><link rel="stylesheet" href="styles.css">
+<script src="maintenance-mode.js" defer></script><script src="script.js" defer></script><script src="tools.js" defer></script>
+  <script src="seo.js" defer></script>
+</head><body>
+<header class="site-header"><a class="brand" href="index.html"><span class="brand-mark">P</span><span>PIXELFORGE</span></a>
+<button class="menu-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+<nav class="nav" aria-label="Main navigation"><a href="index.html">Home</a><a href="index.html#discover">Discover</a><a class="active" href="tools.html" data-quick-tools-nav hidden>Quick Tools</a><a href="library.html">Document Library</a><a href="index.html#about">About</a></nav></header>
+<main class="tools-page section">
+<div class="section-heading section-heading-v2"><div><p class="eyebrow dark">PIXELFORGE UTILITIES</p><h1>Quick digital<br><em>tools.</em></h1></div><p class="section-lead">Fast, private, browser-based utilities. Your calculations and text stay in this browser and are not uploaded.</p></div>
+<p id="tools-page-status" class="tools-page-status" role="status" aria-live="polite">Loading available tools…</p>
+<div class="tools-page-grid" id="tools-page-grid">
+<section class="tool-card" id="tool-calculator" data-tool-id="calculator" hidden><div class="tool-card-heading"><span class="quick-tool-symbol">＋</span><div><p class="eyebrow dark">EVERYDAY MATH</p><h2>Basic Calculator</h2></div></div>
+<form id="calculator-form" class="tool-form"><label for="calc-first">First number</label><input id="calc-first" type="number" step="any" required>
+<label for="calc-operation">Operation</label><select id="calc-operation"><option value="add">Add (+)</option><option value="subtract">Subtract (−)</option><option value="multiply">Multiply (×)</option><option value="divide">Divide (÷)</option></select>
+<label for="calc-second">Second number</label><input id="calc-second" type="number" step="any" required><button class="button button-dark" type="submit">Calculate</button></form>
+<p id="calc-result" class="tool-result" role="status" aria-live="polite"></p></section>
+<section class="tool-card" id="tool-percentage" data-tool-id="percentage" hidden><div class="tool-card-heading"><span class="quick-tool-symbol">%</span><div><p class="eyebrow dark">PERCENTAGES</p><h2>Percentage Calculator</h2></div></div>
+<form id="percentage-form" class="tool-form"><label for="percent-value">Percentage (%)</label><input id="percent-value" type="number" step="any" required>
+<label for="percent-total">Value</label><input id="percent-total" type="number" step="any" required><button class="button button-dark" type="submit">Find percentage</button></form>
+<p id="percentage-result" class="tool-result" role="status" aria-live="polite"></p></section>
+<section class="tool-card" id="tool-word-counter" data-tool-id="word-counter" hidden><div class="tool-card-heading"><span class="quick-tool-symbol">Aa</span><div><p class="eyebrow dark">WRITING</p><h2>Word Counter</h2></div></div>
+<label for="word-counter-input">Paste or type your text</label><textarea id="word-counter-input" rows="7" placeholder="Start writing here…"></textarea>
+<div class="word-stats"><span><strong id="word-count">0</strong><small>Words</small></span><span><strong id="character-count">0</strong><small>Characters</small></span><span><strong id="reading-time">0 min</strong><small>Reading time</small></span></div></section>
+<section class="tool-card" id="tool-unit-converter" data-tool-id="unit-converter" hidden><div class="tool-card-heading"><span class="quick-tool-symbol">↔</span><div><p class="eyebrow dark">MEASUREMENTS</p><h2>Length Converter</h2></div></div>
+<form id="unit-converter-form" class="tool-form"><label for="unit-value">Value</label><input id="unit-value" type="number" step="any" required>
+<div class="tool-unit-row"><div><label for="unit-from">From</label><select id="unit-from"><option value="m">Metres (m)</option><option value="km">Kilometres (km)</option><option value="cm">Centimetres (cm)</option><option value="mm">Millimetres (mm)</option><option value="ft">Feet (ft)</option><option value="in">Inches (in)</option></select></div>
+<div><label for="unit-to">To</label><select id="unit-to"><option value="km">Kilometres (km)</option><option value="m">Metres (m)</option><option value="cm">Centimetres (cm)</option><option value="mm">Millimetres (mm)</option><option value="ft">Feet (ft)</option><option value="in">Inches (in)</option></select></div></div>
+<button class="button button-dark" type="submit">Convert</button></form><p id="unit-result" class="tool-result" role="status" aria-live="polite"></p></section>
+</div><p id="tools-disabled-message" class="tools-disabled-message" hidden>Quick Digital Tools are temporarily unavailable. Please check back soon.</p>
+</main>
+<footer class="footer footer-v2"><a class="brand footer-brand" href="index.html"><span class="brand-mark">P</span><span>PIXELFORGE</span></a><span>© <span id="year"></span> PixelForge. Built for curious minds.</span><a href="index.html">Back to homepage ↑</a></footer>
+</body></html>
