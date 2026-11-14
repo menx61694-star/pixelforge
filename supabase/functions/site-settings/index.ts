@@ -311,15 +311,31 @@ Deno.serve(async (request) => {
           .select("source,resource_id,view_count").gte("view_count", popularConfig.minViews)
           .order("view_count", { ascending: false }).limit(popularConfig.maxItems * 5);
         if (metricsError) throw metricsError;
-        const storagePaths = (metrics ?? []).filter(item => item.source === "supabase").map(item => item.resource_id);
-        const driveIds = (metrics ?? []).filter(item => item.source === "google_drive").map(item => item.resource_id);
+        const storagePaths = (metrics ?? []).filter(item => item.source === "supabase").map(item => String(item.resource_id));
+        const driveIds = (metrics ?? []).filter(item => item.source === "google_drive").map(item => String(item.resource_id));
         const docs = new Map<string, Record<string, unknown>>();
-        if (storagePaths.length) {
-          const { data, error } = await db.from("pixel_forge_published_documents")
-            .select("source,storage_path,title,category,size_bytes").eq("source","supabase")
-            .eq("published",true).in("storage_path",storagePaths);
+        const resourceCategories = ["pdf-documents","study-notes","books-resources","other-documents","exam-materials","technology-guides"];
+        const categoryNames: Record<string, string> = {
+          "pdf-documents":"PDF Documents","study-notes":"Study Notes","books-resources":"Books & Resources",
+          "other-documents":"Other Documents","exam-materials":"Exam Materials","technology-guides":"Technology Guides",
+        };
+        for (const category of resourceCategories) {
+          const wanted = new Set(storagePaths.filter(path => path.startsWith(category + "/")));
+          if (!wanted.size) continue;
+          const { data, error } = await db.storage.from("public-documents").list(category, { limit: 1000 });
           if (error) throw error;
-          for (const item of data ?? []) docs.set("supabase:" + item.storage_path, item);
+          for (const file of data ?? []) {
+            const path = category + "/" + file.name;
+            if (!wanted.has(path) || !file.name || file.name.endsWith("/")) continue;
+            const ext = file.name.split(".").pop() || "FILE";
+            const { data: publicUrl } = db.storage.from("public-documents").getPublicUrl(path);
+            docs.set("supabase:" + path, {
+              source: "supabase", storage_path: path,
+              title: file.name.replace(/\\.[^.]+$/, "").replace(/[_-]+/g, " "),
+              category: categoryNames[category], size_bytes: Number(file.metadata?.size || 0),
+              url: publicUrl.publicUrl, ext,
+            });
+          }
         }
         if (driveIds.length) {
           const { data, error } = await db.from("pixel_forge_published_documents")
@@ -333,7 +349,7 @@ Deno.serve(async (request) => {
           if (!doc) continue;
           const url = metric.source === "google_drive"
             ? required("SUPABASE_URL") + "/functions/v1/google-drive-files?action=public-download&id=" + encodeURIComponent(String(doc.drive_file_id))
-            : db.storage.from("public-documents").getPublicUrl(String(doc.storage_path)).data.publicUrl;
+            : String(doc.url);
           popularItems.push({
             title: doc.title, category: doc.category, source: metric.source, url,
             viewCount: popularConfig.showViews ? metric.view_count : null,
@@ -527,12 +543,21 @@ Deno.serve(async (request) => {
         return json({ error: "Invalid resource tracking request." }, 400, request);
       }
       const db = dbAdmin();
-      const referenceColumn = input.source === "supabase" ? "storage_path" : "drive_file_id";
-      const { data: published, error: publishedError } = await db.from("pixel_forge_published_documents")
-        .select("id").eq("source", input.source).eq("published", true)
-        .eq(referenceColumn, input.resourceId).maybeSingle();
-      if (publishedError) throw publishedError;
-      if (!published) return json({ error: "Resource is not publicly published." }, 404, request);
+      if (input.source === "google_drive") {
+        const { data: published, error: publishedError } = await db.from("pixel_forge_published_documents")
+          .select("id").eq("source", "google_drive").eq("published", true)
+          .eq("drive_file_id", input.resourceId).maybeSingle();
+        if (publishedError) throw publishedError;
+        if (!published) return json({ error: "Resource is not publicly published." }, 404, request);
+      } else {
+        const match = /^(pdf-documents|study-notes|books-resources|other-documents|exam-materials|technology-guides)\\/([^/]{1,255})$/.exec(input.resourceId);
+        if (!match || match[2].includes("..")) return json({ error: "Resource is not publicly published." }, 404, request);
+        const { data: files, error: storageError } = await db.storage.from("public-documents").list(match[1], { search: match[2], limit: 100 });
+        if (storageError) throw storageError;
+        if (!(files ?? []).some(file => file.name === match[2] && !file.name.endsWith("/"))) {
+          return json({ error: "Resource is not publicly published." }, 404, request);
+        }
+      }
       const hmacKey = await crypto.subtle.importKey(
         "raw", new TextEncoder().encode(required("SUPABASE_SERVICE_ROLE_KEY")),
         { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
