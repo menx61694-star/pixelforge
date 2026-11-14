@@ -63,7 +63,7 @@ test("public homepage and library send allowlisted page paths without visitor cr
   assert.match(homepage, /sessionStorage\.getItem\(key\)/);
   assert.match(homepage, /visitorSessionId/);
   assert.match(homepage, /credentials: "omit"/);
-  assert.match(library, /analytics\?action=collect/);
+  assert.match(library, /\/api\/analytics/);
   assert.match(library, /credentials: "omit"/);
 });
 
@@ -141,7 +141,7 @@ test("security logs encrypt raw IP addresses with AES-GCM before persistence", (
   assert.match(edge, /name: "AES-GCM"/);
   assert.match(edge, /ip_ciphertext/);
   assert.match(edge, /ip_iv/);
-  assert.match(edge, /storeSecurityLog\(request, pagePath, db\)/);
+  assert.match(edge, /storeSecurityLog\(request, pagePath, db, proxyContext\.clientIp\)/);
   assert.match(edge, /decryptIp\(row\.ip_ciphertext, row\.ip_iv\)/);
 });
 
