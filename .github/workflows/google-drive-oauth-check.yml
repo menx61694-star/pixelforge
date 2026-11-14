@@ -31,6 +31,7 @@ on:
       - "vault-storage-utils.js"
       - "tests/vault-storage.test.js"
       - "tests/analytics-contract.test.js"
+      - "tests/role-permissions.test.js"
       - "tests/settings-contract.test.js"
       - "admin.html"
       - "admin.css"
@@ -88,6 +89,7 @@ jobs:
         run: |
           node --test tests/vault-storage.test.js
           node --test tests/analytics-contract.test.js
+          node --test tests/role-permissions.test.js
           node --test tests/settings-contract.test.js
           node --test tests/maintenance-mode.test.js
 
