@@ -192,6 +192,7 @@ begin
               or length(trim(coalesce(notice.value->>'title',''))) < 1 or length(notice.value->>'title') > 120
               or coalesce(jsonb_typeof(notice.value->'message'), '') <> 'string'
               or length(trim(coalesce(notice.value->>'message',''))) < 1 or length(notice.value->>'message') > 500
+              or coalesce(jsonb_typeof(notice.value->'type'), '') <> 'string'
               or notice.value->>'type' not in ('info','update','important')
               or coalesce(jsonb_typeof(notice.value->'startDate'), '') <> 'string'
               or (notice.value->>'startDate') !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
