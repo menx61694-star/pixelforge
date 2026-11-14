@@ -20,7 +20,9 @@ on:
       - "maintenance-mode.js"
       - "index.html"
       - "seo.js"
+      - "layout.js"
       - "supabase/phase-14-seo-management.sql"
+      - "supabase/phase-15-homepage-layout.sql"
       - "tools.html"
       - "tools.js"
       - "styles.css"
@@ -81,7 +83,9 @@ on:
       - "tests/settings-contract.test.js"
       - "index.html"
       - "seo.js"
+      - "layout.js"
       - "supabase/phase-14-seo-management.sql"
+      - "supabase/phase-15-homepage-layout.sql"
       - "tools.html"
       - "tools.js"
       - "styles.css"
@@ -122,6 +126,7 @@ jobs:
           node --check script.js
           node --check tools.js
           node --check seo.js
+          node --check layout.js
           node --check library.js
           node --check vault-storage-utils.js
 
