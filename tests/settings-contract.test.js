@@ -154,3 +154,32 @@ test("Daily Quiz homepage markup closes its form and preserves hidden/accessibil
   assert.match(css, /\.daily-quiz-section\[hidden\]\s*\{\s*display:\s*none/);
   assert.match(css, /\.sr-only\s*\{/);
 });
+
+
+test("Quick Digital Tools are admin-managed, ordered, allow-listed and exposed without privileged settings", () => {
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  const edge = read("supabase/functions/site-settings/index.ts");
+  const migration = read("supabase/phase-8-quick-tools.sql");
+  const homepage = read("index.html");
+  const publicScript = read("script.js");
+  const toolsPage = read("tools.html");
+  const toolsScript = read("tools.js");
+  assert.match(adminHtml, /setting-tools-enabled/);
+  assert.match(adminHtml, /setting-tools-items/);
+  assert.match(adminJs, /saveSetting\("home\.tools\.items"/);
+  assert.match(adminJs, /saveSetting\("home\.tools\.enabled"/);
+  assert.match(edge, /home\.tools\.enabled/);
+  assert.match(edge, /home\.tools\.items/);
+  assert.match(edge, /unit-converter/);
+  assert.match(migration, /home\.tools\.items/);
+  assert.match(migration, /jsonb_array_length\(p_value\) <= 4/);
+  assert.match(homepage, /id="quick-tools"/);
+  assert.match(publicScript, /payload\.quickTools/);
+  assert.match(toolsPage, /id="tool-calculator"/);
+  assert.match(toolsPage, /id="tool-percentage"/);
+  assert.match(toolsPage, /id="tool-word-counter"/);
+  assert.match(toolsPage, /id="tool-unit-converter"/);
+  assert.match(toolsScript, /action=public-content/);
+  assert.match(toolsScript, /unit-converter-form/);
+});
