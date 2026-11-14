@@ -550,11 +550,16 @@ Deno.serve(async (request) => {
         if (publishedError) throw publishedError;
         if (!published) return json({ error: "Resource is not publicly published." }, 404, request);
       } else {
-        const match = /^(pdf-documents|study-notes|books-resources|other-documents|exam-materials|technology-guides)\/([^/]{1,255})$/.exec(input.resourceId);
-        if (!match || match[2].includes("..")) return json({ error: "Resource is not publicly published." }, 404, request);
-        const { data: files, error: storageError } = await db.storage.from("public-documents").list(match[1], { search: match[2], limit: 100 });
+        const parts = input.resourceId.split("/");
+        const allowedCategories = ["pdf-documents","study-notes","books-resources","other-documents","exam-materials","technology-guides"];
+        const category = parts[0];
+        const fileName = parts[1];
+        if (parts.length !== 2 || !allowedCategories.includes(category) || !fileName || fileName.length > 255 || fileName.includes("..")) {
+          return json({ error: "Resource is not publicly published." }, 404, request);
+        }
+        const { data: files, error: storageError } = await db.storage.from("public-documents").list(category, { search: fileName, limit: 100 });
         if (storageError) throw storageError;
-        if (!(files ?? []).some(file => file.name === match[2] && !file.name.endsWith("/"))) {
+        if (!(files ?? []).some(file => file.name === fileName && !file.name.endsWith("/"))) {
           return json({ error: "Resource is not publicly published." }, 404, request);
         }
       }
