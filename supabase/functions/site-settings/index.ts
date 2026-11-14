@@ -122,7 +122,7 @@ function validSettingValue(key: string, value: unknown): boolean {
   if (key === "home.tools.items") {
     const allowed = new Set(["calculator","percentage","word-counter","unit-converter"]);
     return Array.isArray(value) && value.length <= 4 &&
-      value.every((item) => typeof item === "string" && allowed.has(item)) &&
+      value.every((item: unknown) => typeof item === "string" && allowed.has(item)) &&
       new Set(value).size === value.length;
   }
   if (typeof value !== "string") return false;
