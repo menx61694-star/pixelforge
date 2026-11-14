@@ -1026,6 +1026,9 @@ const firebaseConfig = {
       setChecked("setting-tools-enabled", values["home.tools.enabled"]);
       setChecked("setting-featured-enabled", values["home.featured.enabled"]);
       setChecked("setting-announcements-enabled", values["home.announcements.enabled"]);
+      setChecked("setting-learning-enabled", values["home.learning.enabled"]);
+      const learningTextarea = document.getElementById("setting-learning-items");
+      if (learningTextarea) learningTextarea.value = JSON.stringify(Array.isArray(values["home.learning.items"]) ? values["home.learning.items"] : [], null, 2);
       setChecked("setting-search-enabled", values["home.search.enabled"]);
       setChecked("setting-search-smart", values["home.search.smart_enabled"]);
       setChecked("setting-search-filters", values["home.search.filters_enabled"]);
@@ -1118,6 +1121,34 @@ const firebaseConfig = {
       }
       saveSetting("home.knowledge.items", items, button)
         .then(() => saveSetting("home.knowledge.enabled", document.getElementById("setting-knowledge-enabled").checked, button));
+    } else if (group === "home.learning") {
+      let items;
+      try { items = JSON.parse(document.getElementById("setting-learning-items").value || "[]"); }
+      catch (_) { setSettingsStatus("Learning paths must be valid JSON.", true); return; }
+      const valid = Array.isArray(items) && items.length <= 12 && items.every(path => {
+        if (!path || typeof path !== "object" || Array.isArray(path) ||
+            !Object.keys(path).every(key => ["id","title","description","topic","level","duration","published","steps"].includes(key)) ||
+            typeof path.id !== "string" || !path.id.trim() || path.id.length > 64 ||
+            typeof path.title !== "string" || !path.title.trim() || path.title.length > 100 ||
+            typeof path.description !== "string" || !path.description.trim() || path.description.length > 240 ||
+            typeof path.topic !== "string" || !path.topic.trim() || path.topic.length > 40 ||
+            !["beginner","intermediate","advanced"].includes(path.level) ||
+            typeof path.duration !== "string" || path.duration.length > 32 ||
+            typeof path.published !== "boolean" || !Array.isArray(path.steps) || path.steps.length < 1 || path.steps.length > 8) return false;
+        return path.steps.every(step => {
+          if (!step || typeof step !== "object" || Array.isArray(step) ||
+              !Object.keys(step).every(key => ["title","url"].includes(key)) ||
+              typeof step.title !== "string" || !step.title.trim() || step.title.length > 100 ||
+              typeof step.url !== "string" || step.url.length > 1200) return false;
+          try { const url = new URL(step.url); return url.protocol === "https:" && !url.username && !url.password; }
+          catch (_) { return false; }
+        });
+      });
+      if (!valid || new Set(items.map(path => path.id)).size !== items.length) {
+        setSettingsStatus("Add up to 12 valid paths with unique IDs and 1–8 HTTPS steps each.", true); return;
+      }
+      saveSetting("home.learning.items", items, button)
+        .then(() => saveSetting("home.learning.enabled", document.getElementById("setting-learning-enabled").checked, button));
     } else if (group === "home.search") {
       const maxResults = Number(document.getElementById("setting-search-max-results").value);
       const placeholder = document.getElementById("setting-search-placeholder").value.trim();
