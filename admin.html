@@ -237,6 +237,14 @@
                 <p class="settings-help">When enabled, the public homepage and Document Library show the maintenance screen.</p>
               </article>
               <article class="settings-card">
+                <h3>Homepage knowledge corner</h3>
+                <label class="settings-toggle"><input id="setting-knowledge-enabled" type="checkbox"><span>Show the “Did you know?” section</span></label>
+                <label for="setting-knowledge-items">Knowledge facts (one per line)</label>
+                <textarea id="setting-knowledge-items" rows="8" maxlength="12000" placeholder="SPACE | Light from the Sun takes about 8 minutes to reach Earth."></textarea>
+                <p class="settings-help">Use one fact per line in CATEGORY | FACT format. Up to 50 facts; each fact should be 8–240 characters. Visitors can request another fact with the refresh button.</p>
+                <button type="button" data-setting-save="home.knowledge">Save homepage knowledge</button>
+              </article>
+              <article class="settings-card">
                 <h3>Automatic sync preferences</h3>
                 <label class="settings-toggle"><input id="setting-drive-auto" type="checkbox"><span>Google Drive auto-sync enabled</span></label>
                 <label class="settings-toggle"><input id="setting-vault-auto" type="checkbox"><span>Private Vault auto-sync enabled</span></label>
