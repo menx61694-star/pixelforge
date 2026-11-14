@@ -44,6 +44,10 @@ const settingKeys = new Set([
   "home.seo.page_overrides",
   "home.layout.enabled",
   "home.layout.sections",
+  "home.popular.enabled",
+  "home.popular.max_items",
+  "home.popular.min_views",
+  "home.popular.show_views",
 ]);
 
 function cors(request: Request) {
@@ -131,7 +135,7 @@ function isValidIsoDate(value: string): boolean {
 }
 function validSettingValue(key: string, value: unknown): boolean {
   if (!settingKeys.has(key)) return false;
-  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled" || key === "home.quiz.enabled" || key === "home.tools.enabled" || key === "home.featured.enabled" || key === "home.announcements.enabled" || key === "home.search.enabled" || key === "home.search.smart_enabled" || key === "home.search.filters_enabled" || key === "home.learning.enabled" || key === "home.feedback.enabled" || key === "home.feedback.allow_anonymous" || key === "home.feedback.display_approved" || key === "home.seo.enabled" || key === "home.layout.enabled") return typeof value === "boolean";
+  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled" || key === "home.quiz.enabled" || key === "home.tools.enabled" || key === "home.featured.enabled" || key === "home.announcements.enabled" || key === "home.search.enabled" || key === "home.search.smart_enabled" || key === "home.search.filters_enabled" || key === "home.learning.enabled" || key === "home.feedback.enabled" || key === "home.feedback.allow_anonymous" || key === "home.feedback.display_approved" || key === "home.seo.enabled" || key === "home.layout.enabled" || key === "home.popular.enabled" || key === "home.popular.show_views") return typeof value === "boolean";
   if (key === "home.knowledge.items") {
     return Array.isArray(value) && value.length <= 50 && value.every((item) =>
       item && typeof item === "object" && !Array.isArray(item) &&
@@ -177,9 +181,11 @@ function validSettingValue(key: string, value: unknown): boolean {
         typeof resource.published === "boolean";
     }) && new Set(value.map((item: { id?: unknown }) => item.id)).size === value.length;
   }
+  if (key === "home.popular.max_items") return typeof value === "number" && Number.isInteger(value) && value >= 3 && value <= 12;
+  if (key === "home.popular.min_views") return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 1000000;
   if (key === "home.layout.sections") {
-    const allowed = new Set(["smart-document-search","discover","user-feedback","learning-corner","announcements","featured-resources","quick-tools","knowledge","daily-quiz","about","contact"]);
-    return Array.isArray(value) && value.length === 11 && value.every((item: unknown) => {
+    const allowed = new Set(["smart-document-search","discover","user-feedback","learning-corner","announcements","featured-resources","popular-resources","quick-tools","knowledge","daily-quiz","about","contact"]);
+    return Array.isArray(value) && value.length === 12 && value.every((item: unknown) => {
       if (!item || typeof item !== "object" || Array.isArray(item)) return false;
       const section = item as Record<string, unknown>;
       return Object.keys(section).every(field => ["id","enabled","title","subtitle"].includes(field)) &&
@@ -187,7 +193,7 @@ function validSettingValue(key: string, value: unknown): boolean {
         typeof section.enabled === "boolean" &&
         typeof section.title === "string" && section.title.length <= 80 &&
         typeof section.subtitle === "string" && section.subtitle.length <= 160;
-    }) && new Set(value.map((item: { id?: unknown }) => item.id)).size === 11;
+    }) && new Set(value.map((item: { id?: unknown }) => item.id)).size === 12;
   }
   if (key === "home.seo.default_title") return typeof value === "string" && value.trim().length >= 5 && value.length <= 70;
   if (key === "home.seo.default_description") return typeof value === "string" && value.trim().length >= 50 && value.length <= 160;
@@ -276,7 +282,7 @@ Deno.serve(async (request) => {
       const db = dbAdmin();
       const { data, error } = await db.from("pixel_forge_site_settings")
         .select("setting_key,setting_value")
-        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items", "home.tools.enabled", "home.tools.items", "home.featured.enabled", "home.featured.items", "home.announcements.enabled", "home.announcements.items", "home.search.enabled", "home.search.smart_enabled", "home.search.filters_enabled", "home.search.max_results", "home.search.placeholder", "home.learning.enabled", "home.learning.items", "home.feedback.enabled", "home.feedback.categories", "home.feedback.allow_anonymous", "home.feedback.display_approved", "home.feedback.max_display", "home.seo.enabled", "home.seo.default_title", "home.seo.default_description", "home.seo.default_keywords", "home.seo.canonical_base", "home.seo.og_image", "home.seo.page_overrides", "home.layout.enabled", "home.layout.sections"]);
+        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items", "home.tools.enabled", "home.tools.items", "home.featured.enabled", "home.featured.items", "home.announcements.enabled", "home.announcements.items", "home.search.enabled", "home.search.smart_enabled", "home.search.filters_enabled", "home.search.max_results", "home.search.placeholder", "home.learning.enabled", "home.learning.items", "home.feedback.enabled", "home.feedback.categories", "home.feedback.allow_anonymous", "home.feedback.display_approved", "home.feedback.max_display", "home.seo.enabled", "home.seo.default_title", "home.seo.default_description", "home.seo.default_keywords", "home.seo.canonical_base", "home.seo.og_image", "home.seo.page_overrides", "home.layout.enabled", "home.layout.sections", "home.popular.enabled", "home.popular.max_items", "home.popular.min_views", "home.popular.show_views"]);
       if (error) throw error;
       const values = Object.fromEntries((data ?? []).map((row) => [row.setting_key, row.setting_value]));
       const items = Array.isArray(values["home.knowledge.items"]) ? values["home.knowledge.items"] : [];
@@ -292,6 +298,42 @@ Deno.serve(async (request) => {
           .order("created_at", { ascending: false }).limit(feedbackSettings.maxDisplay);
         if (feedbackError) throw feedbackError;
         approvedFeedback = feedbackRows ?? [];
+      }
+      const popularConfig = {
+        enabled: values["home.popular.enabled"] === true,
+        maxItems: Number.isInteger(values["home.popular.max_items"]) ? values["home.popular.max_items"] as number : 6,
+        minViews: Number.isInteger(values["home.popular.min_views"]) ? values["home.popular.min_views"] as number : 1,
+        showViews: values["home.popular.show_views"] !== false,
+      };
+      let popularItems: Array<Record<string, unknown>> = [];
+      if (popularConfig.enabled) {
+        const { data: metrics, error: metricsError } = await db.from("pixel_forge_resource_metrics")
+          .select("source,resource_id,view_count").gte("view_count", popularConfig.minViews)
+          .order("view_count", { ascending: false }).limit(popularConfig.maxItems * 5);
+        if (metricsError) throw metricsError;
+        const storagePaths = (metrics ?? []).filter(item => item.source === "supabase").map(item => item.resource_id);
+        const driveIds = (metrics ?? []).filter(item => item.source === "google_drive").map(item => item.resource_id);
+        const [storageResult, driveResult] = await Promise.all([
+          storagePaths.length ? db.from("pixel_forge_published_documents").select("source,storage_path,title,category,size_bytes").eq("source","supabase").eq("published",true).in("storage_path",storagePaths) : Promise.resolve({ data: [], error: null }),
+          driveIds.length ? db.from("pixel_forge_published_documents").select("source,drive_file_id,title,category,size_bytes").eq("source","google_drive").eq("published",true).in("drive_file_id",driveIds) : Promise.resolve({ data: [], error: null }),
+        ]);
+        if (storageResult.error) throw storageResult.error;
+        if (driveResult.error) throw driveResult.error;
+        const docs = new Map<string, Record<string, unknown>>();
+        for (const item of storageResult.data ?? []) docs.set("supabase:" + item.storage_path, item);
+        for (const item of driveResult.data ?? []) docs.set("google_drive:" + item.drive_file_id, item);
+        for (const metric of metrics ?? []) {
+          const doc = docs.get(metric.source + ":" + metric.resource_id);
+          if (!doc) continue;
+          const url = metric.source === "google_drive"
+            ? required("SUPABASE_URL") + "/functions/v1/google-drive-files?action=public-download&id=" + encodeURIComponent(String(doc.drive_file_id))
+            : db.storage.from("public-documents").getPublicUrl(String(doc.storage_path)).data.publicUrl;
+          popularItems.push({
+            title: doc.title, category: doc.category, source: metric.source, url,
+            viewCount: popularConfig.showViews ? metric.view_count : null,
+          });
+          if (popularItems.length >= popularConfig.maxItems) break;
+        }
       }
       return json({
         site: {
@@ -315,6 +357,11 @@ Deno.serve(async (request) => {
                 .filter(item => item.published === true && typeof item.url === "string" && isSafeHttpsUrl(item.url))
                 .slice(0, 12)
             : [],
+        },
+        popularResources: {
+          enabled: popularConfig.enabled,
+          showViews: popularConfig.showViews,
+          items: popularItems,
         },
         layout: {
           enabled: values["home.layout.enabled"] === true,
