@@ -339,3 +339,19 @@ test("All public pages load the SEO metadata runtime", () => {
     assert.match(read(page), /src="seo\.js"/, page + " SEO runtime");
   }
 });
+
+
+test("Homepage Layout Manager validates a complete section order and applies visibility and text overrides", () => {
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  const edge = read("supabase/functions/site-settings/index.ts");
+  const migration = read("supabase/phase-15-homepage-layout.sql");
+  const layoutScript = read("layout.js");
+  assert.match(adminHtml, /setting-layout-sections/);
+  assert.match(adminJs, /saveSetting\("home\.layout\.sections"/);
+  assert.match(edge, /home\.layout\.sections/);
+  assert.match(migration, /home\.layout\.sections/);
+  assert.match(migration, /jsonb_array_length\(p_value\) = 11/);
+  assert.match(layoutScript, /layout-hidden/);
+  assert.match(layoutScript, /main\.append\(section\)/);
+});
