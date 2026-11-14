@@ -29,7 +29,6 @@ on:
       - "supabase/phase-5-settings.sql"
       - "supabase/phase-6-homepage-content.sql"
       - "supabase/phase-7-daily-quiz.sql"
-      - "supabase/phase-7-daily-quiz.sql"
       - "admin.js"
       - "script.js"
       - "library.js"
