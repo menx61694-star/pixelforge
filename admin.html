@@ -253,6 +253,17 @@
                 <button type="button" data-setting-save="home.quiz">Save Daily Quiz</button>
               </article>
               <article class="settings-card">
+                <h3>Quick Digital Tools</h3>
+                <label class="settings-toggle"><input id="setting-tools-enabled" type="checkbox"><span>Show Quick Tools on the public website</span></label>
+                <label for="setting-tools-items">Visible tools (one ID per line, in display order)</label>
+                <textarea id="setting-tools-items" rows="5" maxlength="300" spellcheck="false">calculator
+percentage
+word-counter
+unit-converter</textarea>
+                <p class="settings-help">Allowed IDs: calculator, percentage, word-counter, unit-converter. Remove an ID to hide it; reorder lines to change display order. Tools run locally in the visitor’s browser.</p>
+                <button type="button" data-setting-save="home.tools">Save Quick Tools</button>
+              </article>
+              <article class="settings-card">
                 <h3>Automatic sync preferences</h3>
                 <label class="settings-toggle"><input id="setting-drive-auto" type="checkbox"><span>Google Drive auto-sync enabled</span></label>
                 <label class="settings-toggle"><input id="setting-vault-auto" type="checkbox"><span>Private Vault auto-sync enabled</span></label>
