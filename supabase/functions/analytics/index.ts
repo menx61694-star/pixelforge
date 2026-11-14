@@ -72,9 +72,10 @@ async function hmacHash(value: string): Promise<string> {
   const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(value));
   return Array.from(new Uint8Array(signature), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
-async function rateLimitKey(request: Request, trustedProxyIp?: string): Promise<string | null> {
-  const forwarded = trustedProxyIp ?? request.headers.get("cf-connecting-ip") ?? request.headers.get("x-real-ip");
-  return forwarded ? await hmacHash("rate:" + forwarded) : null;
+async function rateLimitKey(_request: Request, trustedProxyIp?: string): Promise<string | null> {
+  // Never trust client-supplied forwarding headers. Without a signed proxy IP,
+  // the collect route falls back to the pseudonymous visitor-session HMAC.
+  return trustedProxyIp ? await hmacHash("rate:" + trustedProxyIp) : null;
 }
 async function verifyGeoProxy(request: Request) {
   const timestamp = request.headers.get("x-pf-geo-timestamp") ?? "";
@@ -171,11 +172,16 @@ async function authenticatedUid(request: Request): Promise<string | null> {
 }
 async function storeSecurityLog(request: Request, pagePath: string, db: ReturnType<typeof dbAdmin>, trustedProxyIp?: string) {
   const observedIp = getClientIp(request, trustedProxyIp);
-  if (!observedIp) return;
   try {
-    const encrypted = await encryptIp(observedIp.address);
+    // Record the security event even when hosting provides no trusted public IP.
+    // IP fields remain null rather than accepting spoofable forwarding headers.
+    const encrypted = observedIp ? await encryptIp(observedIp.address) : null;
     const { error } = await db.from("pixel_forge_security_logs").insert({
-      ...encrypted, ip_source: observedIp.source, event_type: "page_view", page_path: pagePath,
+      ip_ciphertext: encrypted?.ip_ciphertext ?? null,
+      ip_iv: encrypted?.ip_iv ?? null,
+      ip_source: observedIp?.source ?? "unavailable",
+      event_type: "page_view",
+      page_path: pagePath,
     });
     if (error) throw error;
   } catch (error) {
@@ -230,7 +236,7 @@ Deno.serve(async (request) => {
         region_name: location?.regionName ?? null,
       });
       if (error) throw error;
-      if (proxyContext?.clientIp) await storeSecurityLog(request, pagePath, db, proxyContext.clientIp);
+      await storeSecurityLog(request, pagePath, db, proxyContext?.clientIp);
       return json({ recorded: true }, 202, request);
     }
 
@@ -325,7 +331,7 @@ Deno.serve(async (request) => {
       if (error) throw error;
       const logs = await Promise.all((data ?? []).map(async (row) => ({
         id: row.id, eventType: row.event_type, pagePath: row.page_path,
-        ipAddress: await decryptIp(row.ip_ciphertext, row.ip_iv), ipSource: row.ip_source ?? "unknown (legacy log)", localIpAddress: row.local_ip_ciphertext && row.local_ip_iv ? await decryptIp(row.local_ip_ciphertext, row.local_ip_iv) : null, localIpSource: row.local_ip_source ?? null, createdAt: row.created_at,
+        ipAddress: row.ip_ciphertext && row.ip_iv ? await decryptIp(row.ip_ciphertext, row.ip_iv) : null, ipSource: row.ip_source ?? "unknown (legacy log)", localIpAddress: row.local_ip_ciphertext && row.local_ip_iv ? await decryptIp(row.local_ip_ciphertext, row.local_ip_iv) : null, localIpSource: row.local_ip_source ?? null, createdAt: row.created_at,
       })));
       return json({ logs, retentionDays: 90 }, 200, request);
     }

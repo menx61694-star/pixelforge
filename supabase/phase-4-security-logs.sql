@@ -10,14 +10,17 @@ create table if not exists public.pixel_forge_security_logs (
     '/study-notes.html', '/books-resources.html', '/other-documents.html',
     '/exam-materials.html', '/technology-guides.html'
   )),
-  ip_ciphertext text not null,
-  ip_iv text not null,
+  ip_ciphertext text,
+  ip_iv text,
   ip_source text,
   local_ip_ciphertext text,
   local_ip_iv text,
   local_ip_source text,
   created_at timestamptz not null default now()
 );
+alter table public.pixel_forge_security_logs
+  alter column ip_ciphertext drop not null,
+  alter column ip_iv drop not null;
 alter table public.pixel_forge_security_logs add column if not exists ip_source text;
 alter table public.pixel_forge_security_logs add column if not exists local_ip_ciphertext text;
 alter table public.pixel_forge_security_logs add column if not exists local_ip_iv text;

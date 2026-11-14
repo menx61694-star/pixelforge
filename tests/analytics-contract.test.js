@@ -138,7 +138,7 @@ test("security logs encrypt raw IP addresses with AES-GCM before persistence", (
   assert.match(edge, /name: "AES-GCM"/);
   assert.match(edge, /ip_ciphertext/);
   assert.match(edge, /ip_iv/);
-  assert.match(edge, /storeSecurityLog\(request, pagePath, db, proxyContext\.clientIp\)/);
+  assert.match(edge, /await storeSecurityLog\(request, pagePath, db, proxyContext\?\.clientIp\)/);
   assert.match(edge, /decryptIp\(row\.ip_ciphertext, row\.ip_iv\)/);
 });
 
@@ -219,4 +219,17 @@ test("security log timestamps are displayed in India Standard Time", () => {
   assert.match(adminJs, /toLocaleString\("en-IN", \{ timeZone: "Asia\/Kolkata"/);
   assert.match(adminJs, /\+ " IST"/);
   assert.doesNotMatch(adminJs, /new Date\(log\.createdAt\)\.toISOString\(\)/);
+});
+
+
+test("direct page views are recorded in Security Logs without trusting client forwarding headers", () => {
+  assert.match(edge, /Never trust client-supplied forwarding headers/);
+  assert.match(edge, /return trustedProxyIp \? await hmacHash\("rate:" \+ trustedProxyIp\) : null/);
+  assert.match(edge, /await storeSecurityLog\(request, pagePath, db, proxyContext\?\.clientIp\)/);
+  assert.match(edge, /ip_source: observedIp\?\.source \?\? "unavailable"/);
+  assert.match(edge, /ipAddress: row\.ip_ciphertext && row\.ip_iv \? await decryptIp/);
+  const securitySql = read("supabase/phase-4-security-logs.sql");
+  assert.match(securitySql, /ip_ciphertext text,/);
+  assert.match(securitySql, /alter column ip_ciphertext drop not null/i);
+  assert.match(securitySql, /alter column ip_iv drop not null/i);
 });
