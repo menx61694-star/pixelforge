@@ -351,7 +351,7 @@ test("Homepage Layout Manager validates a complete section order and applies vis
   assert.match(adminJs, /saveSetting\("home\.layout\.sections"/);
   assert.match(edge, /home\.layout\.sections/);
   assert.match(migration, /home\.layout\.sections/);
-  assert.match(migration, /jsonb_array_length\(p_value\) = 11/);
+  assert.match(migration, /jsonb_array_length\(p_value\) = 12/);
   assert.match(layoutScript, /layout-hidden/);
   assert.match(layoutScript, /main\.append\(section\)/);
 });
