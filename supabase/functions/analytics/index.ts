@@ -73,34 +73,22 @@ async function hmacHash(value: string): Promise<string> {
   return Array.from(new Uint8Array(signature), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 async function rateLimitKey(_request: Request, trustedProxyIp?: string): Promise<string | null> {
-  // Never trust client-supplied forwarding headers. Without a signed proxy IP,
-  // the collect route falls back to the pseudonymous visitor-session HMAC.
+  // Use only the client IP supplied by Supabase's managed edge ingress.
+  // Fall back to the HMAC of the tab session when no public IP is available.
   return trustedProxyIp ? await hmacHash("rate:" + trustedProxyIp) : null;
 }
-async function verifyGeoProxy(request: Request) {
-  const timestamp = request.headers.get("x-pf-geo-timestamp") ?? "";
-  const country = request.headers.get("x-pf-geo-country") ?? "";
-  const region = request.headers.get("x-pf-geo-region") ?? "";
-  const clientIp = request.headers.get("x-pf-geo-client-ip") ?? "";
-  const signature = request.headers.get("x-pf-geo-signature") ?? "";
-  const timestampMs = Number(timestamp);
-  if (!/^\d{13}$/.test(timestamp) || !Number.isFinite(timestampMs) ||
-      Math.abs(Date.now() - timestampMs) > 5 * 60 * 1000 ||
-      (country !== "" && !/^[A-Z]{2}$/.test(country)) ||
-      region.length > 80 || /[\r\n]/.test(region) ||
-      !clientIp || clientIp.length > 64 || !/^[0-9a-f:.]+$/i.test(clientIp) ||
-      !/^[0-9a-f]{64}$/i.test(signature)) return null;
-  const message = [timestamp, country, region, clientIp].join("\n");
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(required("PIXELFORGE_GEO_PROXY_SECRET")), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
-  const signatureBytes = Uint8Array.from(signature.match(/.{2}/g) ?? [], byte => parseInt(byte, 16));
-  const valid = await crypto.subtle.verify("HMAC", key, signatureBytes, new TextEncoder().encode(message));
-  return valid ? { countryCode: country || null, regionName: region || null, clientIp } : null;
+function getTrustedCountryCode(request: Request): string | null {
+  // Supabase's hosted API gateway records cf-ipcountry on incoming requests.
+  // Cloudflare adds this at its managed ingress; never accept country from JSON.
+  const country = request.headers.get("cf-ipcountry")?.trim().toUpperCase() ?? "";
+  return /^[A-Z]{2}$/.test(country) && country !== "XX" && country !== "T1" ? country : null;
 }
 
-function getClientIp(_request: Request, trustedProxyIp?: string): { address: string; source: "cloudflare-geo-proxy" } | null {
-  // Only accept an IP carried by the signed geo-proxy context. Direct request
-  // headers such as CF-Connecting-IP and X-Real-IP are client-spoofable here.
-  const candidate = trustedProxyIp;
+function getClientIp(request: Request): { address: string; source: "supabase-edge-cf-connecting-ip" } | null {
+  // Supabase-hosted Edge Functions sit behind Supabase-managed Cloudflare ingress.
+  // CF-Connecting-IP is set at that ingress. Do not use X-Forwarded-For or
+  // X-Real-IP: callers can supply spoofed values in those headers.
+  const candidate = request.headers.get("cf-connecting-ip");
   if (!candidate || candidate.length > 64 || candidate.includes(",")) return null;
   const ip = candidate.trim();
   const parts = ip.split(".");
@@ -114,7 +102,7 @@ function getClientIp(_request: Request, trustedProxyIp?: string): { address: str
     const lower = ip.toLowerCase();
     if (lower === "::" || lower === "::1" || lower.startsWith("fc") || lower.startsWith("fd") || lower.startsWith("fe8") || lower.startsWith("fe9") || lower.startsWith("fea") || lower.startsWith("feb") || lower.startsWith("ff")) return null;
   }
-  return { address: ip, source: "cloudflare-geo-proxy" };
+  return { address: ip, source: "supabase-edge-cf-connecting-ip" };
 }
 function isPrivateLocalIp(ip: string): boolean {
   if (ip.length > 64) return false;
@@ -171,8 +159,7 @@ async function authenticatedUid(request: Request): Promise<string | null> {
   const token = request.headers.get("Authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
   return token ? await lookupFirebaseUser(token) : null;
 }
-async function storeSecurityLog(request: Request, pagePath: string, db: ReturnType<typeof dbAdmin>, trustedProxyIp?: string) {
-  const observedIp = getClientIp(request, trustedProxyIp);
+async function storeSecurityLog(pagePath: string, db: ReturnType<typeof dbAdmin>, observedIp: ReturnType<typeof getClientIp>) {
   try {
     // Record the security event even when hosting provides no trusted public IP.
     // IP fields remain null rather than accepting spoofable forwarding headers.
@@ -212,12 +199,11 @@ Deno.serve(async (request) => {
           (visitorSessionId !== "" && !validSessionId)) {
         return json({ error: "Invalid analytics event." }, 400, request);
       }
-      // Direct Supabase collection remains supported. Geo metadata is accepted only
-      // when a trusted proxy signature is present; otherwise location stays unknown.
-      const hasProxySignature = request.headers.has("x-pf-geo-signature");
-      const proxyContext = hasProxySignature ? await verifyGeoProxy(request) : null;
-      if (hasProxySignature && !proxyContext) return json({ error: "Trusted analytics proxy verification failed." }, 403, request);
-      const keyHash = await rateLimitKey(request, proxyContext?.clientIp) ??
+      // IP and country are read from Supabase's managed edge ingress headers,
+      // never from the browser's JSON payload or caller-controlled forwarding chain.
+      const observedIp = getClientIp(request);
+      const countryCode = getTrustedCountryCode(request);
+      const keyHash = await rateLimitKey(request, observedIp?.address) ??
         (validSessionId ? await hmacHash("visitor-rate:" + visitorSessionId) : null);
       if (!keyHash) return json({ error: "A valid visitor session is required for rate limiting." }, 400, request);
       const now = new Date();
@@ -229,15 +215,15 @@ Deno.serve(async (request) => {
       if (rateError) throw rateError;
       if (permitted !== true) return json({ error: "Rate limit exceeded." }, 429, request);
       const visitorHash = validSessionId ? await hmacHash("visitor:" + visitorSessionId) : null;
-      const location = proxyContext;
       const { error } = await db.from("pixel_forge_analytics_events").insert({
         page_path: pagePath,
         visitor_hash: visitorHash,
-        country_code: location?.countryCode ?? null,
-        region_name: location?.regionName ?? null,
+        country_code: countryCode,
+        // Supabase's standard gateway header exposes country, not a reliable region.
+        region_name: null,
       });
       if (error) throw error;
-      await storeSecurityLog(request, pagePath, db, proxyContext?.clientIp);
+      await storeSecurityLog(pagePath, db, observedIp);
       return json({ recorded: true }, 202, request);
     }
 
@@ -252,7 +238,7 @@ Deno.serve(async (request) => {
       }
       const observedIp = getClientIp(request);
       if (!observedIp) return json({ error: "Observed public IP is unavailable from the trusted hosting edge." }, 422, request);
-      const keyHash = await rateLimitKey(request);
+      const keyHash = await rateLimitKey(request, observedIp.address);
       if (!keyHash) return json({ error: "Unable to apply request rate limit." }, 400, request);
       const now = new Date();
       const windowStart = new Date(Math.floor(now.getTime() / 60000) * 60000).toISOString();
