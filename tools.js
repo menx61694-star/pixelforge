@@ -2,6 +2,7 @@
 (() => {
  const grid=document.getElementById("tools-page-grid"); if(!grid)return;
  const status=document.getElementById("tools-page-status"), disabled=document.getElementById("tools-disabled-message");
+ const navLinks=document.querySelectorAll("[data-quick-tools-nav]");
  const cards=new Map([...grid.querySelectorAll("[data-tool-id]")].map(card=>[card.dataset.toolId,card]));
  const format=value=>Number.isFinite(value)?value.toLocaleString(undefined,{maximumFractionDigits:8}):"—";
  const enabled=new Set();
@@ -9,12 +10,12 @@
  .then(response=>{if(!response.ok)throw new Error("Tools configuration unavailable");return response.json();})
  .then(payload=>{
   const config=payload.quickTools;
-  if(!config||config.enabled!==true||!Array.isArray(config.items)){grid.hidden=true;disabled.hidden=false;status.textContent="Tools are currently disabled.";return;}
+  if(!config||config.enabled!==true||!Array.isArray(config.items)){grid.hidden=true;disabled.hidden=false;status.textContent="Tools are currently disabled.";navLinks.forEach(link=>{link.hidden=true;});return;}
   config.items.forEach(id=>{const card=cards.get(id);if(!card||enabled.has(id))return;enabled.add(id);card.hidden=false;grid.append(card);});
-  if(!enabled.size){grid.hidden=true;disabled.hidden=false;status.textContent="No tools are currently published.";return;}
-  status.textContent=enabled.size+" quick tool(s) available.";
+  if(!enabled.size){grid.hidden=true;disabled.hidden=false;status.textContent="No tools are currently published.";navLinks.forEach(link=>{link.hidden=true;});return;}
+  status.textContent=enabled.size+" quick tool(s) available.";navLinks.forEach(link=>{link.hidden=false;});
   const hash=location.hash.slice(1);if(cards.has(hash)&&enabled.has(hash))cards.get(hash).scrollIntoView({behavior:"smooth",block:"start"});
- }).catch(()=>{grid.hidden=true;disabled.hidden=false;status.textContent="Could not load the tools catalogue.";});
+ }).catch(()=>{grid.hidden=true;disabled.hidden=false;status.textContent="Could not load the tools catalogue.";navLinks.forEach(link=>{link.hidden=true;});});
  document.getElementById("calculator-form")?.addEventListener("submit",event=>{
   event.preventDefault();const a=Number(document.getElementById("calc-first").value),b=Number(document.getElementById("calc-second").value),op=document.getElementById("calc-operation").value;let result;
   if(op==="add")result=a+b;else if(op==="subtract")result=a-b;else if(op==="multiply")result=a*b;else result=b===0?NaN:a/b;
