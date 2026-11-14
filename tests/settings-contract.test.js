@@ -301,9 +301,13 @@ test("User Feedback is moderated, privacy-conscious and controlled from Admin Se
   assert.match(edge, /action === "feedback-list"/);
   assert.match(edge, /action === "feedback-moderate"/);
   assert.match(edge, /submission_hash/);
+  assert.match(edge, /consent: true/);
+  assert.match(edge, /Object.keys\(input\).length !== 6/);
+  assert.match(adminJs, /loadFeedbackInbox/);
   assert.match(migration, /pixel_forge_public_feedback/);
   assert.match(migration, /pixel_forge_feedback_audit/);
   assert.match(migration, /pixel_forge_moderate_feedback/);
+  assert.match(migration, /consent boolean not null check \(consent = true\)/);
   assert.match(migration, /enable row level security/);
   assert.match(homepage, /id="public-feedback-form"/);
   assert.match(publicScript, /action=submit-feedback/);
