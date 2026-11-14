@@ -88,3 +88,6 @@
 .daily-quiz-result{min-height:1.5rem;color:#46516a;line-height:1.6}
 .daily-quiz-result.is-correct{color:#18764d}.daily-quiz-result.is-wrong{color:#a23c32}
 @media(max-width:760px){.daily-quiz-section{grid-template-columns:1fr;gap:1.4rem;padding:3rem 6vw}}
+
+.daily-quiz-section[hidden]{display:none}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
