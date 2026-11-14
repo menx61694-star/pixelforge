@@ -299,3 +299,32 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
       if (grid.children.length) section.hidden = false;
     }).catch(() => { section.hidden = true; });
 })();
+
+
+/* Admin-managed announcements; only currently active published notices are returned. */
+(() => {
+  const section = document.getElementById("announcements");
+  const list = document.getElementById("announcements-list");
+  if (!section || !list) return;
+  fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
+    method: "GET", headers: { "Accept": "application/json" }, credentials: "omit"
+  }).then(response => { if (!response.ok) throw new Error("Announcements unavailable"); return response.json(); })
+    .then(payload => {
+      const config = payload.announcements;
+      if (!config || config.enabled !== true || !Array.isArray(config.items)) return;
+      config.items.slice(0, 20).forEach(item => {
+        const card = document.createElement("article"); card.className = "announcement-card announcement-" + item.type;
+        const type = document.createElement("span"); type.className = "announcement-type"; type.textContent = String(item.type || "INFO").toUpperCase();
+        const title = document.createElement("h3"); title.textContent = item.title;
+        const message = document.createElement("p"); message.textContent = item.message;
+        const dates = document.createElement("small"); dates.className = "announcement-dates";
+        dates.textContent = item.startDate === item.endDate ? item.startDate : item.startDate + " – " + item.endDate;
+        card.append(type, title, message, dates);
+        if (typeof item.url === "string" && item.url.startsWith("https://") && typeof item.label === "string" && item.label) {
+          const link = document.createElement("a"); link.href = item.url; link.target = "_blank"; link.rel = "noopener noreferrer"; link.textContent = item.label + " ↗"; card.append(link);
+        }
+        list.append(card);
+      });
+      if (list.children.length) section.hidden = false;
+    }).catch(() => { section.hidden = true; });
+})();
