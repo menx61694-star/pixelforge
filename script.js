@@ -455,3 +455,28 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
     finally { submit.disabled = false; }
   });
 })();
+
+/* Popular Resources are ranked from deduplicated published-document opens. */
+(() => {
+  const section = document.getElementById("popular-resources");
+  const grid = document.getElementById("popular-resources-grid");
+  if (!section || !grid) return;
+  fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
+    method: "GET", headers: { "Accept": "application/json" }, credentials: "omit"
+  }).then(response => { if (!response.ok) throw new Error("Popular resources unavailable"); return response.json(); })
+    .then(payload => {
+      const config = payload.popularResources;
+      if (!config || config.enabled !== true || !Array.isArray(config.items)) return;
+      config.items.forEach(item => {
+        const card = document.createElement("article"); card.className = "popular-resource-card";
+        const category = document.createElement("span"); category.className = "popular-resource-category"; category.textContent = String(item.category || "RESOURCE");
+        const title = document.createElement("h3"); title.textContent = item.title;
+        const source = document.createElement("p"); source.className = "popular-resource-meta";
+        source.textContent = (item.source === "google_drive" ? "Google Drive" : "PixelForge Storage") +
+          (config.showViews === true && Number.isFinite(Number(item.viewCount)) ? " · " + Number(item.viewCount).toLocaleString() + " opens" : "");
+        const link = document.createElement("a"); link.href = item.url; link.target = "_blank"; link.rel = "noopener noreferrer"; link.textContent = "Open resource ↗";
+        card.append(category, title, source, link); grid.append(card);
+      });
+      if (grid.children.length) section.hidden = false;
+    }).catch(() => { section.hidden = true; });
+})();
