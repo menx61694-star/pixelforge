@@ -208,3 +208,15 @@
 
 /* Homepage layout manager visibility */
 .layout-hidden{display:none!important}
+
+/* Popular Resources ranked by actual published-document opens */
+.popular-resources-section[hidden]{display:none}
+.popular-resources-section{padding-top:clamp(3rem,7vw,6rem);padding-bottom:clamp(3rem,7vw,6rem);background:#f5f6fb}
+.popular-resources-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;margin-top:2rem}
+.popular-resource-card{display:flex;flex-direction:column;align-items:flex-start;min-height:190px;padding:1.4rem;border:1px solid #e1e6f0;border-radius:18px;background:#fff}
+.popular-resource-category{color:#5968d9;font-size:.7rem;font-weight:850;letter-spacing:.1em}
+.popular-resource-card h3{margin:1rem 0 .5rem;color:#1b2948;font-size:1.1rem}
+.popular-resource-meta{margin:0 0 1.1rem;color:#7a8499;font-size:.78rem}
+.popular-resource-card a{margin-top:auto;color:#4d5bd1;font-weight:800;text-decoration:none}
+@media(max-width:800px){.popular-resources-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.popular-resources-grid{grid-template-columns:1fr}}
