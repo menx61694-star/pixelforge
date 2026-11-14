@@ -264,6 +264,12 @@
                 <p class="settings-help">Ranking uses real opens of published library documents. A browser session counts at most once per resource per day. Resources with no qualifying opens are not shown.</p>
               </article>
               <article class="settings-card">
+                <h3>Document Library</h3>
+                <label class="settings-toggle"><input id="setting-library-pdf-preview-enabled" type="checkbox" checked><span>Enable inline PDF previews in the public Document Library</span></label>
+                <p class="settings-help">Applies only to published public PDFs from PixelForge Storage and Google Drive. Private Vault files are excluded. The Open document link remains available as a fallback.</p>
+                <button type="button" data-setting-save="home.library">Save Document Library Settings</button>
+              </article>
+              <article class="settings-card">
                 <h3>Homepage Layout Manager</h3>
                 <label class="settings-toggle"><input id="setting-layout-enabled" type="checkbox"><span>Apply Admin-managed homepage layout</span></label>
                 <label for="setting-layout-sections">Homepage sections (JSON, array order = display order)</label>
