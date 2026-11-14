@@ -374,6 +374,7 @@ create table if not exists public.pixel_forge_public_feedback (
   category text not null check (length(category) between 2 and 32),
   rating smallint not null check (rating between 1 and 5),
   message text not null check (length(message) between 20 and 1000),
+  consent boolean not null check (consent = true),
   status text not null default 'pending' check (status in ('pending','approved','rejected')),
   submission_hash text,
   created_at timestamptz not null default now(),
