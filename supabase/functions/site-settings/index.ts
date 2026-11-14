@@ -13,6 +13,8 @@ const settingKeys = new Set([
   "maintenance.message",
   "sync.drive.auto_enabled",
   "sync.vault.auto_enabled",
+  "home.knowledge.enabled",
+  "home.knowledge.items",
 ]);
 
 function cors(request: Request) {
@@ -87,7 +89,15 @@ async function authorize(request: Request, permission: "settings.view" | "settin
 }
 function validSettingValue(key: string, value: unknown): boolean {
   if (!settingKeys.has(key)) return false;
-  if (key === "maintenance.enabled" || key.startsWith("sync.")) return typeof value === "boolean";
+  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled") return typeof value === "boolean";
+  if (key === "home.knowledge.items") {
+    return Array.isArray(value) && value.length <= 50 && value.every((item) =>
+      item && typeof item === "object" && !Array.isArray(item) &&
+      Object.keys(item).every((field) => field === "category" || field === "text") &&
+      typeof item.category === "string" && item.category.length <= 32 &&
+      typeof item.text === "string" && item.text.trim().length >= 8 && item.text.length <= 240
+    );
+  }
   if (typeof value !== "string") return false;
   if (key === "site.name") return value.trim().length > 0 && value.length <= 80;
   if (key === "site.description") return value.length <= 300;
@@ -106,6 +116,24 @@ Deno.serve(async (request) => {
   try {
     const url = new URL(request.url);
     const action = url.searchParams.get("action") ?? "";
+    if (request.method === "GET" && action === "public-content") {
+      const db = dbAdmin();
+      const { data, error } = await db.from("pixel_forge_site_settings")
+        .select("setting_key,setting_value")
+        .in("setting_key", ["home.knowledge.enabled", "home.knowledge.items"]);
+      if (error) throw error;
+      const values = Object.fromEntries((data ?? []).map((row) => [row.setting_key, row.setting_value]));
+      const items = Array.isArray(values["home.knowledge.items"]) ? values["home.knowledge.items"] : [];
+      return json({
+        knowledge: {
+          enabled: values["home.knowledge.enabled"] !== false,
+          items: items.filter((item: unknown) =>
+            item && typeof item === "object" && typeof (item as { text?: unknown }).text === "string"
+          ).slice(0, 50),
+        },
+      }, 200, request);
+    }
+
     if (request.method === "GET" && action === "public-status") {
       const db = createClient(required("SUPABASE_URL"), required("SUPABASE_SERVICE_ROLE_KEY"), {
         auth: { persistSession: false, autoRefreshToken: false },
