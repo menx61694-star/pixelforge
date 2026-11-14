@@ -1026,6 +1026,10 @@ const firebaseConfig = {
       setChecked("setting-tools-enabled", values["home.tools.enabled"]);
       setChecked("setting-featured-enabled", values["home.featured.enabled"]);
       setChecked("setting-announcements-enabled", values["home.announcements.enabled"]);
+      setChecked("setting-popular-enabled", values["home.popular.enabled"]);
+      setInputValue("setting-popular-max-items", values["home.popular.max_items"] ?? 6);
+      setInputValue("setting-popular-min-views", values["home.popular.min_views"] ?? 1);
+      setChecked("setting-popular-show-views", values["home.popular.show_views"] !== false);
       setChecked("setting-layout-enabled", values["home.layout.enabled"]);
       const layoutTextarea = document.getElementById("setting-layout-sections");
       if (layoutTextarea) layoutTextarea.value = JSON.stringify(Array.isArray(values["home.layout.sections"]) ? values["home.layout.sections"] : [{"id":"smart-document-search","enabled":true,"title":"","subtitle":""},{"id":"discover","enabled":true,"title":"","subtitle":""},{"id":"user-feedback","enabled":true,"title":"","subtitle":""},{"id":"learning-corner","enabled":true,"title":"","subtitle":""},{"id":"announcements","enabled":true,"title":"","subtitle":""},{"id":"featured-resources","enabled":true,"title":"","subtitle":""},{"id":"quick-tools","enabled":true,"title":"","subtitle":""},{"id":"knowledge","enabled":true,"title":"","subtitle":""},{"id":"daily-quiz","enabled":true,"title":"","subtitle":""},{"id":"about","enabled":true,"title":"","subtitle":""},{"id":"contact","enabled":true,"title":"","subtitle":""}], null, 2);
@@ -1139,12 +1143,23 @@ const firebaseConfig = {
       }
       saveSetting("home.knowledge.items", items, button)
         .then(() => saveSetting("home.knowledge.enabled", document.getElementById("setting-knowledge-enabled").checked, button));
+    } else if (group === "home.popular") {
+      const maxItems = Number(document.getElementById("setting-popular-max-items").value);
+      const minViews = Number(document.getElementById("setting-popular-min-views").value);
+      if (!Number.isInteger(maxItems) || maxItems < 3 || maxItems > 12 ||
+          !Number.isInteger(minViews) || minViews < 1 || minViews > 1000000) {
+        setSettingsStatus("Choose 3–12 resources and a minimum open threshold from 1 to 1,000,000.", true); return;
+      }
+      saveSetting("home.popular.max_items", maxItems, button)
+        .then(() => saveSetting("home.popular.min_views", minViews, button))
+        .then(() => saveSetting("home.popular.show_views", document.getElementById("setting-popular-show-views").checked, button))
+        .then(() => saveSetting("home.popular.enabled", document.getElementById("setting-popular-enabled").checked, button));
     } else if (group === "home.layout") {
       let sections;
       try { sections = JSON.parse(document.getElementById("setting-layout-sections").value || "[]"); }
       catch (_) { setSettingsStatus("Homepage layout must be valid JSON.", true); return; }
-      const allowed = new Set(["smart-document-search","discover","user-feedback","learning-corner","announcements","featured-resources","quick-tools","knowledge","daily-quiz","about","contact"]);
-      const valid = Array.isArray(sections) && sections.length === 11 && sections.every(item =>
+      const allowed = new Set(["smart-document-search","discover","user-feedback","learning-corner","announcements","featured-resources","popular-resources","quick-tools","knowledge","daily-quiz","about","contact"]);
+      const valid = Array.isArray(sections) && sections.length === 12 && sections.every(item =>
         item && typeof item === "object" && !Array.isArray(item) &&
         Object.keys(item).every(key => ["id","enabled","title","subtitle"].includes(key)) &&
         typeof item.id === "string" && allowed.has(item.id) &&
@@ -1152,8 +1167,8 @@ const firebaseConfig = {
         typeof item.title === "string" && item.title.length <= 80 &&
         typeof item.subtitle === "string" && item.subtitle.length <= 160
       );
-      if (!valid || new Set(sections.map(item => item.id)).size !== 11) {
-        setSettingsStatus("Keep all 11 allowed section IDs exactly once. Check visibility and heading values.", true); return;
+      if (!valid || new Set(sections.map(item => item.id)).size !== 12) {
+        setSettingsStatus("Keep all 12 allowed section IDs exactly once. Check visibility and heading values.", true); return;
       }
       saveSetting("home.layout.sections", sections, button)
         .then(() => saveSetting("home.layout.enabled", document.getElementById("setting-layout-enabled").checked, button));
