@@ -18,6 +18,8 @@ on:
       - "supabase/functions/site-settings/**"
       - "maintenance-mode.js"
       - "index.html"
+      - "styles.css"
+      - "styles.css"
       - "library.html"
       - "tests/maintenance-mode.test.js"
       - "supabase/config.toml"
