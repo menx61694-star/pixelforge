@@ -30,6 +30,11 @@ const settingKeys = new Set([
   "home.search.placeholder",
   "home.learning.enabled",
   "home.learning.items",
+  "home.feedback.enabled",
+  "home.feedback.categories",
+  "home.feedback.allow_anonymous",
+  "home.feedback.display_approved",
+  "home.feedback.max_display",
 ]);
 
 function cors(request: Request) {
@@ -117,7 +122,7 @@ function isValidIsoDate(value: string): boolean {
 }
 function validSettingValue(key: string, value: unknown): boolean {
   if (!settingKeys.has(key)) return false;
-  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled" || key === "home.quiz.enabled" || key === "home.tools.enabled" || key === "home.featured.enabled" || key === "home.announcements.enabled" || key === "home.search.enabled" || key === "home.search.smart_enabled" || key === "home.search.filters_enabled" || key === "home.learning.enabled") return typeof value === "boolean";
+  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled" || key === "home.quiz.enabled" || key === "home.tools.enabled" || key === "home.featured.enabled" || key === "home.announcements.enabled" || key === "home.search.enabled" || key === "home.search.smart_enabled" || key === "home.search.filters_enabled" || key === "home.learning.enabled" || key === "home.feedback.enabled" || key === "home.feedback.allow_anonymous" || key === "home.feedback.display_approved") return typeof value === "boolean";
   if (key === "home.knowledge.items") {
     return Array.isArray(value) && value.length <= 50 && value.every((item) =>
       item && typeof item === "object" && !Array.isArray(item) &&
@@ -163,6 +168,12 @@ function validSettingValue(key: string, value: unknown): boolean {
         typeof resource.published === "boolean";
     }) && new Set(value.map((item: { id?: unknown }) => item.id)).size === value.length;
   }
+  if (key === "home.feedback.categories") {
+    return Array.isArray(value) && value.length >= 1 && value.length <= 8 &&
+      value.every((item: unknown) => typeof item === "string" && item.trim().length >= 2 && item.length <= 32) &&
+      new Set(value.map((item: string) => item.toLowerCase())).size === value.length;
+  }
+  if (key === "home.feedback.max_display") return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 12;
   if (key === "home.learning.items") {
     return Array.isArray(value) && value.length <= 12 && value.every((item: unknown) => {
       if (!item || typeof item !== "object" || Array.isArray(item)) return false;
@@ -226,10 +237,23 @@ Deno.serve(async (request) => {
       const db = dbAdmin();
       const { data, error } = await db.from("pixel_forge_site_settings")
         .select("setting_key,setting_value")
-        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items", "home.tools.enabled", "home.tools.items", "home.featured.enabled", "home.featured.items", "home.announcements.enabled", "home.announcements.items", "home.search.enabled", "home.search.smart_enabled", "home.search.filters_enabled", "home.search.max_results", "home.search.placeholder", "home.learning.enabled", "home.learning.items"]);
+        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items", "home.tools.enabled", "home.tools.items", "home.featured.enabled", "home.featured.items", "home.announcements.enabled", "home.announcements.items", "home.search.enabled", "home.search.smart_enabled", "home.search.filters_enabled", "home.search.max_results", "home.search.placeholder", "home.learning.enabled", "home.learning.items", "home.feedback.enabled", "home.feedback.categories", "home.feedback.allow_anonymous", "home.feedback.display_approved", "home.feedback.max_display"]);
       if (error) throw error;
       const values = Object.fromEntries((data ?? []).map((row) => [row.setting_key, row.setting_value]));
       const items = Array.isArray(values["home.knowledge.items"]) ? values["home.knowledge.items"] : [];
+      const feedbackSettings = {
+        enabled: values["home.feedback.enabled"] === true,
+        displayApproved: values["home.feedback.display_approved"] === true,
+        maxDisplay: Number.isInteger(values["home.feedback.max_display"]) ? values["home.feedback.max_display"] as number : 6,
+      };
+      let approvedFeedback: Array<Record<string, unknown>> = [];
+      if (feedbackSettings.displayApproved) {
+        const { data: feedbackRows, error: feedbackError } = await db.from("pixel_forge_public_feedback")
+          .select("name,category,rating,message").eq("status", "approved")
+          .order("created_at", { ascending: false }).limit(feedbackSettings.maxDisplay);
+        if (feedbackError) throw feedbackError;
+        approvedFeedback = feedbackRows ?? [];
+      }
       return json({
         site: {
           name: typeof values["site.name"] === "string" ? values["site.name"] : "PixelForge",
@@ -252,6 +276,13 @@ Deno.serve(async (request) => {
                 .filter(item => item.published === true && typeof item.url === "string" && isSafeHttpsUrl(item.url))
                 .slice(0, 12)
             : [],
+        },
+        feedback: {
+          enabled: values["home.feedback.enabled"] === true,
+          categories: Array.isArray(values["home.feedback.categories"]) ? values["home.feedback.categories"] : ["General","Website","Resources","Suggestion"],
+          allowAnonymous: values["home.feedback.allow_anonymous"] !== false,
+          displayApproved: values["home.feedback.display_approved"] === true,
+          approvedFeedback,
         },
         learningCorner: {
           enabled: values["home.learning.enabled"] === true,
@@ -334,6 +365,52 @@ Deno.serve(async (request) => {
       }, 200, request);
     }
 
+    if (request.method === "POST" && action === "submit-feedback") {
+      const raw = await request.text();
+      if (raw.length > 4000) return json({ error: "Feedback submission is too large." }, 413, request);
+      const input = (() => { try { return JSON.parse(raw); } catch (_) { return null; } })();
+      if (!input || typeof input !== "object" || Array.isArray(input) ||
+          Object.keys(input).length !== 5 ||
+          typeof input.name !== "string" || input.name.length > 60 ||
+          typeof input.category !== "string" ||
+          !Number.isInteger(input.rating) || input.rating < 1 || input.rating > 5 ||
+          typeof input.message !== "string" || input.message.trim().length < 20 || input.message.length > 1000 ||
+          typeof input.website !== "string" || input.website.length > 200) {
+        return json({ error: "Please check your feedback details and try again." }, 400, request);
+      }
+      if (input.website.trim()) return json({ ok: true, message: "Thank you. Your feedback has been sent for review." }, 200, request);
+      const db = dbAdmin();
+      const { data: settingsRows, error: settingsError } = await db.from("pixel_forge_site_settings")
+        .select("setting_key,setting_value").in("setting_key", [
+          "home.feedback.enabled","home.feedback.categories","home.feedback.allow_anonymous"
+        ]);
+      if (settingsError) throw settingsError;
+      const settings = Object.fromEntries((settingsRows ?? []).map(row => [row.setting_key, row.setting_value]));
+      const categories = Array.isArray(settings["home.feedback.categories"]) ? settings["home.feedback.categories"] : [];
+      if (settings["home.feedback.enabled"] !== true) return json({ error: "Feedback is currently disabled." }, 403, request);
+      if (settings["home.feedback.allow_anonymous"] === false && !input.name.trim()) {
+        return json({ error: "Please enter your name to submit feedback." }, 400, request);
+      }
+      if (!categories.includes(input.category)) return json({ error: "Choose a valid feedback category." }, 400, request);
+      const ip = request.headers.get("x-real-ip") || request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "";
+      let submissionHash: string | null = null;
+      if (ip) {
+        const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(required("SUPABASE_SERVICE_ROLE_KEY") + "|" + ip));
+        submissionHash = Array.from(new Uint8Array(digest)).map(byte => byte.toString(16).padStart(2, "0")).join("");
+        const { count, error: rateError } = await db.from("pixel_forge_public_feedback")
+          .select("id", { count: "exact", head: true }).eq("submission_hash", submissionHash)
+          .gte("created_at", new Date(Date.now() - 60 * 60 * 1000).toISOString());
+        if (rateError) throw rateError;
+        if ((count ?? 0) >= 5) return json({ error: "Too many feedback submissions. Please try again later." }, 429, request);
+      }
+      const { error: insertError } = await db.from("pixel_forge_public_feedback").insert({
+        name: input.name.trim() || null, category: input.category, rating: input.rating,
+        message: input.message.trim(), status: "pending", submission_hash: submissionHash,
+      });
+      if (insertError) throw insertError;
+      return json({ ok: true, message: "Thank you. Your feedback has been sent for review." }, 200, request);
+    }
+
     if (request.method === "GET" && action === "public-status") {
       const db = createClient(required("SUPABASE_URL"), required("SUPABASE_SERVICE_ROLE_KEY"), {
         auth: { persistSession: false, autoRefreshToken: false },
@@ -354,6 +431,30 @@ Deno.serve(async (request) => {
     const permission = request.method === "GET" ? "settings.view" : "settings.manage";
     const actor = await authorize(request, permission);
     if (!actor) return json({ error: "Active administrator permission is required." }, 403, request);
+
+    if (request.method === "GET" && action === "feedback-list") {
+      const { data, error } = await actor.db.from("pixel_forge_public_feedback")
+        .select("id,name,category,rating,message,status,created_at,reviewed_at,reviewed_by")
+        .order("created_at", { ascending: false }).limit(100);
+      if (error) throw error;
+      return json({ feedback: data ?? [] }, 200, request);
+    }
+
+    if (request.method === "POST" && action === "feedback-moderate") {
+      const raw = await request.text();
+      if (raw.length > 1000) return json({ error: "Moderation request is too large." }, 413, request);
+      const input = (() => { try { return JSON.parse(raw); } catch (_) { return null; } })();
+      if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).length !== 2 ||
+          typeof input.id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.id) ||
+          !["approved","rejected"].includes(input.status)) {
+        return json({ error: "Invalid feedback moderation request." }, 400, request);
+      }
+      const { error } = await actor.db.rpc("pixel_forge_moderate_feedback", {
+        p_feedback_id: input.id, p_status: input.status, p_actor_uid: actor.uid,
+      });
+      if (error) throw error;
+      return json({ ok: true }, 200, request);
+    }
 
     if (request.method === "GET" && action === "list") {
       const { data, error } = await actor.db.from("pixel_forge_site_settings")
