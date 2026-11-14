@@ -185,7 +185,7 @@ function validSettingValue(key: string, value: unknown): boolean {
       if (!item || typeof item !== "object" || Array.isArray(item)) return false;
       const page = item as Record<string, unknown>;
       return Object.keys(page).every(field => ["page","title","description","keywords","robots","canonical"].includes(field)) &&
-        typeof page.page === "string" && /^\\/[a-z0-9/_-]*$/i.test(page.page) && !page.page.includes("..") &&
+        typeof page.page === "string" && /^\/[a-z0-9/_-]*$/i.test(page.page) && !page.page.includes("..") &&
         typeof page.title === "string" && page.title.trim().length >= 5 && page.title.length <= 70 &&
         typeof page.description === "string" && page.description.trim().length >= 50 && page.description.length <= 160 &&
         typeof page.keywords === "string" && page.keywords.length <= 250 &&
