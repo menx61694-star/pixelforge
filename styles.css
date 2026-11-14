@@ -132,3 +132,16 @@
 .featured-resource-card a{margin-top:auto;color:#4d5bd1;font-weight:800;text-decoration:none}
 @media(max-width:800px){.featured-resources-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.featured-resources-grid{grid-template-columns:1fr}}
+
+/* Scheduled announcements */
+.announcements-section[hidden]{display:none}
+.announcements-section{padding-top:clamp(3rem,7vw,6rem);padding-bottom:clamp(3rem,7vw,6rem);background:#f5f6fb}
+.announcements-list{display:grid;gap:.85rem;margin-top:2rem}
+.announcement-card{display:grid;grid-template-columns:110px minmax(0,1fr) auto;grid-template-areas:"type title dates" "type message dates" "type link dates";align-items:start;gap:.45rem 1rem;padding:1.25rem 1.4rem;border:1px solid #e0e5ef;border-radius:16px;background:#fff}
+.announcement-type{grid-area:type;align-self:start;display:inline-flex;justify-content:center;padding:.4rem .55rem;border-radius:99px;background:#edf0ff;color:#4e5bd0;font-size:.68rem;font-weight:850;letter-spacing:.08em}
+.announcement-important .announcement-type{background:#fff0ed;color:#b34d3f}.announcement-update .announcement-type{background:#eaf6ef;color:#27744e}
+.announcement-card h3{grid-area:title;margin:0;color:#1b2948;font-size:1.05rem}
+.announcement-card p{grid-area:message;margin:0;color:#66718a;line-height:1.6;font-size:.9rem}
+.announcement-dates{grid-area:dates;color:#7a8499;font-size:.75rem;white-space:nowrap}
+.announcement-card a{grid-area:link;color:#4d5bd1;font-size:.85rem;font-weight:800;text-decoration:none}
+@media(max-width:680px){.announcement-card{grid-template-columns:1fr auto;grid-template-areas:"type dates" "title title" "message message" "link link";gap:.65rem}}
