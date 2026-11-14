@@ -1,6 +1,6 @@
 /* Admin-managed homepage section order, visibility and plain-text heading overrides. */
 (() => {
-  const allowed = new Set(["smart-document-search","discover","user-feedback","learning-corner","announcements","featured-resources","quick-tools","knowledge","daily-quiz","about","contact"]);
+  const allowed = new Set(["smart-document-search","discover","user-feedback","learning-corner","announcements","featured-resources","popular-resources","quick-tools","knowledge","daily-quiz","about","contact"]);
   fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
     method: "GET", headers: { "Accept": "application/json" }, credentials: "omit"
   }).then(response => { if (!response.ok) throw new Error("Homepage layout unavailable"); return response.json(); })
