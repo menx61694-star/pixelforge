@@ -72,6 +72,26 @@
       </div>
     </section>
 
+    <section class="user-feedback-section section" id="user-feedback" hidden aria-labelledby="user-feedback-title">
+      <div class="section-heading section-heading-v2"><div><p class="eyebrow dark">HELP US IMPROVE</p><h2 id="user-feedback-title">Your feedback<br><em>matters.</em></h2></div><p class="section-lead">Share an idea, report an issue or tell us what would make PixelForge better.</p></div>
+      <div class="feedback-layout">
+        <form id="public-feedback-form" class="public-feedback-form">
+          <label for="feedback-name">Name <span>(optional)</span></label><input id="feedback-name" type="text" maxlength="60" autocomplete="name">
+          <label for="feedback-category">Feedback category</label><select id="feedback-category" required></select>
+          <label for="feedback-rating">Your rating</label><select id="feedback-rating" required><option value="5">★★★★★ — Excellent</option><option value="4">★★★★☆ — Good</option><option value="3">★★★☆☆ — Average</option><option value="2">★★☆☆☆ — Needs improvement</option><option value="1">★☆☆☆☆ — Poor</option></select>
+          <label for="feedback-message">Your feedback</label><textarea id="feedback-message" rows="5" minlength="20" maxlength="1000" required placeholder="Tell us what you think (20–1000 characters)…"></textarea>
+          <label class="feedback-honeypot" aria-hidden="true" for="feedback-website">Leave this field empty</label><input class="feedback-honeypot" id="feedback-website" type="text" tabindex="-1" autocomplete="off">
+          <button class="button button-dark" id="feedback-submit" type="submit">Submit feedback</button>
+          <p id="feedback-status" class="feedback-status" role="status" aria-live="polite"></p>
+          <p class="feedback-privacy-note">Feedback is reviewed by the PixelForge team before it can appear publicly. Name is optional.</p>
+        </form>
+        <div class="approved-feedback-panel" id="approved-feedback-panel" hidden>
+          <p class="eyebrow dark">COMMUNITY VOICES</p><h3>What visitors say</h3>
+          <div id="approved-feedback-list" class="approved-feedback-list"></div>
+        </div>
+      </div>
+    </section>
+
     <section class="learning-corner-section section" id="learning-corner" hidden aria-labelledby="learning-corner-title">
       <div class="section-heading section-heading-v2"><div><p class="eyebrow dark">LEARN WITH A PLAN</p><h2 id="learning-corner-title">Learning<br><em>corner.</em></h2></div><p class="section-lead">Follow a guided path, one useful step at a time.</p></div>
       <div class="learning-path-grid" id="learning-path-grid"></div>
