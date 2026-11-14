@@ -102,7 +102,7 @@ function getClientIp(request: Request, trustedProxyIp?: string): { address: stri
   if (!candidate || candidate.length > 64 || candidate.includes(",")) return null;
   const ip = candidate.trim();
   const parts = ip.split(".");
-  const ipv4 = parts.length === 4 && parts.every((part) => /^\\d{1,3}$/.test(part) && Number(part) <= 255);
+  const ipv4 = parts.length === 4 && parts.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255);
   const ipv6 = ip.includes(":") && /^[0-9a-f:]+$/i.test(ip) && ip.split(":").length >= 3;
   if (!ipv4 && !ipv6) return null;
   if (ipv4) {
