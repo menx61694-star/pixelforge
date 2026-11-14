@@ -29,10 +29,16 @@
   const searchFilters = document.getElementById("library-search-filters");
   const searchHint = document.getElementById("library-search-hint");
   const loadMoreButton = document.getElementById("library-load-more");
+  const previewDialog = document.getElementById("pdf-preview-dialog");
+  const previewFrame = document.getElementById("pdf-preview-frame");
+  const previewTitle = document.getElementById("pdf-preview-title");
+  const previewOpenLink = document.getElementById("pdf-preview-open");
+  const previewClose = document.getElementById("pdf-preview-close");
+  const previewFullscreen = document.getElementById("pdf-preview-fullscreen");
   const grid = document.getElementById("document-grid");
   const count = document.getElementById("library-count");
   const cards = document.getElementById("category-grid");
-  const state = { documents: [], loading: false, searchConfig: { enabled: true, smartEnabled: true, filtersEnabled: true, maxResults: 30, placeholder: "Search documents, notes and guides…" }, visibleLimit: 30 };
+  const state = { documents: [], loading: false, searchConfig: { enabled: true, smartEnabled: true, filtersEnabled: true, maxResults: 30, placeholder: "Search documents, notes and guides…" }, visibleLimit: 30, pdfPreviewEnabled: true };
   const params = new URLSearchParams(window.location.search);
   search.value = params.get("q") || "";
   if (categoryFilter) categoryFilter.value = params.get("category") || categorySlug;
@@ -123,6 +129,16 @@
       const h3 = document.createElement("h3"); h3.textContent = doc.title;
       const p = document.createElement("p"); p.textContent = doc.category + " · " + doc.size + (doc.source === "google_drive" ? " · Google Drive" : " · PixelForge Storage");
       const a = document.createElement("a"); a.href = doc.url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = "Open document ↗";
+      if (state.searchConfig.pdfPreviewEnabled && doc.ext.toLowerCase() === "pdf" && previewDialog && previewFrame) {
+        const previewButton = document.createElement("button");
+        previewButton.type = "button"; previewButton.className = "document-preview-button"; previewButton.textContent = "Preview PDF";
+        previewButton.addEventListener("click", () => {
+          previewTitle.textContent = doc.title; previewOpenLink.href = doc.url;
+          previewFrame.src = doc.url + (doc.url.includes("#") ? "" : "#view=FitH");
+          if (typeof previewDialog.showModal === "function") previewDialog.showModal(); else window.open(doc.url, "_blank", "noopener");
+        });
+        card.append(previewButton);
+      }
       a.addEventListener("click", () => {
         if (!doc.resourceId || !["supabase","google_drive"].includes(doc.source)) return;
         try {
@@ -143,6 +159,7 @@
       const response = await fetch(SUPABASE_URL + "/functions/v1/site-settings?action=public-content", { credentials: "omit" });
       if (!response.ok) throw new Error("Search settings unavailable");
       const payload = await response.json(), config = payload.search || {};
+      state.searchConfig.pdfPreviewEnabled = payload.library?.pdfPreviewEnabled !== false;
       state.searchConfig = {
         enabled: config.enabled === true, smartEnabled: config.smartEnabled !== false,
         filtersEnabled: config.filtersEnabled !== false,
@@ -225,6 +242,10 @@
       showState("The public library is not connected yet. Admin-only files remain private. (" + (error.message || "Storage unavailable") + ")", true);
     }
   }
+  previewClose?.addEventListener("click", () => { previewDialog?.close(); if (previewFrame) previewFrame.src = "about:blank"; });
+  previewDialog?.addEventListener("close", () => { if (previewFrame) previewFrame.src = "about:blank"; });
+  previewDialog?.addEventListener("click", event => { if (event.target === previewDialog) previewDialog.close(); });
+  previewFullscreen?.addEventListener("click", async () => { try { if (previewFrame?.requestFullscreen) await previewFrame.requestFullscreen(); } catch (_) { previewTitle.textContent += " (Fullscreen unavailable)"; } });
   search.addEventListener("input", () => { state.visibleLimit = state.searchConfig.maxResults; render(); });
   categoryFilter?.addEventListener("change", () => { state.visibleLimit = state.searchConfig.maxResults; render(); });
   typeFilter?.addEventListener("change", () => { state.visibleLimit = state.searchConfig.maxResults; render(); });
