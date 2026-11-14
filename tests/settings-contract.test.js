@@ -355,3 +355,28 @@ test("Homepage Layout Manager validates a complete section order and applies vis
   assert.match(layoutScript, /layout-hidden/);
   assert.match(layoutScript, /main\.append\(section\)/);
 });
+
+
+test("Popular Resources rank published documents using privacy-preserving unique daily opens", () => {
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  const edge = read("supabase/functions/site-settings/index.ts");
+  const migration = read("supabase/phase-16-popular-resources.sql");
+  const homepage = read("index.html");
+  const publicScript = read("script.js");
+  const library = read("library.js");
+  assert.match(adminHtml, /setting-popular-enabled/);
+  assert.match(adminJs, /saveSetting\("home\.popular\.max_items"/);
+  assert.match(edge, /action === "track-resource"/);
+  assert.match(edge, /pixel_forge_track_resource_view/);
+  assert.match(edge, /pixel_forge_resource_metrics/);
+  assert.match(edge, /pixel_forge_published_documents/);
+  assert.match(migration, /pixel_forge_resource_views/);
+  assert.match(migration, /pixel_forge_resource_metrics/);
+  assert.match(migration, /pixel_forge_track_resource_view/);
+  assert.match(migration, /primary key \(source, resource_id, visitor_hash, view_day\)/);
+  assert.match(homepage, /id="popular-resources"/);
+  assert.match(publicScript, /payload\.popularResources/);
+  assert.match(library, /action=track-resource/);
+  assert.match(library, /resourceId: doc\.drive_file_id/);
+});
