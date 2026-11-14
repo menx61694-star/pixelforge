@@ -253,11 +253,22 @@
                 <button type="button" data-setting-save="home.quiz">Save Daily Quiz</button>
               </article>
               <article class="settings-card">
+                <h3>Popular Resources</h3>
+                <label class="settings-toggle"><input id="setting-popular-enabled" type="checkbox"><span>Show Popular Resources on the homepage</span></label>
+                <label for="setting-popular-max-items">Number of resources to show (3–12)</label>
+                <input id="setting-popular-max-items" type="number" min="3" max="12" step="1" value="6">
+                <label for="setting-popular-min-views">Minimum unique opens required</label>
+                <input id="setting-popular-min-views" type="number" min="1" max="1000000" step="1" value="1">
+                <label class="settings-toggle"><input id="setting-popular-show-views" type="checkbox"><span>Display open counts beside resources</span></label>
+                <button type="button" data-setting-save="home.popular">Save Popular Resources Settings</button>
+                <p class="settings-help">Ranking uses real opens of published library documents. A browser session counts at most once per resource per day. Resources with no qualifying opens are not shown.</p>
+              </article>
+              <article class="settings-card">
                 <h3>Homepage Layout Manager</h3>
                 <label class="settings-toggle"><input id="setting-layout-enabled" type="checkbox"><span>Apply Admin-managed homepage layout</span></label>
                 <label for="setting-layout-sections">Homepage sections (JSON, array order = display order)</label>
                 <textarea id="setting-layout-sections" rows="14" maxlength="14000" spellcheck="false" placeholder='[{"id":"smart-document-search","enabled":true,"title":"","subtitle":""},{"id":"discover","enabled":true,"title":"","subtitle":""},{"id":"user-feedback","enabled":true,"title":"","subtitle":""},{"id":"learning-corner","enabled":true,"title":"","subtitle":""},{"id":"announcements","enabled":true,"title":"","subtitle":""},{"id":"featured-resources","enabled":true,"title":"","subtitle":""},{"id":"quick-tools","enabled":true,"title":"","subtitle":""},{"id":"knowledge","enabled":true,"title":"","subtitle":""},{"id":"daily-quiz","enabled":true,"title":"","subtitle":""},{"id":"about","enabled":true,"title":"","subtitle":""},{"id":"contact","enabled":true,"title":"","subtitle":""}]'></textarea>
-                <p class="settings-help">Keep all 11 section IDs exactly once. Set enabled to false to hide a section. Optional title/subtitle overrides are plain text. Reorder objects in the array to change homepage order; the hero and highlights strip stay fixed at the top.</p>
+                <p class="settings-help">Keep all 12 section IDs exactly once. Set enabled to false to hide a section. Optional title/subtitle overrides are plain text. Reorder objects in the array to change homepage order; the hero and highlights strip stay fixed at the top.</p>
                 <button type="button" data-setting-save="home.layout">Save Homepage Layout</button>
               </article>
               <article class="settings-card">
