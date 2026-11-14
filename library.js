@@ -159,12 +159,12 @@
       const response = await fetch(SUPABASE_URL + "/functions/v1/site-settings?action=public-content", { credentials: "omit" });
       if (!response.ok) throw new Error("Search settings unavailable");
       const payload = await response.json(), config = payload.search || {};
-      state.searchConfig.pdfPreviewEnabled = payload.library?.pdfPreviewEnabled !== false;
       state.searchConfig = {
         enabled: config.enabled === true, smartEnabled: config.smartEnabled !== false,
         filtersEnabled: config.filtersEnabled !== false,
         maxResults: Number.isInteger(config.maxResults) ? Math.min(100, Math.max(6, config.maxResults)) : 30,
-        placeholder: typeof config.placeholder === "string" ? config.placeholder : "Search documents, notes and guides…"
+        placeholder: typeof config.placeholder === "string" ? config.placeholder : "Search documents, notes and guides…",
+        pdfPreviewEnabled: payload.library?.pdfPreviewEnabled !== false
       };
     } catch (_) { /* Keep local fallback settings if the public settings service is unavailable. */ }
     state.visibleLimit = state.searchConfig.maxResults;
