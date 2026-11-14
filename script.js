@@ -272,3 +272,30 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
       if (grid.children.length) section.hidden = false;
     }).catch(() => { section.hidden = true; });
 })();
+
+
+/* Admin-curated Featured Resources. All content is rendered as text and HTTPS links. */
+(() => {
+  const section = document.getElementById("featured-resources");
+  const grid = document.getElementById("featured-resources-grid");
+  if (!section || !grid) return;
+  fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
+    method: "GET", headers: { "Accept": "application/json" }, credentials: "omit"
+  }).then(response => { if (!response.ok) throw new Error("Featured resources unavailable"); return response.json(); })
+    .then(payload => {
+      const config = payload.featuredResources;
+      if (!config || config.enabled !== true || !Array.isArray(config.items)) return;
+      config.items.filter(item => item && item.published === true &&
+        typeof item.title === "string" && typeof item.url === "string" && item.url.startsWith("https://")
+      ).slice(0, 12).forEach(item => {
+        const card = document.createElement("article"); card.className = "featured-resource-card";
+        const category = document.createElement("span"); category.className = "featured-resource-category"; category.textContent = String(item.category || "RESOURCE");
+        const title = document.createElement("h3"); title.textContent = item.title;
+        const description = document.createElement("p"); description.textContent = String(item.description || "");
+        const link = document.createElement("a"); link.href = item.url; link.target = "_blank"; link.rel = "noopener noreferrer";
+        link.textContent = String(item.label || "Explore resource") + " ↗";
+        card.append(category, title, description, link); grid.append(card);
+      });
+      if (grid.children.length) section.hidden = false;
+    }).catch(() => { section.hidden = true; });
+})();
