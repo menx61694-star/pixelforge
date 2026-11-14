@@ -96,14 +96,6 @@ async function verifyGeoProxy(request: Request) {
   return valid ? { countryCode: country || null, regionName: region || null, clientIp } : null;
 }
 
-function getTrustedLocation(request: Request) {
-  const rawCountry = request.headers.get("cf-ipcountry") ?? "";
-  const countryCode = /^[A-Za-z]{2}$/.test(rawCountry) ? rawCountry.toUpperCase() : null;
-  const rawRegion = request.headers.get("cf-region") ?? "";
-  const regionName = rawRegion.trim().slice(0, 80) || null;
-  return { countryCode, regionName };
-}
-
 function getClientIp(request: Request): { address: string; source: "cf-connecting-ip" } | null {
   // Only trust the hosting edge client-IP header; never use client-supplied fallback headers.
   const candidate = request.headers.get("cf-connecting-ip");
