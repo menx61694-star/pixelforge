@@ -1153,7 +1153,7 @@ const firebaseConfig = {
       const validOverrides = Array.isArray(overrides) && overrides.length <= 20 && overrides.every(item =>
         item && typeof item === "object" && !Array.isArray(item) &&
         Object.keys(item).every(key => ["page","title","description","keywords","robots","canonical"].includes(key)) &&
-        typeof item.page === "string" && /^\/[a-z0-9/_-]*$/i.test(item.page) && !item.page.includes("..") &&
+        typeof item.page === "string" && /^\/[a-z0-9/._-]*$/i.test(item.page) && !item.page.includes("..") &&
         typeof item.title === "string" && item.title.trim().length >= 5 && item.title.length <= 70 &&
         typeof item.description === "string" && item.description.trim().length >= 50 && item.description.length <= 160 &&
         typeof item.keywords === "string" && item.keywords.length <= 250 &&
