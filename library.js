@@ -129,15 +129,15 @@
       const h3 = document.createElement("h3"); h3.textContent = doc.title;
       const p = document.createElement("p"); p.textContent = doc.category + " · " + doc.size + (doc.source === "google_drive" ? " · Google Drive" : " · PixelForge Storage");
       const a = document.createElement("a"); a.href = doc.url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = "Open document ↗";
+      let previewButton = null;
       if (state.searchConfig.pdfPreviewEnabled && doc.ext.toLowerCase() === "pdf" && previewDialog && previewFrame) {
-        const previewButton = document.createElement("button");
+        previewButton = document.createElement("button");
         previewButton.type = "button"; previewButton.className = "document-preview-button"; previewButton.textContent = "Preview PDF";
         previewButton.addEventListener("click", () => {
           previewTitle.textContent = doc.title; previewOpenLink.href = doc.url;
           previewFrame.src = doc.url + (doc.url.includes("#") ? "" : "#view=FitH");
           if (typeof previewDialog.showModal === "function") previewDialog.showModal(); else window.open(doc.url, "_blank", "noopener");
         });
-        card.append(previewButton);
       }
       a.addEventListener("click", () => {
         if (!doc.resourceId || !["supabase","google_drive"].includes(doc.source)) return;
@@ -150,7 +150,9 @@
           }).catch(() => {});
         } catch (_) { /* Tracking is optional; never block opening a document. */ }
       });
-      card.append(icon, h3, p, a); grid.append(card);
+      card.append(icon, h3, p);
+      if (previewButton) card.append(previewButton);
+      card.append(a); grid.append(card);
     });
     if (loadMoreButton) loadMoreButton.hidden = docs.length <= state.visibleLimit;
   }
