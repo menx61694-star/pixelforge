@@ -380,3 +380,26 @@ test("Popular Resources rank published documents using privacy-preserving unique
   assert.match(library, /action=track-resource/);
   assert.match(library, /resourceId: doc\.drive_file_id/);
 });
+
+
+test("PDF preview is a public-library-only feature controlled by an audited admin setting", () => {
+  const library = read("library.js");
+  const libraryHtml = read("library.html");
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  const edge = read("supabase/functions/site-settings/index.ts");
+  const migration = read("supabase/phase-17-library-pdf-preview.sql");
+  assert.ok(library.includes("pdfPreviewEnabled"));
+  assert.ok(library.includes('doc.ext.toLowerCase() === "pdf"'));
+  assert.ok(library.includes('previewFrame.src = "about:blank"'));
+  assert.ok(library.includes("Open document"));
+  assert.ok(libraryHtml.includes('id="pdf-preview-dialog"'));
+  assert.ok(libraryHtml.includes('id="pdf-preview-fullscreen"'));
+  assert.ok(adminHtml.includes("setting-library-pdf-preview-enabled"));
+  assert.ok(adminJs.includes('saveSetting("home.library.pdf_preview_enabled"'));
+  assert.ok(edge.includes("home.library.pdf_preview_enabled"));
+  assert.ok(edge.includes('pdfPreviewEnabled: values["home.library.pdf_preview_enabled"] !== false'));
+  assert.ok(migration.includes("home.library.pdf_preview_enabled"));
+  assert.ok(migration.includes("when 'home.library.pdf_preview_enabled' then jsonb_typeof(p_value) = 'boolean'"));
+  assert.ok(migration.includes("enable row level security"));
+});
