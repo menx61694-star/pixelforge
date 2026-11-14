@@ -202,3 +202,6 @@
 .feedback-inbox-actions button{padding:.5rem .85rem;border:0;border-radius:8px;background:#edf0ff;color:#3e4db9;font-weight:750;cursor:pointer}
 .feedback-inbox-actions button:last-child{background:#fff0ed;color:#a74b3d}
 @media(max-width:760px){.feedback-layout{grid-template-columns:1fr}}
+
+.feedback-consent{display:flex;align-items:flex-start;gap:.65rem;font-size:.82rem;line-height:1.5;color:#46536e}
+.feedback-consent input{width:auto;min-height:0;margin:.2rem 0 0;flex:0 0 auto}
