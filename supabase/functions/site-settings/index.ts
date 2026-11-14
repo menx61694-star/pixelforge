@@ -17,6 +17,8 @@ const settingKeys = new Set([
   "home.knowledge.items",
   "home.quiz.enabled",
   "home.quiz.items",
+  "home.tools.enabled",
+  "home.tools.items",
 ]);
 
 function cors(request: Request) {
@@ -91,7 +93,7 @@ async function authorize(request: Request, permission: "settings.view" | "settin
 }
 function validSettingValue(key: string, value: unknown): boolean {
   if (!settingKeys.has(key)) return false;
-  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled" || key === "home.quiz.enabled") return typeof value === "boolean";
+  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled" || key === "home.quiz.enabled" || key === "home.tools.enabled") return typeof value === "boolean";
   if (key === "home.knowledge.items") {
     return Array.isArray(value) && value.length <= 50 && value.every((item) =>
       item && typeof item === "object" && !Array.isArray(item) &&
@@ -117,6 +119,12 @@ function validSettingValue(key: string, value: unknown): boolean {
       typeof item.explanation === "string" && item.explanation.length <= 1000
     );
   }
+  if (key === "home.tools.items") {
+    const allowed = new Set(["calculator","percentage","word-counter","unit-converter"]);
+    return Array.isArray(value) && value.length <= 4 &&
+      value.every((item) => typeof item === "string" && allowed.has(item)) &&
+      new Set(value).size === value.length;
+  }
   if (typeof value !== "string") return false;
   if (key === "site.name") return value.trim().length > 0 && value.length <= 80;
   if (key === "site.description") return value.length <= 300;
@@ -139,7 +147,7 @@ Deno.serve(async (request) => {
       const db = dbAdmin();
       const { data, error } = await db.from("pixel_forge_site_settings")
         .select("setting_key,setting_value")
-        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items"]);
+        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items", "home.tools.enabled", "home.tools.items"]);
       if (error) throw error;
       const values = Object.fromEntries((data ?? []).map((row) => [row.setting_key, row.setting_value]));
       const items = Array.isArray(values["home.knowledge.items"]) ? values["home.knowledge.items"] : [];
@@ -153,6 +161,10 @@ Deno.serve(async (request) => {
           items: items.filter((item: unknown) =>
             item && typeof item === "object" && typeof (item as { text?: unknown }).text === "string"
           ).slice(0, 50),
+        },
+        quickTools: {
+          enabled: values["home.tools.enabled"] === true,
+          items: Array.isArray(values["home.tools.items"]) ? values["home.tools.items"] : [],
         },
         quiz: {
           enabled: values["home.quiz.enabled"] === true,
