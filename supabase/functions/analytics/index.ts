@@ -72,8 +72,8 @@ async function hmacHash(value: string): Promise<string> {
   const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(value));
   return Array.from(new Uint8Array(signature), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
-async function rateLimitKey(request: Request): Promise<string | null> {
-  const forwarded = request.headers.get("cf-connecting-ip") ?? request.headers.get("x-real-ip");
+async function rateLimitKey(request: Request, trustedProxyIp?: string): Promise<string | null> {
+  const forwarded = trustedProxyIp ?? request.headers.get("cf-connecting-ip") ?? request.headers.get("x-real-ip");
   return forwarded ? await hmacHash("rate:" + forwarded) : null;
 }
 async function verifyGeoProxy(request: Request) {
