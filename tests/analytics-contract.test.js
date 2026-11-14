@@ -138,7 +138,7 @@ test("security logs encrypt raw IP addresses with AES-GCM before persistence", (
   assert.match(edge, /name: "AES-GCM"/);
   assert.match(edge, /ip_ciphertext/);
   assert.match(edge, /ip_iv/);
-  assert.match(edge, /await storeSecurityLog\\(request, pagePath, db, proxyContext\\?\\.clientIp\\)/);
+  assert.match(edge, /await storeSecurityLog\(request, pagePath, db, proxyContext\?\.clientIp\)/);
   assert.match(edge, /decryptIp\(row\.ip_ciphertext, row\.ip_iv\)/);
 });
 
