@@ -1023,6 +1023,9 @@ const firebaseConfig = {
       setChecked("setting-vault-auto", values["sync.vault.auto_enabled"]);
       setChecked("setting-knowledge-enabled", values["home.knowledge.enabled"]);
       setChecked("setting-quiz-enabled", values["home.quiz.enabled"]);
+      setChecked("setting-tools-enabled", values["home.tools.enabled"]);
+      const toolsTextarea = document.getElementById("setting-tools-items");
+      if (toolsTextarea) toolsTextarea.value = (Array.isArray(values["home.tools.items"]) ? values["home.tools.items"] : ["calculator","percentage","word-counter","unit-converter"]).join("\\n");
       const quizTextarea = document.getElementById("setting-quiz-items");
       if (quizTextarea) quizTextarea.value = JSON.stringify(Array.isArray(values["home.quiz.items"]) ? values["home.quiz.items"] : [], null, 2);
       const knowledgeItems = Array.isArray(values["home.knowledge.items"]) ? values["home.knowledge.items"] : [];
@@ -1104,6 +1107,14 @@ const firebaseConfig = {
       }
       saveSetting("home.knowledge.items", items, button)
         .then(() => saveSetting("home.knowledge.enabled", document.getElementById("setting-knowledge-enabled").checked, button));
+    } else if (group === "home.tools") {
+      const items = document.getElementById("setting-tools-items").value.split(/\\r?\\n/).map(item => item.trim()).filter(Boolean);
+      const allowed = new Set(["calculator","percentage","word-counter","unit-converter"]);
+      if (items.length > 4 || items.some(item => !allowed.has(item)) || new Set(items).size !== items.length) {
+        setSettingsStatus("Choose each allowed tool at most once. Keep the list to four tools.", true); return;
+      }
+      saveSetting("home.tools.items", items, button)
+        .then(() => saveSetting("home.tools.enabled", document.getElementById("setting-tools-enabled").checked, button));
     } else if (group === "home.quiz") {
       let items;
       try { items = JSON.parse(document.getElementById("setting-quiz-items").value || "[]"); }
