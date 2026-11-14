@@ -6,7 +6,7 @@
     .then(payload => {
       const config = payload.seo;
       if (!config || config.enabled !== true) return;
-      const path = window.location.pathname.replace(/\\/+$/, "") || "/";
+      const path = window.location.pathname.replace(/\/+$/, "") || "/";
       const overrides = Array.isArray(config.pageOverrides) ? config.pageOverrides : [];
       const page = overrides.find(item => item && item.page === path);
       const title = page && page.title ? page.title : config.defaultTitle;
