@@ -6,7 +6,7 @@
     .then(payload => {
       const config = payload.seo;
       if (!config || config.enabled !== true) return;
-      const path = window.location.pathname.replace(/\\/+$/, "") || "/";
+      const path = window.location.pathname.replace(/\/+$/, "") || "/";
       const overrides = Array.isArray(config.pageOverrides) ? config.pageOverrides : [];
       const page = overrides.find(item => item && item.page === path);
       const title = page && page.title ? page.title : config.defaultTitle;
@@ -39,6 +39,6 @@
         if (!canonical) { canonical = document.createElement("link"); canonical.rel = "canonical"; document.head.append(canonical); }
         canonical.href = canonicalUrl;
         setMeta("og:url", canonicalUrl, true);
-      } catch (_) { /* Leave static canonical metadata untouched if the configured URL is invalid. */ }
+      } catch (_) { /* Keep static canonical metadata if the configured URL is invalid. */ }
     }).catch(() => { /* Static HTML metadata remains the fallback. */ });
 })();
