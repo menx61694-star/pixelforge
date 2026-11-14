@@ -183,3 +183,25 @@ test("Quick Digital Tools are admin-managed, ordered, allow-listed and exposed w
   assert.match(toolsScript, /action=public-content/);
   assert.match(toolsScript, /unit-converter-form/);
 });
+
+
+test("Featured Resources are admin-managed, published-only and restricted to safe HTTPS URLs", () => {
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  const edge = read("supabase/functions/site-settings/index.ts");
+  const migration = read("supabase/phase-9-featured-resources.sql");
+  const homepage = read("index.html");
+  const publicScript = read("script.js");
+  assert.match(adminHtml, /setting-featured-enabled/);
+  assert.match(adminHtml, /setting-featured-items/);
+  assert.match(adminJs, /saveSetting\("home\.featured\.items"/);
+  assert.match(adminJs, /saveSetting\("home\.featured\.enabled"/);
+  assert.match(edge, /isSafeHttpsUrl/);
+  assert.match(edge, /home\.featured\.items/);
+  assert.match(migration, /home\.featured\.items/);
+  assert.match(migration, /jsonb_array_length\(p_value\) <= 12/);
+  assert.match(homepage, /id="featured-resources"/);
+  assert.match(publicScript, /payload\.featuredResources/);
+  assert.match(publicScript, /item\.published === true/);
+  assert.match(publicScript, /noopener noreferrer/);
+});
