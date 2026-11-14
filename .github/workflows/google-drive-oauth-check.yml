@@ -10,7 +10,6 @@ on:
       - feature/phase4-privacy-first-analytics
       - feature/security-logs-ip-retention-90d
       - main
-      - feature/public-homepage-refresh
     paths:
       - "supabase/functions/google-drive-oauth/**"
       - "supabase/functions/google-drive-files/**"
@@ -19,14 +18,6 @@ on:
       - "supabase/functions/site-settings/**"
       - "maintenance-mode.js"
       - "index.html"
-      - "seo.js"
-      - "layout.js"
-      - "supabase/phase-14-seo-management.sql"
-      - "supabase/phase-15-homepage-layout.sql"
-      - "supabase/phase-16-popular-resources.sql"
-      - "tools.html"
-      - "tools.js"
-      - "styles.css"
       - "library.html"
       - "tests/maintenance-mode.test.js"
       - "supabase/config.toml"
@@ -34,22 +25,9 @@ on:
       - "supabase/phase-4-analytics.sql"
       - "supabase/phase-4-security-logs.sql"
       - "supabase/phase-5-settings.sql"
-      - "supabase/phase-6-homepage-content.sql"
-      - "supabase/phase-7-daily-quiz.sql"
-      - "supabase/phase-8-quick-tools.sql"
-      - "supabase/phase-11-smart-search.sql"
-      - "supabase/phase-10-announcements.sql"
-      - "supabase/phase-9-featured-resources.sql"
       - "admin.js"
       - "script.js"
       - "library.js"
-      - "technology-guides.html"
-      - "exam-materials.html"
-      - "other-documents.html"
-      - "books-resources.html"
-      - "study-notes.html"
-      - "pdf-documents.html"
-      - "library.css"
       - "vault-storage-utils.js"
       - "tests/vault-storage.test.js"
       - "tests/analytics-contract.test.js"
@@ -73,34 +51,12 @@ on:
       - "supabase/phase-4-analytics.sql"
       - "supabase/phase-4-security-logs.sql"
       - "supabase/phase-5-settings.sql"
-      - "supabase/phase-6-homepage-content.sql"
-      - "supabase/phase-7-daily-quiz.sql"
-      - "supabase/phase-8-quick-tools.sql"
-      - "supabase/phase-11-smart-search.sql"
-      - "supabase/phase-10-announcements.sql"
-      - "supabase/phase-9-featured-resources.sql"
       - "supabase/SECURITY-LOGS-SETUP.md"
       - "tests/analytics-contract.test.js"
       - "tests/settings-contract.test.js"
-      - "index.html"
-      - "seo.js"
-      - "layout.js"
-      - "supabase/phase-14-seo-management.sql"
-      - "supabase/phase-15-homepage-layout.sql"
-      - "supabase/phase-16-popular-resources.sql"
-      - "tools.html"
-      - "tools.js"
-      - "styles.css"
       - "admin.js"
       - "script.js"
       - "library.js"
-      - "technology-guides.html"
-      - "exam-materials.html"
-      - "other-documents.html"
-      - "books-resources.html"
-      - "study-notes.html"
-      - "pdf-documents.html"
-      - "library.css"
       - "admin.html"
       - "admin.css"
       - ".github/workflows/google-drive-oauth-check.yml"
@@ -126,9 +82,6 @@ jobs:
           node --check admin.js
           node --check maintenance-mode.js
           node --check script.js
-          node --check tools.js
-          node --check seo.js
-          node --check layout.js
           node --check library.js
           node --check vault-storage-utils.js
 
