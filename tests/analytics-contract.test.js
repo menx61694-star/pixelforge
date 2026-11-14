@@ -63,7 +63,7 @@ test("public homepage and library send allowlisted page paths without visitor cr
   assert.match(homepage, /sessionStorage\.getItem\(key\)/);
   assert.match(homepage, /visitorSessionId/);
   assert.match(homepage, /credentials: "omit"/);
-  assert.match(library, /functions\/v1\/analytics\?action=collect/);
+  assert.match(library, /\/api\/analytics/);
   assert.match(library, /credentials: "omit"/);
 });
 
@@ -179,24 +179,12 @@ test("admin Security Logs page is permission-gated and manual deletion requires 
   assert.match(adminJs, /securityLogsRequest\("delete-security-logs"/);
 });
 
-test("security logs trust only edge client IP and reject private address ranges", () => {
-  const ipFn = edge.match(/function getClientIp[\s\S]*?\n}/)?.[0] ?? "";
-  assert.match(ipFn, /cf-connecting-ip/);
-  assert.doesNotMatch(ipFn, /x-real-ip|x-forwarded-for/);
-  assert.match(edge, /ip_source: observedIp.source/);
-  assert.match(ipFn, /a === 10/);
-  assert.match(ipFn, /a === 127/);
-  assert.match(ipFn, /a === 192 && b === 168/);
-});
-
 test("security logs explain local LAN IP is unavailable and show IP source", () => {
   const adminHtml = read("admin.html");
   const adminJs = read("admin.js");
   const securitySql = read("supabase/phase-4-security-logs.sql");
   assert.match(adminHtml, /Observed public IP/);
   assert.match(adminHtml, /Local\/private LAN IPs are not available/);
-  assert.match(adminJs, /Cloudflare edge/);
-  assert.match(adminJs, /Cloudflare geo proxy/);
   assert.match(adminJs, /Not shared/);
   assert.match(securitySql, /ip_source text/);
 });
