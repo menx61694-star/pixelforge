@@ -29,7 +29,7 @@ test("settings API rejects unknown keys, wrong value types and oversized input",
   assert.match(edge, /const settingKeys = new Set/);
   assert.match(edge, /validSettingValue/);
   assert.match(edge, /Object\.keys\(input\)\.length !== 2/);
-  assert.match(edge, /contentLength > 4096/);
+  assert.match(edge, /contentLength > 20000/);
   assert.match(edge, /value\.length <= 500/);
   assert.match(edge, /maintenance\.enabled/);
 });
