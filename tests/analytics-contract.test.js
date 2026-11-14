@@ -115,6 +115,7 @@ test("visitor country geo uses the Supabase-managed country header and ignores c
   assert.match(edge, /getTrustedCountryCode\(request\)/);
   assert.match(edge, /country_code: countryCode/);
   assert.match(edge, /region_name: null/);
+  assert.match(edge, /country !== "XX" && country !== "T1"/);
   assert.doesNotMatch(edge, /verifyGeoProxy|x-pf-geo-signature/);
   assert.match(sql, /add column if not exists country_code text/i);
   assert.match(sql, /add column if not exists region_name text/i);
@@ -139,7 +140,7 @@ test("security logs encrypt raw IP addresses with AES-GCM before persistence", (
   assert.match(edge, /name: "AES-GCM"/);
   assert.match(edge, /ip_ciphertext/);
   assert.match(edge, /ip_iv/);
-  assert.match(edge, /await storeSecurityLog\(request, pagePath, db, proxyContext\?\.clientIp\)/);
+  assert.match(edge, /await storeSecurityLog\(pagePath, db, observedIp\)/);
   assert.match(edge, /decryptIp\(row\.ip_ciphertext, row\.ip_iv\)/);
 });
 
