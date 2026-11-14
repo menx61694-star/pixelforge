@@ -205,10 +205,14 @@ Deno.serve(async (request) => {
           (visitorSessionId !== "" && !validSessionId)) {
         return json({ error: "Invalid analytics event." }, 400, request);
       }
-      const proxyContext = await verifyGeoProxy(request);
-      if (!proxyContext) return json({ error: "Trusted analytics proxy verification failed." }, 403, request);
-      const keyHash = await rateLimitKey(request, proxyContext.clientIp);
-      if (!keyHash) return json({ error: "Unable to apply request rate limit." }, 400, request);
+      // Direct Supabase collection remains supported. Geo metadata is accepted only
+      // when a trusted proxy signature is present; otherwise location stays unknown.
+      const hasProxySignature = request.headers.has("x-pf-geo-signature");
+      const proxyContext = hasProxySignature ? await verifyGeoProxy(request) : null;
+      if (hasProxySignature && !proxyContext) return json({ error: "Trusted analytics proxy verification failed." }, 403, request);
+      const keyHash = await rateLimitKey(request, proxyContext?.clientIp) ??
+        (validSessionId ? await hmacHash("visitor-rate:" + visitorSessionId) : null);
+      if (!keyHash) return json({ error: "A valid visitor session is required for rate limiting." }, 400, request);
       const now = new Date();
       const windowStart = new Date(Math.floor(now.getTime() / 60000) * 60000).toISOString();
       const db = dbAdmin();
@@ -222,11 +226,11 @@ Deno.serve(async (request) => {
       const { error } = await db.from("pixel_forge_analytics_events").insert({
         page_path: pagePath,
         visitor_hash: visitorHash,
-        country_code: location.countryCode,
-        region_name: location.regionName,
+        country_code: location?.countryCode ?? null,
+        region_name: location?.regionName ?? null,
       });
       if (error) throw error;
-      await storeSecurityLog(request, pagePath, db, proxyContext.clientIp);
+      if (proxyContext?.clientIp) await storeSecurityLog(request, pagePath, db, proxyContext.clientIp);
       return json({ recorded: true }, 202, request);
     }
 
