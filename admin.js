@@ -1026,6 +1026,9 @@ const firebaseConfig = {
       setChecked("setting-tools-enabled", values["home.tools.enabled"]);
       setChecked("setting-featured-enabled", values["home.featured.enabled"]);
       setChecked("setting-announcements-enabled", values["home.announcements.enabled"]);
+      setChecked("setting-layout-enabled", values["home.layout.enabled"]);
+      const layoutTextarea = document.getElementById("setting-layout-sections");
+      if (layoutTextarea) layoutTextarea.value = JSON.stringify(Array.isArray(values["home.layout.sections"]) ? values["home.layout.sections"] : [{"id":"smart-document-search","enabled":true,"title":"","subtitle":""},{"id":"discover","enabled":true,"title":"","subtitle":""},{"id":"user-feedback","enabled":true,"title":"","subtitle":""},{"id":"learning-corner","enabled":true,"title":"","subtitle":""},{"id":"announcements","enabled":true,"title":"","subtitle":""},{"id":"featured-resources","enabled":true,"title":"","subtitle":""},{"id":"quick-tools","enabled":true,"title":"","subtitle":""},{"id":"knowledge","enabled":true,"title":"","subtitle":""},{"id":"daily-quiz","enabled":true,"title":"","subtitle":""},{"id":"about","enabled":true,"title":"","subtitle":""},{"id":"contact","enabled":true,"title":"","subtitle":""}], null, 2);
       setChecked("setting-seo-enabled", values["home.seo.enabled"]);
       setInputValue("setting-seo-title", values["home.seo.default_title"] ?? "PixelForge — Digital resources and learning tools");
       setInputValue("setting-seo-description", values["home.seo.default_description"] ?? "Discover curated documents, study notes, digital tools and guided learning resources on PixelForge.");
@@ -1136,6 +1139,24 @@ const firebaseConfig = {
       }
       saveSetting("home.knowledge.items", items, button)
         .then(() => saveSetting("home.knowledge.enabled", document.getElementById("setting-knowledge-enabled").checked, button));
+    } else if (group === "home.layout") {
+      let sections;
+      try { sections = JSON.parse(document.getElementById("setting-layout-sections").value || "[]"); }
+      catch (_) { setSettingsStatus("Homepage layout must be valid JSON.", true); return; }
+      const allowed = new Set(["smart-document-search","discover","user-feedback","learning-corner","announcements","featured-resources","quick-tools","knowledge","daily-quiz","about","contact"]);
+      const valid = Array.isArray(sections) && sections.length === 11 && sections.every(item =>
+        item && typeof item === "object" && !Array.isArray(item) &&
+        Object.keys(item).every(key => ["id","enabled","title","subtitle"].includes(key)) &&
+        typeof item.id === "string" && allowed.has(item.id) &&
+        typeof item.enabled === "boolean" &&
+        typeof item.title === "string" && item.title.length <= 80 &&
+        typeof item.subtitle === "string" && item.subtitle.length <= 160
+      );
+      if (!valid || new Set(sections.map(item => item.id)).size !== 11) {
+        setSettingsStatus("Keep all 11 allowed section IDs exactly once. Check visibility and heading values.", true); return;
+      }
+      saveSetting("home.layout.sections", sections, button)
+        .then(() => saveSetting("home.layout.enabled", document.getElementById("setting-layout-enabled").checked, button));
     } else if (group === "home.seo") {
       const title = document.getElementById("setting-seo-title").value.trim();
       const description = document.getElementById("setting-seo-description").value.trim();
