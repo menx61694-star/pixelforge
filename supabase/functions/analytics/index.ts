@@ -205,7 +205,9 @@ Deno.serve(async (request) => {
           (visitorSessionId !== "" && !validSessionId)) {
         return json({ error: "Invalid analytics event." }, 400, request);
       }
-      const proxyContext = await verifyGeoProxy(request);\n      if (!proxyContext) return json({ error: "Trusted analytics proxy verification failed." }, 403, request);\n      const keyHash = await rateLimitKey(request, proxyContext.clientIp);
+      const proxyContext = await verifyGeoProxy(request);
+      if (!proxyContext) return json({ error: "Trusted analytics proxy verification failed." }, 403, request);
+      const keyHash = await rateLimitKey(request, proxyContext.clientIp);
       if (!keyHash) return json({ error: "Unable to apply request rate limit." }, 400, request);
       const now = new Date();
       const windowStart = new Date(Math.floor(now.getTime() / 60000) * 60000).toISOString();
