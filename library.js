@@ -165,15 +165,20 @@
   }
 
   async function load() {
-    await loadSearchConfig();
+    // Start the settings request immediately, but do not make document loading wait for it.
+    const configPromise = loadSearchConfig();
     if (!window.supabase || !window.supabase.createClient) {
+      await configPromise;
       return showState("The document library service could not load. Please refresh later.", true);
     }
     const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
     const selected = active ? [active] : categories;
     try {
       showState("Loading published documents…");
-      const results = await Promise.all(selected.map(async category => {
+
+      // Storage category listings and the public Google Drive listing are independent;
+      // fetch them concurrently so the Drive request does not add a second network wait.
+      const storagePromise = Promise.all(selected.map(async category => {
         const { data, error } = await client.storage.from(PUBLIC_BUCKET).list(category.slug, {
           limit: 100, offset: 0, sortBy: { column: "created_at", order: "desc" }
         });
@@ -187,29 +192,36 @@
           return { title: niceName(file.name), category: category.name, categorySlug: category.slug, url: publicData.publicUrl, size, ext, source: "supabase", resourceId: path };
         });
       }));
-      let driveDocs = [];
-      try {
-        const driveResponse = await fetch(SUPABASE_URL + "/functions/v1/google-drive-files?action=public-list");
-        const drivePayload = await driveResponse.json();
-        if (!driveResponse.ok) throw new Error(drivePayload.error || "Published Drive documents could not be loaded.");
-        driveDocs = (drivePayload.documents || [])
-          .filter(doc => selected.some(category => category.slug === doc.category))
-          .map(doc => ({
-            title: doc.title || "Google Drive document",
-            category: categories.find(category => category.slug === doc.category)?.name || doc.category,
-            categorySlug: doc.category,
-            url: SUPABASE_URL + "/functions/v1/google-drive-files?action=public-download&id=" + encodeURIComponent(doc.drive_file_id),
-            size: doc.size_bytes ? (doc.size_bytes >= 1048576 ? (doc.size_bytes / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(doc.size_bytes / 1024)) + " KB") : "Size unavailable",
-            ext: (doc.title || "").split(".").pop()?.slice(0, 4) || "FILE",
-            source: "google_drive",
-            resourceId: doc.drive_file_id
-          }));
-      } catch (driveError) {
-        console.warn("Published Google Drive documents could not be loaded:", driveError);
-      }
+
+      const drivePromise = (async () => {
+        try {
+          const driveResponse = await fetch(SUPABASE_URL + "/functions/v1/google-drive-files?action=public-list", { credentials: "omit" });
+          const drivePayload = await driveResponse.json();
+          if (!driveResponse.ok) throw new Error(drivePayload.error || "Published Drive documents could not be loaded.");
+          return (drivePayload.documents || [])
+            .filter(doc => selected.some(category => category.slug === doc.category))
+            .map(doc => ({
+              title: doc.title || "Google Drive document",
+              category: categories.find(category => category.slug === doc.category)?.name || doc.category,
+              categorySlug: doc.category,
+              url: SUPABASE_URL + "/functions/v1/google-drive-files?action=public-download&id=" + encodeURIComponent(doc.drive_file_id),
+              size: doc.size_bytes ? (doc.size_bytes >= 1048576 ? (doc.size_bytes / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(doc.size_bytes / 1024)) + " KB") : "Size unavailable",
+              ext: (doc.title || "").split(".").pop()?.slice(0, 4) || "FILE",
+              source: "google_drive",
+              resourceId: doc.drive_file_id
+            }));
+        } catch (driveError) {
+          console.warn("Published Google Drive documents could not be loaded:", driveError);
+          return [];
+        }
+      })();
+
+      const [results, driveDocs] = await Promise.all([storagePromise, drivePromise]);
+      await configPromise;
       state.documents = results.flat().concat(driveDocs);
       render();
     } catch (error) {
+      await configPromise;
       showState("The public library is not connected yet. Admin-only files remain private. (" + (error.message || "Storage unavailable") + ")", true);
     }
   }
