@@ -403,7 +403,7 @@ Deno.serve(async (request) => {
             : [],
         },
         search: {
-          enabled: values["home.search.enabled"] === true,
+          enabled: values["home.search.enabled"] !== false,
           smartEnabled: values["home.search.smart_enabled"] !== false,
           filtersEnabled: values["home.search.filters_enabled"] !== false,
           maxResults: Number.isInteger(values["home.search.max_results"]) ? values["home.search.max_results"] : 30,
