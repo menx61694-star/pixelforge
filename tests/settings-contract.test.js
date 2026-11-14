@@ -265,3 +265,23 @@ test("All library category pages receive the same Smart Search controls and pagi
   }
   assert.match(read("library.js"), /query\.split\(\/\\s\+\//);
 });
+
+
+test("Learning Corner paths are admin-managed and expose only published steps with HTTPS links", () => {
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  const edge = read("supabase/functions/site-settings/index.ts");
+  const migration = read("supabase/phase-12-learning-corner.sql");
+  const homepage = read("index.html");
+  const publicScript = read("script.js");
+  assert.match(adminHtml, /setting-learning-enabled/);
+  assert.match(adminHtml, /setting-learning-items/);
+  assert.match(adminJs, /saveSetting\("home\.learning\.items"/);
+  assert.match(edge, /home\.learning\.items/);
+  assert.match(edge, /learningCorner:/);
+  assert.match(migration, /home\.learning\.items/);
+  assert.match(migration, /jsonb_array_length\(p_value\) <= 12/);
+  assert.match(homepage, /id="learning-corner"/);
+  assert.match(publicScript, /payload\.learningCorner/);
+  assert.match(publicScript, /noopener noreferrer/);
+});
