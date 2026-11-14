@@ -248,7 +248,7 @@
                 <h3>Daily Quiz</h3>
                 <label class="settings-toggle"><input id="setting-quiz-enabled" type="checkbox"><span>Enable Question of the Day</span></label>
                 <label for="setting-quiz-items">Quiz questions (JSON)</label>
-                <textarea id="setting-quiz-items" rows="12" maxlength="30000" spellcheck="false" placeholder='[{"id":"q1","category":"Science","publishDate":"2026-11-15","published":true,"question":"Which planet is known as the Red Planet?","options":["Earth","Mars","Venus","Jupiter"],"correctIndex":1,"explanation":"Mars appears reddish because iron minerals in its soil oxidize."}]'></textarea>
+                <textarea id="setting-quiz-items" rows="12" maxlength="18000" spellcheck="false" placeholder='[{"id":"q1","category":"Science","publishDate":"2026-11-15","published":true,"question":"Which planet is known as the Red Planet?","options":["Earth","Mars","Venus","Jupiter"],"correctIndex":1,"explanation":"Mars appears reddish because iron minerals in its soil oxidize."}]'></textarea>
                 <p class="settings-help">Add up to 100 questions. Each object needs id, category, publishDate (YYYY-MM-DD), published, question, exactly four options, correctIndex (0–3), and explanation. Only a published question scheduled for today's India date is shown publicly. Correct answers are checked by the server.</p>
                 <button type="button" data-setting-save="home.quiz">Save Daily Quiz</button>
               </article>
