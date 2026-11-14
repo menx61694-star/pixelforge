@@ -89,104 +89,32 @@ begin
           not exists (
             select 1 from jsonb_array_elements(p_value) as item(value)
             where jsonb_typeof(item.value) <> 'object'
-              or jsonb_typeof(item.value->'id') <> 'string'
-              or length(trim(item.value->>'id')) < 1 or length(item.value->>'id') > 80
-              or jsonb_typeof(item.value->'category') <> 'string'
-              or length(trim(item.value->>'category')) < 1 or length(item.value->>'category') > 32
-              or jsonb_typeof(item.value->'publishDate') <> 'string'
-              or (item.value->>'publishDate') !~ '^\\d{4}-\\d{2}-\\d{2}
-    else false
-  end;
-  if coalesce(v_valid, false) is not true then
-    raise exception 'Invalid site setting key or value';
-  end if;
-
-  select setting_value into v_old_value from public.pixel_forge_site_settings
-  where setting_key = p_key for update;
-
-  update public.pixel_forge_site_settings
-  set setting_value = p_value, updated_by = p_actor_uid, updated_at = now()
-  where setting_key = p_key returning updated_at into v_updated_at;
-
-  if not found then raise exception 'Site setting has not been initialized'; end if;
-
-  insert into public.pixel_forge_site_settings_audit
-    (setting_key, old_value, new_value, actor_uid)
-  values (p_key, v_old_value, p_value, p_actor_uid);
-  return v_updated_at;
-end;
-$$;
-revoke all on function public.pixel_forge_update_site_setting(text, jsonb, text) from public, anon, authenticated;
-grant execute on function public.pixel_forge_update_site_setting(text, jsonb, text) to service_role;
-
-insert into public.pixel_forge_site_settings (setting_key, setting_value, updated_by) values
-  ('home.knowledge.enabled', 'true'::jsonb, 'system'),
-  ('home.knowledge.items', jsonb_build_array(
-    jsonb_build_object('category','SPACE','text','A day on Venus is longer than its year: Venus takes about 243 Earth days to rotate once, but about 225 Earth days to orbit the Sun.'),
-    jsonb_build_object('category','HUMAN BODY','text','Your brain uses roughly 20% of your body’s energy, even though it makes up only about 2% of your body weight.'),
-    jsonb_build_object('category','COMPUTING','text','The first computer mouse, built in the 1960s, was made of wood and had just one button.'),
-    jsonb_build_object('category','NATURE','text','Octopuses have three hearts: two pump blood to the gills, while one pumps it to the rest of the body.'),
-    jsonb_build_object('category','SPACE','text','Light from the Sun takes about 8 minutes and 20 seconds to reach Earth.'),
-    jsonb_build_object('category','TECHNOLOGY','text','The word robot comes from the Czech word robota, which refers to forced labour.'),
-    jsonb_build_object('category','EARTH','text','Earth is not a perfect sphere; its rotation makes it slightly wider around the equator.'),
-    jsonb_build_object('category','BIOLOGY','text','A single human cell contains about two metres of DNA when stretched out.')
-  ), 'system')
-  ('home.quiz.enabled', 'false'::jsonb, 'system'),
-  ('home.quiz.items', '[]'::jsonb, 'system')
-on conflict (setting_key) do nothing;
-
-              or jsonb_typeof(item.value->'published') <> 'boolean'
-              or jsonb_typeof(item.value->'question') <> 'string'
-              or length(trim(item.value->>'question')) < 10 or length(item.value->>'question') > 500
-              or jsonb_typeof(item.value->'options') <> 'array'
-              or jsonb_array_length(item.value->'options') <> 4
-              or exists (
-                select 1 from jsonb_array_elements(item.value->'options') as option(value)
-                where jsonb_typeof(option.value) <> 'string'
-                  or length(trim(option.value #>> '{}')) < 1
-                  or length(option.value #>> '{}') > 160
-              )
-              or jsonb_typeof(item.value->'correctIndex') <> 'number'
-              or (item.value->>'correctIndex') !~ '^[0-3]
-    else false
-  end;
-  if coalesce(v_valid, false) is not true then
-    raise exception 'Invalid site setting key or value';
-  end if;
-
-  select setting_value into v_old_value from public.pixel_forge_site_settings
-  where setting_key = p_key for update;
-
-  update public.pixel_forge_site_settings
-  set setting_value = p_value, updated_by = p_actor_uid, updated_at = now()
-  where setting_key = p_key returning updated_at into v_updated_at;
-
-  if not found then raise exception 'Site setting has not been initialized'; end if;
-
-  insert into public.pixel_forge_site_settings_audit
-    (setting_key, old_value, new_value, actor_uid)
-  values (p_key, v_old_value, p_value, p_actor_uid);
-  return v_updated_at;
-end;
-$$;
-revoke all on function public.pixel_forge_update_site_setting(text, jsonb, text) from public, anon, authenticated;
-grant execute on function public.pixel_forge_update_site_setting(text, jsonb, text) to service_role;
-
-insert into public.pixel_forge_site_settings (setting_key, setting_value, updated_by) values
-  ('home.knowledge.enabled', 'true'::jsonb, 'system'),
-  ('home.knowledge.items', jsonb_build_array(
-    jsonb_build_object('category','SPACE','text','A day on Venus is longer than its year: Venus takes about 243 Earth days to rotate once, but about 225 Earth days to orbit the Sun.'),
-    jsonb_build_object('category','HUMAN BODY','text','Your brain uses roughly 20% of your body’s energy, even though it makes up only about 2% of your body weight.'),
-    jsonb_build_object('category','COMPUTING','text','The first computer mouse, built in the 1960s, was made of wood and had just one button.'),
-    jsonb_build_object('category','NATURE','text','Octopuses have three hearts: two pump blood to the gills, while one pumps it to the rest of the body.'),
-    jsonb_build_object('category','SPACE','text','Light from the Sun takes about 8 minutes and 20 seconds to reach Earth.'),
-    jsonb_build_object('category','TECHNOLOGY','text','The word robot comes from the Czech word robota, which refers to forced labour.'),
-    jsonb_build_object('category','EARTH','text','Earth is not a perfect sphere; its rotation makes it slightly wider around the equator.'),
-    jsonb_build_object('category','BIOLOGY','text','A single human cell contains about two metres of DNA when stretched out.')
-  ), 'system')
-on conflict (setting_key) do nothing;
-
-              or jsonb_typeof(item.value->'explanation') <> 'string'
+              or coalesce(jsonb_typeof(item.value->'id'), '') <> 'string'
+              or length(trim(coalesce(item.value->>'id', ''))) < 1
+              or length(item.value->>'id') > 80
+              or coalesce(jsonb_typeof(item.value->'category'), '') <> 'string'
+              or length(trim(coalesce(item.value->>'category', ''))) < 1
+              or length(item.value->>'category') > 32
+              or coalesce(jsonb_typeof(item.value->'publishDate'), '') <> 'string'
+              or (item.value->>'publishDate') !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+              or coalesce(jsonb_typeof(item.value->'published'), '') <> 'boolean'
+              or coalesce(jsonb_typeof(item.value->'question'), '') <> 'string'
+              or length(trim(coalesce(item.value->>'question', ''))) < 10
+              or length(item.value->>'question') > 500
+              or case when jsonb_typeof(item.value->'options') = 'array'
+                   then jsonb_array_length(item.value->'options') <> 4
+                   else true end
+              or case when jsonb_typeof(item.value->'options') = 'array'
+                   then exists (
+                     select 1 from jsonb_array_elements(item.value->'options') as option(value)
+                     where coalesce(jsonb_typeof(option.value), '') <> 'string'
+                       or length(trim(coalesce(option.value #>> '{}', ''))) < 1
+                       or length(option.value #>> '{}') > 160
+                   )
+                   else true end
+              or coalesce(jsonb_typeof(item.value->'correctIndex'), '') <> 'number'
+              or (item.value->>'correctIndex') !~ '^[0-3]$'
+              or coalesce(jsonb_typeof(item.value->'explanation'), '') <> 'string'
               or length(item.value->>'explanation') > 1000
           )
         else false end
@@ -226,5 +154,7 @@ insert into public.pixel_forge_site_settings (setting_key, setting_value, update
     jsonb_build_object('category','TECHNOLOGY','text','The word robot comes from the Czech word robota, which refers to forced labour.'),
     jsonb_build_object('category','EARTH','text','Earth is not a perfect sphere; its rotation makes it slightly wider around the equator.'),
     jsonb_build_object('category','BIOLOGY','text','A single human cell contains about two metres of DNA when stretched out.')
-  ), 'system')
+  ), 'system'),
+  ('home.quiz.enabled', 'false'::jsonb, 'system'),
+  ('home.quiz.items', '[]'::jsonb, 'system')
 on conflict (setting_key) do nothing;
