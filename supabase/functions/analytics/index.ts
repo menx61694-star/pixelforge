@@ -97,9 +97,10 @@ async function verifyGeoProxy(request: Request) {
   return valid ? { countryCode: country || null, regionName: region || null, clientIp } : null;
 }
 
-function getClientIp(request: Request, trustedProxyIp?: string): { address: string; source: "cf-connecting-ip" | "cloudflare-geo-proxy" } | null {
-  // trustedProxyIp is accepted only after verifyGeoProxy() validates its HMAC.
-  const candidate = trustedProxyIp ?? request.headers.get("cf-connecting-ip");
+function getClientIp(_request: Request, trustedProxyIp?: string): { address: string; source: "cloudflare-geo-proxy" } | null {
+  // Only accept an IP carried by the signed geo-proxy context. Direct request
+  // headers such as CF-Connecting-IP and X-Real-IP are client-spoofable here.
+  const candidate = trustedProxyIp;
   if (!candidate || candidate.length > 64 || candidate.includes(",")) return null;
   const ip = candidate.trim();
   const parts = ip.split(".");
@@ -113,7 +114,7 @@ function getClientIp(request: Request, trustedProxyIp?: string): { address: stri
     const lower = ip.toLowerCase();
     if (lower === "::" || lower === "::1" || lower.startsWith("fc") || lower.startsWith("fd") || lower.startsWith("fe8") || lower.startsWith("fe9") || lower.startsWith("fea") || lower.startsWith("feb") || lower.startsWith("ff")) return null;
   }
-  return { address: ip, source: trustedProxyIp ? "cloudflare-geo-proxy" : "cf-connecting-ip" };
+  return { address: ip, source: "cloudflare-geo-proxy" };
 }
 function isPrivateLocalIp(ip: string): boolean {
   if (ip.length > 64) return false;
