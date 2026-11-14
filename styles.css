@@ -205,3 +205,6 @@
 
 .feedback-consent{display:flex;align-items:flex-start;gap:.65rem;font-size:.82rem;line-height:1.5;color:#46536e}
 .feedback-consent input{width:auto;min-height:0;margin:.2rem 0 0;flex:0 0 auto}
+
+/* Homepage layout manager visibility */
+.layout-hidden{display:none!important}
