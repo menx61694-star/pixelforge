@@ -38,7 +38,7 @@
   const grid = document.getElementById("document-grid");
   const count = document.getElementById("library-count");
   const cards = document.getElementById("category-grid");
-  const state = { documents: [], loading: false, searchConfig: { enabled: true, smartEnabled: true, filtersEnabled: true, maxResults: 30, placeholder: "Search documents, notes and guides…" }, visibleLimit: 30, pdfPreviewEnabled: true };
+  const state = { documents: [], loading: false, searchConfig: { enabled: true, smartEnabled: true, filtersEnabled: true, maxResults: 30, placeholder: "Search documents, notes and guides…", pdfPreviewEnabled: true }, visibleLimit: 30, pdfPreviewEnabled: true };
   const params = new URLSearchParams(window.location.search);
   search.value = params.get("q") || "";
   if (categoryFilter) categoryFilter.value = params.get("category") || categorySlug;
