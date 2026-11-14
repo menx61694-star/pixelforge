@@ -112,3 +112,12 @@ test("public homepage knowledge is admin-managed, allow-listed, and safely expos
   assert.match(publicScript, /textContent = facts\[next\]\.text/);
   assert.doesNotMatch(publicScript, /innerHTML\s*=\s*facts/);
 });
+
+test("public settings expose admin-managed branding without leaking private settings", () => {
+  assert.match(edge, /"site\.name", "site\.description", "home\.knowledge\.enabled"/);
+  assert.match(edge, /name: typeof values\["site\.name"\]/);
+  assert.match(edge, /description: typeof values\["site\.description"\]/);
+  const publicScript = read("script.js");
+  assert.match(publicScript, /document\.title = payload\.site\.name/);
+  assert.match(publicScript, /description\.setAttribute\("content", payload\.site\.description\)/);
+});
