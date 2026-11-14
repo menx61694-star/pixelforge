@@ -120,11 +120,15 @@ Deno.serve(async (request) => {
       const db = dbAdmin();
       const { data, error } = await db.from("pixel_forge_site_settings")
         .select("setting_key,setting_value")
-        .in("setting_key", ["home.knowledge.enabled", "home.knowledge.items"]);
+        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items"]);
       if (error) throw error;
       const values = Object.fromEntries((data ?? []).map((row) => [row.setting_key, row.setting_value]));
       const items = Array.isArray(values["home.knowledge.items"]) ? values["home.knowledge.items"] : [];
       return json({
+        site: {
+          name: typeof values["site.name"] === "string" ? values["site.name"] : "PixelForge",
+          description: typeof values["site.description"] === "string" ? values["site.description"] : "",
+        },
         knowledge: {
           enabled: values["home.knowledge.enabled"] !== false,
           items: items.filter((item: unknown) =>
