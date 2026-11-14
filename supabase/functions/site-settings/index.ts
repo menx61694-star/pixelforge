@@ -112,7 +112,7 @@ function validSettingValue(key: string, value: unknown): boolean {
       typeof item.published === "boolean" &&
       typeof item.question === "string" && item.question.trim().length >= 10 && item.question.length <= 500 &&
       Array.isArray(item.options) && item.options.length === 4 &&
-      item.options.every((option) => typeof option === "string" && option.trim().length > 0 && option.length <= 160) &&
+      item.options.every((option: unknown) => typeof option === "string" && option.trim().length > 0 && option.length <= 160) &&
       Number.isInteger(item.correctIndex) && item.correctIndex >= 0 && item.correctIndex <= 3 &&
       typeof item.explanation === "string" && item.explanation.length <= 1000
     );
