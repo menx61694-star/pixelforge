@@ -413,6 +413,8 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
         categories.forEach(name => { const option = document.createElement("option"); option.value = name; option.textContent = name; category.append(option); });
         if (!categories.length) return;
         document.getElementById("feedback-name").required = config.allowAnonymous === false;
+        const nameNote = document.getElementById("feedback-name-note");
+        if (nameNote) nameNote.textContent = config.allowAnonymous === false ? "(required)" : "(optional)";
         const privacyNote = document.querySelector(".feedback-privacy-note");
         if (privacyNote && config.allowAnonymous === false) privacyNote.textContent = "Your name is required and may appear with an approved comment. Feedback is reviewed before publication.";
         section.hidden = false;
