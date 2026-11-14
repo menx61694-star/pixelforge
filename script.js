@@ -241,6 +241,7 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
   const section = document.getElementById("quick-tools");
   const grid = document.getElementById("quick-tools-grid");
   if (!section || !grid) return;
+  const navLinks = document.querySelectorAll("[data-quick-tools-nav]");
   const catalogue = {
     calculator: { title: "Basic Calculator", description: "Quick arithmetic for everyday calculations.", symbol: "＋", href: "tools.html#calculator", label: "Calculate" },
     percentage: { title: "Percentage Calculator", description: "Find percentages and percentage values.", symbol: "%", href: "tools.html#percentage", label: "Calculate" },
@@ -252,8 +253,14 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
   }).then(response => { if (!response.ok) throw new Error("Quick Tools unavailable"); return response.json(); })
     .then(payload => {
       const config = payload.quickTools;
-      if (!config || config.enabled !== true || !Array.isArray(config.items)) return;
-      config.items.filter(id => Object.prototype.hasOwnProperty.call(catalogue, id)).forEach(id => {
+      if (!config || config.enabled !== true || !Array.isArray(config.items)) {
+        navLinks.forEach(link => { link.hidden = true; });
+        return;
+      }
+      const enabledItems = config.items.filter(id => Object.prototype.hasOwnProperty.call(catalogue, id));
+      if (!enabledItems.length) { navLinks.forEach(link => { link.hidden = true; }); return; }
+      navLinks.forEach(link => { link.hidden = false; });
+      enabledItems.forEach(id => {
         const item = catalogue[id], card = document.createElement("a");
         card.className = "quick-tool-card"; card.href = item.href;
         const symbol = document.createElement("span"); symbol.className = "quick-tool-symbol"; symbol.textContent = item.symbol;
