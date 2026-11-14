@@ -313,3 +313,23 @@ test("User Feedback is moderated, privacy-conscious and controlled from Admin Se
   assert.match(publicScript, /action=submit-feedback/);
   assert.match(publicScript, /approvedFeedback/);
 });
+
+
+test("SEO Management validates metadata and applies page-specific canonical and robots overrides", () => {
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  const edge = read("supabase/functions/site-settings/index.ts");
+  const migration = read("supabase/phase-14-seo-management.sql");
+  const seoScript = read("seo.js");
+  assert.match(adminHtml, /setting-seo-enabled/);
+  assert.match(adminHtml, /setting-seo-pages/);
+  assert.match(adminJs, /saveSetting\("home\.seo\.page_overrides"/);
+  assert.match(edge, /home\.seo\.page_overrides/);
+  assert.match(edge, /isSafeHttpsUrl/);
+  assert.match(migration, /home\.seo\.default_description/);
+  assert.match(migration, /home\.seo\.page_overrides/);
+  assert.match(migration, /noindex,nofollow/);
+  assert.match(seoScript, /og:title/);
+  assert.match(seoScript, /canonical/);
+  assert.match(seoScript, /robots/);
+});
