@@ -112,16 +112,18 @@ test("refreshes reuse the same tab session ID and summary reports unique visitor
 
 test("location reporting accepts only HMAC-authenticated Cloudflare edge metadata and stores aggregates", () => {
   const worker = read("cloudflare/analytics-geo/worker.js");
-  assert.match(worker, /request\\.cf/);
-  assert.match(worker, /x-pf-geo-country/);
-  assert.match(worker, /x-pf-geo-region/);
-  assert.match(edge, /verifyGeoProxy\\(request\\)/);
-  assert.match(edge, /crypto\\.subtle\\.verify\\("HMAC"/);
-  assert.match(edge, /country_code: location\\.countryCode/);
-  assert.match(sql, /add column if not exists country_code text/i);
-  assert.match(sql, /add column if not exists region_name text/i);
-  assert.match(sql, /'locations'/);
-  assert.doesNotMatch(sql.match(/create table if not exists public\\.pixel_forge_analytics_events \\(([\\s\\S]*?)\\n\\);/i)?.[1] ?? "", /ip_address/i);
+  assert.ok(worker.includes("request.cf"));
+  assert.ok(worker.includes("x-pf-geo-country"));
+  assert.ok(worker.includes("x-pf-geo-region"));
+  assert.ok(edge.includes("verifyGeoProxy(request)"));
+  assert.ok(edge.includes('crypto.subtle.verify("HMAC"'));
+  assert.ok(edge.includes("country_code: location.countryCode"));
+  assert.ok(sql.includes("add column if not exists country_code text"));
+  assert.ok(sql.includes("add column if not exists region_name text"));
+  assert.ok(sql.includes("'locations'"));
+  const eventTable = sql.split("create table if not exists public.pixel_forge_analytics_events (")[1]?.split("\n);")[0] ?? "";
+  assert.ok(eventTable);
+  assert.doesNotMatch(eventTable, /ip_address/i);
 });
 
 test("admin analytics separates page views, unique visitors, and location reports", () => {
