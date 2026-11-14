@@ -169,3 +169,69 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
     // Keep the built-in fact collection available if the settings service is offline.
   });
 })();
+
+
+/* Daily Quiz: public question payload never includes the answer key. */
+(() => {
+  const section = document.getElementById("daily-quiz");
+  const form = document.getElementById("daily-quiz-form");
+  if (!section || !form) return;
+  const questionNode = document.getElementById("daily-quiz-question");
+  const optionsNode = document.getElementById("daily-quiz-options");
+  const submit = document.getElementById("daily-quiz-submit");
+  const result = document.getElementById("daily-quiz-result");
+  const category = document.getElementById("daily-quiz-category");
+  const dateNode = document.getElementById("daily-quiz-date");
+  let question = null;
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit"
+  }).format(new Date());
+  fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
+    method: "GET", headers: { "Accept": "application/json" }, credentials: "omit"
+  }).then(response => {
+    if (!response.ok) throw new Error("Quiz unavailable");
+    return response.json();
+  }).then(payload => {
+    question = payload.quiz && payload.quiz.enabled === true ? payload.quiz.question : null;
+    if (!question) return;
+    section.hidden = false;
+    questionNode.textContent = question.question;
+    category.textContent = String(question.category || "DAILY QUIZ").toUpperCase();
+    dateNode.textContent = today;
+    optionsNode.replaceChildren();
+    question.options.forEach((option, index) => {
+      const label = document.createElement("label");
+      label.className = "daily-quiz-option";
+      const input = document.createElement("input");
+      input.type = "radio"; input.name = "daily-quiz-answer"; input.value = String(index); input.required = true;
+      const text = document.createElement("span"); text.textContent = option;
+      label.append(input, text); optionsNode.append(label);
+    });
+    submit.disabled = false;
+  }).catch(() => { section.hidden = true; });
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!question) return;
+    const selected = form.querySelector('input[name="daily-quiz-answer"]:checked');
+    if (!selected) { result.textContent = "Choose an option first."; return; }
+    submit.disabled = true;
+    result.className = "daily-quiz-result";
+    result.textContent = "Checking your answer…";
+    try {
+      const response = await fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=quiz-answer", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        credentials: "omit",
+        body: JSON.stringify({ questionId: question.id, selectedIndex: Number(selected.value) })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not check your answer.");
+      result.className = "daily-quiz-result " + (payload.correct ? "is-correct" : "is-wrong");
+      result.textContent = (payload.correct ? "Correct! " : "Not quite. ") + (payload.explanation || "");
+      optionsNode.querySelectorAll("input").forEach(input => { input.disabled = true; });
+      submit.textContent = "Answer submitted";
+    } catch (error) {
+      result.textContent = error.message || "Could not check your answer.";
+      submit.disabled = false;
+    }
+  });
+})();
