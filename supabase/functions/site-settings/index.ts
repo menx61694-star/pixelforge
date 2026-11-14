@@ -19,6 +19,8 @@ const settingKeys = new Set([
   "home.quiz.items",
   "home.tools.enabled",
   "home.tools.items",
+  "home.featured.enabled",
+  "home.featured.items",
 ]);
 
 function cors(request: Request) {
@@ -91,9 +93,17 @@ async function authorize(request: Request, permission: "settings.view" | "settin
   if (permissionError) throw permissionError;
   return access?.allowed === true ? { uid, db } : null;
 }
+function isSafeHttpsUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password;
+  } catch (_) {
+    return false;
+  }
+}
 function validSettingValue(key: string, value: unknown): boolean {
   if (!settingKeys.has(key)) return false;
-  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled" || key === "home.quiz.enabled" || key === "home.tools.enabled") return typeof value === "boolean";
+  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled" || key === "home.quiz.enabled" || key === "home.tools.enabled" || key === "home.featured.enabled") return typeof value === "boolean";
   if (key === "home.knowledge.items") {
     return Array.isArray(value) && value.length <= 50 && value.every((item) =>
       item && typeof item === "object" && !Array.isArray(item) &&
@@ -125,6 +135,20 @@ function validSettingValue(key: string, value: unknown): boolean {
       value.every((item: unknown) => typeof item === "string" && allowed.has(item)) &&
       new Set(value).size === value.length;
   }
+  if (key === "home.featured.items") {
+    return Array.isArray(value) && value.length <= 12 && value.every((item: unknown) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+      const resource = item as Record<string, unknown>;
+      return Object.keys(resource).every(field => ["id","title","description","category","url","label","published"].includes(field)) &&
+        typeof resource.id === "string" && resource.id.trim().length > 0 && resource.id.length <= 64 &&
+        typeof resource.title === "string" && resource.title.trim().length > 0 && resource.title.length <= 100 &&
+        typeof resource.description === "string" && resource.description.length <= 240 &&
+        typeof resource.category === "string" && resource.category.trim().length > 0 && resource.category.length <= 40 &&
+        typeof resource.url === "string" && resource.url.length <= 1200 && isSafeHttpsUrl(resource.url) &&
+        typeof resource.label === "string" && resource.label.trim().length > 0 && resource.label.length <= 32 &&
+        typeof resource.published === "boolean";
+    }) && new Set(value.map((item: { id?: unknown }) => item.id)).size === value.length;
+  }
   if (typeof value !== "string") return false;
   if (key === "site.name") return value.trim().length > 0 && value.length <= 80;
   if (key === "site.description") return value.length <= 300;
@@ -147,7 +171,7 @@ Deno.serve(async (request) => {
       const db = dbAdmin();
       const { data, error } = await db.from("pixel_forge_site_settings")
         .select("setting_key,setting_value")
-        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items", "home.tools.enabled", "home.tools.items"]);
+        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items", "home.tools.enabled", "home.tools.items", "home.featured.enabled", "home.featured.items"]);
       if (error) throw error;
       const values = Object.fromEntries((data ?? []).map((row) => [row.setting_key, row.setting_value]));
       const items = Array.isArray(values["home.knowledge.items"]) ? values["home.knowledge.items"] : [];
@@ -165,6 +189,14 @@ Deno.serve(async (request) => {
         quickTools: {
           enabled: values["home.tools.enabled"] === true,
           items: Array.isArray(values["home.tools.items"]) ? values["home.tools.items"] : [],
+        },
+        featuredResources: {
+          enabled: values["home.featured.enabled"] === true,
+          items: Array.isArray(values["home.featured.items"])
+            ? (values["home.featured.items"] as Array<Record<string, unknown>>)
+                .filter(item => item.published === true && typeof item.url === "string" && isSafeHttpsUrl(item.url))
+                .slice(0, 12)
+            : [],
         },
         quiz: {
           enabled: values["home.quiz.enabled"] === true,
