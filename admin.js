@@ -1250,7 +1250,7 @@ const firebaseConfig = {
       } else {
         payload.logs.forEach(log => {
           const row = document.createElement("tr");
-          [log.ipAddress, log.ipAddress && log.ipAddress.includes(":") ? "IPv6" : "IPv4", log.ipSource === "cf-connecting-ip" ? "Cloudflare edge" : "Unknown / legacy", (log.localIpAddress ? log.localIpAddress + " (browser-reported)" : "Not shared"), log.eventType, log.pagePath, new Date(log.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }) + " IST"].forEach(value => {
+          [log.ipAddress, log.ipAddress && log.ipAddress.includes(":") ? "IPv6" : "IPv4", log.ipSource === "cloudflare-geo-proxy" ? "Cloudflare geo proxy" : log.ipSource === "cf-connecting-ip" ? "Cloudflare edge" : "Unknown / legacy", (log.localIpAddress ? log.localIpAddress + " (browser-reported)" : "Not shared"), log.eventType, log.pagePath, new Date(log.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }) + " IST"].forEach(value => {
             const cell = document.createElement("td"); cell.textContent = String(value ?? "—"); row.append(cell);
           });
           securityLogsBody.append(row);

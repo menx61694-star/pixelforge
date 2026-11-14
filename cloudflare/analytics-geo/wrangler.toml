@@ -1,0 +1,8 @@
+name = "pixelforge-analytics-geo"
+main = "worker.js"
+compatibility_date = "2026-11-14"
+workers_dev = false
+
+[[routes]]
+pattern = "pixelforge.jo3.org/api/analytics*"
+zone_name = "jo3.org"

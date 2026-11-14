@@ -12,7 +12,7 @@ function getPixelForgeVisitorSessionId() {
   }
 }
 function trackPixelForgePageView() {
-  const endpoint = "https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/analytics?action=collect";
+  const endpoint = "/api/analytics";
   const pagePath = window.location.pathname || "/";
   const visitorSessionId = getPixelForgeVisitorSessionId();
   fetch(endpoint, {

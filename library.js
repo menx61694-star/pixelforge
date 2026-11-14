@@ -10,7 +10,7 @@
       return id;
     } catch (_) { return null; }
   }
-  fetch(SUPABASE_URL + "/functions/v1/analytics?action=collect", {
+  fetch(window.location.origin + "/api/analytics", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ pagePath: window.location.pathname || "/", visitorSessionId: getVisitorSessionId() }),
     keepalive: true, credentials: "omit"
