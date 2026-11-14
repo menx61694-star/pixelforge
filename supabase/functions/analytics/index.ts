@@ -169,8 +169,8 @@ async function authenticatedUid(request: Request): Promise<string | null> {
   const token = request.headers.get("Authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
   return token ? await lookupFirebaseUser(token) : null;
 }
-async function storeSecurityLog(request: Request, pagePath: string, db: ReturnType<typeof dbAdmin>) {
-  const observedIp = getClientIp(request);
+async function storeSecurityLog(request: Request, pagePath: string, db: ReturnType<typeof dbAdmin>, trustedProxyIp?: string) {
+  const observedIp = getClientIp(request, trustedProxyIp);
   if (!observedIp) return;
   try {
     const encrypted = await encryptIp(observedIp.address);
