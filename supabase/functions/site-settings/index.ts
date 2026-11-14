@@ -21,6 +21,8 @@ const settingKeys = new Set([
   "home.tools.items",
   "home.featured.enabled",
   "home.featured.items",
+  "home.announcements.enabled",
+  "home.announcements.items",
 ]);
 
 function cors(request: Request) {
@@ -101,9 +103,14 @@ function isSafeHttpsUrl(value: string): boolean {
     return false;
   }
 }
+function isValidIsoDate(value: string): boolean {
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
+  const date = new Date(value + "T00:00:00.000Z");
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
 function validSettingValue(key: string, value: unknown): boolean {
   if (!settingKeys.has(key)) return false;
-  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled" || key === "home.quiz.enabled" || key === "home.tools.enabled" || key === "home.featured.enabled") return typeof value === "boolean";
+  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled" || key === "home.quiz.enabled" || key === "home.tools.enabled" || key === "home.featured.enabled" || key === "home.announcements.enabled") return typeof value === "boolean";
   if (key === "home.knowledge.items") {
     return Array.isArray(value) && value.length <= 50 && value.every((item) =>
       item && typeof item === "object" && !Array.isArray(item) &&
@@ -149,6 +156,24 @@ function validSettingValue(key: string, value: unknown): boolean {
         typeof resource.published === "boolean";
     }) && new Set(value.map((item: { id?: unknown }) => item.id)).size === value.length;
   }
+  if (key === "home.announcements.items") {
+    return Array.isArray(value) && value.length <= 20 && value.every((item: unknown) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+      const notice = item as Record<string, unknown>;
+      const url = typeof notice.url === "string" ? notice.url : "";
+      const label = typeof notice.label === "string" ? notice.label : "";
+      return Object.keys(notice).every(field => ["id","title","message","type","startDate","endDate","published","url","label"].includes(field)) &&
+        typeof notice.id === "string" && notice.id.trim().length > 0 && notice.id.length <= 64 &&
+        typeof notice.title === "string" && notice.title.trim().length > 0 && notice.title.length <= 120 &&
+        typeof notice.message === "string" && notice.message.trim().length > 0 && notice.message.length <= 500 &&
+        ["info","update","important"].includes(String(notice.type)) &&
+        typeof notice.startDate === "string" && isValidIsoDate(notice.startDate) &&
+        typeof notice.endDate === "string" && isValidIsoDate(notice.endDate) && notice.startDate <= notice.endDate &&
+        typeof notice.published === "boolean" &&
+        url.length <= 1200 && (url === "" || isSafeHttpsUrl(url)) &&
+        label.length <= 32 && (url === "" ? label === "" : label.trim().length > 0);
+    }) && new Set(value.map((item: { id?: unknown }) => item.id)).size === value.length;
+  }
   if (typeof value !== "string") return false;
   if (key === "site.name") return value.trim().length > 0 && value.length <= 80;
   if (key === "site.description") return value.length <= 300;
@@ -171,7 +196,7 @@ Deno.serve(async (request) => {
       const db = dbAdmin();
       const { data, error } = await db.from("pixel_forge_site_settings")
         .select("setting_key,setting_value")
-        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items", "home.tools.enabled", "home.tools.items", "home.featured.enabled", "home.featured.items"]);
+        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items", "home.tools.enabled", "home.tools.items", "home.featured.enabled", "home.featured.items", "home.announcements.enabled", "home.announcements.items"]);
       if (error) throw error;
       const values = Object.fromEntries((data ?? []).map((row) => [row.setting_key, row.setting_value]));
       const items = Array.isArray(values["home.knowledge.items"]) ? values["home.knowledge.items"] : [];
@@ -196,6 +221,18 @@ Deno.serve(async (request) => {
             ? (values["home.featured.items"] as Array<Record<string, unknown>>)
                 .filter(item => item.published === true && typeof item.url === "string" && isSafeHttpsUrl(item.url))
                 .slice(0, 12)
+            : [],
+        },
+        announcements: {
+          enabled: values["home.announcements.enabled"] === true,
+          items: Array.isArray(values["home.announcements.items"])
+            ? (values["home.announcements.items"] as Array<Record<string, unknown>>).filter(item =>
+                item.published === true &&
+                typeof item.startDate === "string" && typeof item.endDate === "string" &&
+                isValidIsoDate(item.startDate) && isValidIsoDate(item.endDate) &&
+                item.startDate <= new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()) &&
+                item.endDate >= new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())
+              ).slice(0, 20)
             : [],
         },
         quiz: {
