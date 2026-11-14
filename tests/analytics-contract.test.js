@@ -228,3 +228,17 @@ test("security log timestamps are displayed in India Standard Time", () => {
   assert.match(adminJs, /\+ " IST"/);
   assert.doesNotMatch(adminJs, /new Date\(log\.createdAt\)\.toISOString\(\)/);
 });
+
+test("public analytics uses the Cloudflare geo proxy and backend verifies signed edge metadata", () => {
+  const worker = read("cloudflare/analytics-geo/worker.js");
+  const wrangler = read("cloudflare/analytics-geo/wrangler.toml");
+  assert.match(read("script.js"), /const endpoint = "\/api\/analytics"/);
+  assert.match(read("library.js"), /\/api\/analytics/);
+  assert.match(worker, /request\.cf/);
+  assert.match(worker, /CF-Connecting-IP/);
+  assert.match(worker, /x-pf-geo-signature/);
+  assert.match(wrangler, /pixelforge\.jo3\.org\/api\/analytics/);
+  assert.match(edge, /verifyGeoProxy\(request\)/);
+  assert.match(edge, /crypto\.subtle\.verify\("HMAC"/);
+  assert.match(edge, /Trusted analytics proxy verification failed/);
+});
