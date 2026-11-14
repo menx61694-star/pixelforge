@@ -23,8 +23,10 @@ alter table public.pixel_forge_site_settings
       when 'sync.vault.auto_enabled' then jsonb_typeof(setting_value) = 'boolean'
       when 'home.knowledge.enabled' then jsonb_typeof(setting_value) = 'boolean'
       when 'home.knowledge.items' then
-        jsonb_typeof(setting_value) = 'array' and jsonb_array_length(setting_value) <= 50
-      else false end
+        case when jsonb_typeof(setting_value) = 'array'
+          then jsonb_array_length(setting_value) <= 50
+          else false
+        end
       else false
     end
   );
