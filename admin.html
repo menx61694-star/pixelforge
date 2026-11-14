@@ -253,6 +253,14 @@
                 <button type="button" data-setting-save="home.quiz">Save Daily Quiz</button>
               </article>
               <article class="settings-card">
+                <h3>Featured Resources</h3>
+                <label class="settings-toggle"><input id="setting-featured-enabled" type="checkbox"><span>Show Featured Resources on the homepage</span></label>
+                <label for="setting-featured-items">Featured resources (JSON)</label>
+                <textarea id="setting-featured-items" rows="10" maxlength="18000" spellcheck="false" placeholder='[{"id":"resource-1","title":"Getting Started Guide","description":"A practical introduction for new visitors.","category":"GUIDES","url":"https://example.com/guide","label":"Read guide","published":true}]'></textarea>
+                <p class="settings-help">Add up to 12 resources in display order. Each needs a unique id, title, description, category, HTTPS URL, link label and published status. Set published to false to keep a draft hidden.</p>
+                <button type="button" data-setting-save="home.featured">Save Featured Resources</button>
+              </article>
+              <article class="settings-card">
                 <h3>Quick Digital Tools</h3>
                 <label class="settings-toggle"><input id="setting-tools-enabled" type="checkbox"><span>Show Quick Tools on the public website</span></label>
                 <label for="setting-tools-items">Visible tools (one ID per line, in display order)</label>
