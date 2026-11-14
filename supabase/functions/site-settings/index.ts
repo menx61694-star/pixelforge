@@ -161,7 +161,7 @@ function validSettingValue(key: string, value: unknown): boolean {
         typeof resource.published === "boolean";
     }) && new Set(value.map((item: { id?: unknown }) => item.id)).size === value.length;
   }
-  if (key === "home.search.max_results") return Number.isInteger(value) && value >= 6 && value <= 100;
+  if (key === "home.search.max_results") return typeof value === "number" && Number.isInteger(value) && value >= 6 && value <= 100;
   if (key === "home.search.placeholder") return typeof value === "string" && value.trim().length >= 5 && value.length <= 100;
   if (key === "home.announcements.items") {
     return Array.isArray(value) && value.length <= 20 && value.every((item: unknown) => {
