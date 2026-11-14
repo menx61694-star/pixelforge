@@ -205,3 +205,25 @@ test("Featured Resources are admin-managed, published-only and restricted to saf
   assert.match(publicScript, /item\.published === true/);
   assert.match(publicScript, /noopener noreferrer/);
 });
+
+
+test("Announcements are admin-managed, date-validated, scheduled in India time and safely published", () => {
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  const edge = read("supabase/functions/site-settings/index.ts");
+  const migration = read("supabase/phase-10-announcements.sql");
+  const homepage = read("index.html");
+  const publicScript = read("script.js");
+  assert.match(adminHtml, /setting-announcements-enabled/);
+  assert.match(adminHtml, /setting-announcements-items/);
+  assert.match(adminJs, /saveSetting\("home\.announcements\.items"/);
+  assert.match(adminJs, /saveSetting\("home\.announcements\.enabled"/);
+  assert.match(edge, /isValidIsoDate/);
+  assert.match(edge, /home\.announcements\.items/);
+  assert.match(edge, /Asia\/Kolkata/);
+  assert.match(migration, /home\.announcements\.items/);
+  assert.match(migration, /jsonb_array_length\(p_value\) <= 20/);
+  assert.match(homepage, /id="announcements"/);
+  assert.match(publicScript, /payload\.announcements/);
+  assert.match(publicScript, /noopener noreferrer/);
+});
