@@ -253,6 +253,17 @@
                 <button type="button" data-setting-save="home.quiz">Save Daily Quiz</button>
               </article>
               <article class="settings-card">
+                <h3>Smart Document Search</h3>
+                <label class="settings-toggle"><input id="setting-search-enabled" type="checkbox"><span>Enable Smart Document Search</span></label>
+                <label class="settings-toggle"><input id="setting-search-smart" type="checkbox"><span>Use relevance ranking and typo-tolerant matching</span></label>
+                <label class="settings-toggle"><input id="setting-search-filters" type="checkbox"><span>Show category and file-type filters</span></label>
+                <label for="setting-search-max-results">Results per page (6–100)</label>
+                <input id="setting-search-max-results" type="number" min="6" max="100" step="1" value="30">
+                <label for="setting-search-placeholder">Search placeholder</label>
+                <input id="setting-search-placeholder" type="text" maxlength="100" value="Search documents, notes and guides…">
+                <button type="button" data-setting-save="home.search">Save Search Settings</button>
+              </article>
+              <article class="settings-card">
                 <h3>Announcements</h3>
                 <label class="settings-toggle"><input id="setting-announcements-enabled" type="checkbox"><span>Show active announcements on the homepage</span></label>
                 <label for="setting-announcements-items">Announcements (JSON)</label>
