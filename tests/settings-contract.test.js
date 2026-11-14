@@ -146,3 +146,11 @@ test("Daily Quiz is admin-managed, validated server-side, and never exposes the 
   assert.match(publicScript, /action=quiz-answer/);
   assert.doesNotMatch(edge.match(/quiz: \{[\s\S]*?\n        \},/)?.[0] || "", /correctIndex/);
 });
+
+test("Daily Quiz homepage markup closes its form and preserves hidden/accessibility behavior", () => {
+  const homepage = read("index.html");
+  const css = read("styles.css");
+  assert.match(homepage, /<form id="daily-quiz-form">[\s\S]*?<\/form>\s*<p id="daily-quiz-result"/);
+  assert.match(css, /\.daily-quiz-section\[hidden\]\s*\{\s*display:\s*none/);
+  assert.match(css, /\.sr-only\s*\{/);
+});
