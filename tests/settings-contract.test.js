@@ -121,3 +121,28 @@ test("public settings expose admin-managed branding without leaking private sett
   assert.match(publicScript, /document\.title = payload\.site\.name/);
   assert.match(publicScript, /description\.setAttribute\("content", payload\.site\.description\)/);
 });
+
+
+test("Daily Quiz is admin-managed, validated server-side, and never exposes the answer key publicly", () => {
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  const edge = read("supabase/functions/site-settings/index.ts");
+  const migration = read("supabase/phase-7-daily-quiz.sql");
+  const homepage = read("index.html");
+  const publicScript = read("script.js");
+  assert.match(adminHtml, /setting-quiz-enabled/);
+  assert.match(adminHtml, /setting-quiz-items/);
+  assert.match(adminJs, /saveSetting\("home\.quiz\.items"/);
+  assert.match(adminJs, /saveSetting\("home\.quiz\.enabled"/);
+  assert.match(adminJs, /Number\.isInteger\(item\.correctIndex\)/);
+  assert.match(edge, /action === "quiz-answer"/);
+  assert.match(edge, /item\.correctIndex/);
+  assert.match(edge, /timeZone: "Asia\/Kolkata"/);
+  assert.match(edge, /home\.quiz\.enabled/);
+  assert.match(edge, /home\.quiz\.items/);
+  assert.match(migration, /home\.quiz\.items/);
+  assert.match(migration, /jsonb_array_length\(p_value\) <= 100/);
+  assert.match(homepage, /id="daily-quiz"/);
+  assert.match(publicScript, /action=quiz-answer/);
+  assert.doesNotMatch(edge.match(/quiz: \{[\s\S]*?\n        \},/)?.[0] || "", /correctIndex/);
+});
