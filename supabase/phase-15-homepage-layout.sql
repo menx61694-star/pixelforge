@@ -101,7 +101,7 @@ alter table public.pixel_forge_site_settings
         case when jsonb_typeof(setting_value) = 'array' then jsonb_array_length(setting_value) <= 20 else false end
       when 'home.layout.enabled' then jsonb_typeof(setting_value) = 'boolean'
       when 'home.layout.sections' then
-        case when jsonb_typeof(setting_value) = 'array' then jsonb_array_length(setting_value) = 11 else false end
+        case when jsonb_typeof(setting_value) = 'array' then jsonb_array_length(setting_value) = 12 else false end
       else false
     end
   );
@@ -364,14 +364,14 @@ begin
     when 'home.layout.enabled' then jsonb_typeof(p_value) = 'boolean'
     when 'home.layout.sections' then
       case when jsonb_typeof(p_value) = 'array' then
-        case when jsonb_array_length(p_value) = 11 then
+        case when jsonb_array_length(p_value) = 12 then
           not exists (
             select 1 from jsonb_array_elements(p_value) as section(value)
             where jsonb_typeof(section.value) <> 'object'
               or coalesce(jsonb_typeof(section.value->'id'), '') <> 'string'
               or section.value->>'id' not in (
                 'smart-document-search','discover','user-feedback','learning-corner','announcements',
-                'featured-resources','quick-tools','knowledge','daily-quiz','about','contact'
+                'featured-resources','popular-resources','quick-tools','knowledge','daily-quiz','about','contact'
               )
               or coalesce(jsonb_typeof(section.value->'enabled'), '') <> 'boolean'
               or coalesce(jsonb_typeof(section.value->'title'), '') <> 'string'
@@ -447,7 +447,7 @@ insert into public.pixel_forge_site_settings (setting_key, setting_value, update
   ('home.seo.og_image', '""'::jsonb, 'system'),
   ('home.seo.page_overrides', '[]'::jsonb, 'system'),
   ('home.layout.enabled', 'true'::jsonb, 'system'),
-  ('home.layout.sections', '[{"id":"smart-document-search","enabled":true,"title":"","subtitle":""},{"id":"discover","enabled":true,"title":"","subtitle":""},{"id":"user-feedback","enabled":true,"title":"","subtitle":""},{"id":"learning-corner","enabled":true,"title":"","subtitle":""},{"id":"announcements","enabled":true,"title":"","subtitle":""},{"id":"featured-resources","enabled":true,"title":"","subtitle":""},{"id":"quick-tools","enabled":true,"title":"","subtitle":""},{"id":"knowledge","enabled":true,"title":"","subtitle":""},{"id":"daily-quiz","enabled":true,"title":"","subtitle":""},{"id":"about","enabled":true,"title":"","subtitle":""},{"id":"contact","enabled":true,"title":"","subtitle":""}]'::jsonb, 'system')
+  ('home.layout.sections', '[{"id":"smart-document-search","enabled":true,"title":"","subtitle":""},{"id":"discover","enabled":true,"title":"","subtitle":""},{"id":"user-feedback","enabled":true,"title":"","subtitle":""},{"id":"learning-corner","enabled":true,"title":"","subtitle":""},{"id":"announcements","enabled":true,"title":"","subtitle":""},{"id":"featured-resources","enabled":true,"title":"","subtitle":""},{"id":"popular-resources","enabled":true,"title":"","subtitle":""},{"id":"quick-tools","enabled":true,"title":"","subtitle":""},{"id":"knowledge","enabled":true,"title":"","subtitle":""},{"id":"daily-quiz","enabled":true,"title":"","subtitle":""},{"id":"about","enabled":true,"title":"","subtitle":""},{"id":"contact","enabled":true,"title":"","subtitle":""}]'::jsonb, 'system')
 on conflict (setting_key) do nothing;
 
 
