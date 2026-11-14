@@ -1198,14 +1198,18 @@ const firebaseConfig = {
     if (!locations.length) {
       const empty = document.createElement("li");
       empty.className = "empty-state";
-      empty.textContent = "Location data is not available from the hosting edge headers yet.";
+      empty.textContent = "No country data has been received from the trusted Supabase edge for this period yet.";
       root.append(empty);
       return;
     }
     locations.forEach(item => {
       const li = document.createElement("li");
       const label = document.createElement("span");
-      const country = item.country || "Unknown";
+      const countryCode = item.country || "";
+      let country = countryCode || "Unknown";
+      if (/^[A-Z]{2}$/.test(countryCode) && typeof Intl.DisplayNames === "function") {
+        try { country = new Intl.DisplayNames(["en"], { type: "region" }).of(countryCode) || countryCode; } catch (_) {}
+      }
       label.textContent = item.region ? country + " · " + item.region : country;
       const visitors = document.createElement("strong");
       visitors.textContent = Number(item.visitors || 0).toLocaleString();
@@ -1250,7 +1254,7 @@ const firebaseConfig = {
       } else {
         payload.logs.forEach(log => {
           const row = document.createElement("tr");
-          [log.ipAddress, log.ipAddress && log.ipAddress.includes(":") ? "IPv6" : "IPv4", log.ipSource === "cloudflare-geo-proxy" ? "Verified proxy" : log.ipSource === "unavailable" ? "Hosting IP unavailable" : log.ipSource === "cf-connecting-ip" ? "Legacy edge IP" : "Unknown / legacy", (log.localIpAddress ? log.localIpAddress + " (browser-reported)" : "Not shared"), log.eventType, log.pagePath, new Date(log.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }) + " IST"].forEach(value => {
+          [log.ipAddress, log.ipAddress && log.ipAddress.includes(":") ? "IPv6" : "IPv4", log.ipSource === "supabase-edge-cf-connecting-ip" ? "Supabase trusted edge" : log.ipSource === "unavailable" ? "Hosting IP unavailable" : log.ipSource === "cf-connecting-ip" ? "Legacy edge IP" : "Unknown / legacy", (log.localIpAddress ? log.localIpAddress + " (browser-reported)" : "Not shared"), log.eventType, log.pagePath, new Date(log.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }) + " IST"].forEach(value => {
             const cell = document.createElement("td"); cell.textContent = String(value ?? "—"); row.append(cell);
           });
           securityLogsBody.append(row);

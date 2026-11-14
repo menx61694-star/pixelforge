@@ -110,11 +110,13 @@ test("refreshes reuse the same tab session ID and summary reports unique visitor
   assert.match(sql, /'uniqueVisitors'/);
 });
 
-test("location reporting remains unavailable without a trusted hosting proxy", () => {
-  assert.match(edge, /hasProxySignature/);
-  assert.match(edge, /hasProxySignature && !proxyContext/);
-  assert.match(edge, /country_code: location\?\.countryCode \?\? null/);
-  assert.match(edge, /region_name: location\?\.regionName \?\? null/);
+test("visitor country geo uses the Supabase-managed country header and ignores caller payload", () => {
+  assert.match(edge, /request\.headers\.get\("cf-ipcountry"\)/);
+  assert.match(edge, /getTrustedCountryCode\(request\)/);
+  assert.match(edge, /country_code: countryCode/);
+  assert.match(edge, /region_name: null/);
+  assert.match(edge, /country !== "XX" && country !== "T1"/);
+  assert.doesNotMatch(edge, /verifyGeoProxy|x-pf-geo-signature/);
   assert.match(sql, /add column if not exists country_code text/i);
   assert.match(sql, /add column if not exists region_name text/i);
   assert.match(sql, /'locations'/);
@@ -138,7 +140,7 @@ test("security logs encrypt raw IP addresses with AES-GCM before persistence", (
   assert.match(edge, /name: "AES-GCM"/);
   assert.match(edge, /ip_ciphertext/);
   assert.match(edge, /ip_iv/);
-  assert.match(edge, /await storeSecurityLog\(request, pagePath, db, proxyContext\?\.clientIp\)/);
+  assert.match(edge, /await storeSecurityLog\(pagePath, db, observedIp\)/);
   assert.match(edge, /decryptIp\(row\.ip_ciphertext, row\.ip_iv\)/);
 });
 
@@ -223,14 +225,14 @@ test("security log timestamps are displayed in India Standard Time", () => {
 });
 
 
-test("direct page views are recorded in Security Logs without trusting client forwarding headers", () => {
-  const getClientIp = edge.match(/function getClientIp\([\s\S]*?\n}\n/)?.[0] ?? "";
+test("direct page views use Supabase-managed client IP and never trust caller forwarding headers", () => {
+  const getClientIp = edge.match(/function getClientIp\(request: Request\)[\s\S]*?\n}\n/)?.[0] ?? "";
   assert.ok(getClientIp, "trusted client IP resolver must exist");
-  assert.match(getClientIp, /const candidate = trustedProxyIp;/);
-  assert.doesNotMatch(getClientIp, /request\.headers|get\("cf-connecting-ip"\)|get\("x-real-ip"\)/);
-  assert.match(edge, /Never trust client-supplied forwarding headers/);
+  assert.match(getClientIp, /request\.headers\.get\("cf-connecting-ip"\)/);
+  assert.doesNotMatch(getClientIp, /x-forwarded-for|x-real-ip/);
+  assert.match(edge, /Supabase-managed Cloudflare ingress/);
   assert.match(edge, /return trustedProxyIp \? await hmacHash\("rate:" \+ trustedProxyIp\) : null/);
-  assert.match(edge, /await storeSecurityLog\(request, pagePath, db, proxyContext\?\.clientIp\)/);
+  assert.match(edge, /await storeSecurityLog\(pagePath, db, observedIp\)/);
   assert.match(edge, /ip_source: observedIp\?\.source \?\? "unavailable"/);
   assert.match(edge, /ipAddress: row\.ip_ciphertext && row\.ip_iv \? await decryptIp/);
   const securitySql = read("supabase/phase-4-security-logs.sql");
