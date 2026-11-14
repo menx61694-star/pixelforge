@@ -1021,6 +1021,12 @@ const firebaseConfig = {
       setValue("setting-maintenance-message", values["maintenance.message"]);
       setChecked("setting-drive-auto", values["sync.drive.auto_enabled"]);
       setChecked("setting-vault-auto", values["sync.vault.auto_enabled"]);
+      setChecked("setting-knowledge-enabled", values["home.knowledge.enabled"]);
+      const knowledgeItems = Array.isArray(values["home.knowledge.items"]) ? values["home.knowledge.items"] : [];
+      const knowledgeTextarea = document.getElementById("setting-knowledge-items");
+      if (knowledgeTextarea) knowledgeTextarea.value = knowledgeItems.map(item =>
+        String(item.category || "GENERAL") + " | " + String(item.text || "")
+      ).join("\n");
       renderSettingsAudit(auditPayload.audit || []);
       document.querySelectorAll("[data-setting-save]").forEach(button => {
         button.hidden = !currentPermissions.has("settings.manage");
@@ -1082,6 +1088,19 @@ const firebaseConfig = {
     } else if (group === "sync") {
       saveSetting("sync.drive.auto_enabled", document.getElementById("setting-drive-auto").checked, button)
         .then(() => saveSetting("sync.vault.auto_enabled", document.getElementById("setting-vault-auto").checked, button));
+    } else if (group === "home.knowledge") {
+      const lines = document.getElementById("setting-knowledge-items").value.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+      const items = lines.map(line => {
+        const split = line.indexOf("|");
+        return split < 0 ? { category: "GENERAL", text: line } :
+          { category: line.slice(0, split).trim().slice(0, 32), text: line.slice(split + 1).trim() };
+      });
+      if (items.length > 50 || items.some(item => item.text.length < 8 || item.text.length > 240)) {
+        setSettingsStatus("Please add up to 50 facts, each 8–240 characters.", true);
+        return;
+      }
+      saveSetting("home.knowledge.items", items, button)
+        .then(() => saveSetting("home.knowledge.enabled", document.getElementById("setting-knowledge-enabled").checked, button));
     }
   }));
   if (refreshSettingsButton) refreshSettingsButton.addEventListener("click", loadSettings);
