@@ -96,13 +96,13 @@ async function verifyGeoProxy(request: Request) {
   return valid ? { countryCode: country || null, regionName: region || null, clientIp } : null;
 }
 
-function getClientIp(request: Request): { address: string; source: "cf-connecting-ip" } | null {
-  // Only trust the hosting edge client-IP header; never use client-supplied fallback headers.
-  const candidate = request.headers.get("cf-connecting-ip");
+function getClientIp(request: Request, trustedProxyIp?: string): { address: string; source: "cf-connecting-ip" | "cloudflare-geo-proxy" } | null {
+  // trustedProxyIp is accepted only after verifyGeoProxy() validates its HMAC.
+  const candidate = trustedProxyIp ?? request.headers.get("cf-connecting-ip");
   if (!candidate || candidate.length > 64 || candidate.includes(",")) return null;
   const ip = candidate.trim();
   const parts = ip.split(".");
-  const ipv4 = parts.length === 4 && parts.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255);
+  const ipv4 = parts.length === 4 && parts.every((part) => /^\\d{1,3}$/.test(part) && Number(part) <= 255);
   const ipv6 = ip.includes(":") && /^[0-9a-f:]+$/i.test(ip) && ip.split(":").length >= 3;
   if (!ipv4 && !ipv6) return null;
   if (ipv4) {
