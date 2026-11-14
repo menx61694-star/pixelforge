@@ -649,7 +649,7 @@ const firebaseConfig = {
   }
 
   function displayFileName(storedName) {
-    return storedName.replace(/^\\d{10,}-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, "");
+    return storedName.replace(/^\d{10,}-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, "");
   }
 
   async function listAllStorageFiles(bucketName, folderPath) {
@@ -1125,7 +1125,7 @@ const firebaseConfig = {
             typeof item.message !== "string" || !item.message.trim() || item.message.length > 500 ||
             !["info","update","important"].includes(item.type) ||
             typeof item.startDate !== "string" || typeof item.endDate !== "string" ||
-            !/^\\d{4}-\\d{2}-\\d{2}$/.test(item.startDate) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(item.endDate) ||
+            !/^\d{4}-\d{2}-\d{2}$/.test(item.startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(item.endDate) ||
             Number.isNaN(Date.parse(item.startDate + "T00:00:00.000Z")) || Number.isNaN(Date.parse(item.endDate + "T00:00:00.000Z")) ||
             new Date(item.startDate + "T00:00:00.000Z").toISOString().slice(0, 10) !== item.startDate ||
             new Date(item.endDate + "T00:00:00.000Z").toISOString().slice(0, 10) !== item.endDate ||
