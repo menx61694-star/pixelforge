@@ -1027,6 +1027,7 @@ const firebaseConfig = {
       setChecked("setting-featured-enabled", values["home.featured.enabled"]);
       setChecked("setting-announcements-enabled", values["home.announcements.enabled"]);
       setChecked("setting-popular-enabled", values["home.popular.enabled"]);
+      setChecked("setting-library-pdf-preview-enabled", values["home.library.pdf_preview_enabled"] !== false);
       setInputValue("setting-popular-max-items", values["home.popular.max_items"] ?? 6);
       setInputValue("setting-popular-min-views", values["home.popular.min_views"] ?? 1);
       setChecked("setting-popular-show-views", values["home.popular.show_views"] !== false);
@@ -1143,6 +1144,8 @@ const firebaseConfig = {
       }
       saveSetting("home.knowledge.items", items, button)
         .then(() => saveSetting("home.knowledge.enabled", document.getElementById("setting-knowledge-enabled").checked, button));
+    } else if (group === "home.library") {
+      saveSetting("home.library.pdf_preview_enabled", document.getElementById("setting-library-pdf-preview-enabled").checked, button);
     } else if (group === "home.popular") {
       const maxItems = Number(document.getElementById("setting-popular-max-items").value);
       const minViews = Number(document.getElementById("setting-popular-min-views").value);
