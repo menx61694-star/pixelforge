@@ -123,6 +123,17 @@
       const h3 = document.createElement("h3"); h3.textContent = doc.title;
       const p = document.createElement("p"); p.textContent = doc.category + " · " + doc.size + (doc.source === "google_drive" ? " · Google Drive" : " · PixelForge Storage");
       const a = document.createElement("a"); a.href = doc.url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = "Open document ↗";
+      a.addEventListener("click", () => {
+        if (!doc.resourceId || !["supabase","google_drive"].includes(doc.source)) return;
+        try {
+          let visitorId = sessionStorage.getItem("pf-resource-visitor");
+          if (!visitorId) { visitorId = crypto.randomUUID(); sessionStorage.setItem("pf-resource-visitor", visitorId); }
+          fetch(SUPABASE_URL + "/functions/v1/site-settings?action=track-resource", {
+            method: "POST", headers: { "Content-Type": "application/json" }, credentials: "omit", keepalive: true,
+            body: JSON.stringify({ source: doc.source, resourceId: doc.resourceId, visitorId })
+          }).catch(() => {});
+        } catch (_) { /* Tracking is optional; never block opening a document. */ }
+      });
       card.append(icon, h3, p, a); grid.append(card);
     });
     if (loadMoreButton) loadMoreButton.hidden = docs.length <= state.visibleLimit;
@@ -173,7 +184,7 @@
           const bytes = Number(file.metadata && file.metadata.size || 0);
           const size = bytes >= 1048576 ? (bytes / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(bytes / 1024)) + " KB";
           const ext = (file.name.split(".").pop() || "FILE").slice(0, 4);
-          return { title: niceName(file.name), category: category.name, categorySlug: category.slug, url: publicData.publicUrl, size, ext, source: "supabase" };
+          return { title: niceName(file.name), category: category.name, categorySlug: category.slug, url: publicData.publicUrl, size, ext, source: "supabase", resourceId: path };
         });
       }));
       let driveDocs = [];
@@ -190,7 +201,8 @@
             url: SUPABASE_URL + "/functions/v1/google-drive-files?action=public-download&id=" + encodeURIComponent(doc.drive_file_id),
             size: doc.size_bytes ? (doc.size_bytes >= 1048576 ? (doc.size_bytes / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(doc.size_bytes / 1024)) + " KB") : "Size unavailable",
             ext: (doc.title || "").split(".").pop()?.slice(0, 4) || "FILE",
-            source: "google_drive"
+            source: "google_drive",
+            resourceId: doc.drive_file_id
           }));
       } catch (driveError) {
         console.warn("Published Google Drive documents could not be loaded:", driveError);
