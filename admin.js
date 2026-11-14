@@ -1022,6 +1022,9 @@ const firebaseConfig = {
       setChecked("setting-drive-auto", values["sync.drive.auto_enabled"]);
       setChecked("setting-vault-auto", values["sync.vault.auto_enabled"]);
       setChecked("setting-knowledge-enabled", values["home.knowledge.enabled"]);
+      setChecked("setting-quiz-enabled", values["home.quiz.enabled"]);
+      const quizTextarea = document.getElementById("setting-quiz-items");
+      if (quizTextarea) quizTextarea.value = JSON.stringify(Array.isArray(values["home.quiz.items"]) ? values["home.quiz.items"] : [], null, 2);
       const knowledgeItems = Array.isArray(values["home.knowledge.items"]) ? values["home.knowledge.items"] : [];
       const knowledgeTextarea = document.getElementById("setting-knowledge-items");
       if (knowledgeTextarea) knowledgeTextarea.value = knowledgeItems.map(item =>
@@ -1101,6 +1104,28 @@ const firebaseConfig = {
       }
       saveSetting("home.knowledge.items", items, button)
         .then(() => saveSetting("home.knowledge.enabled", document.getElementById("setting-knowledge-enabled").checked, button));
+    } else if (group === "home.quiz") {
+      let items;
+      try { items = JSON.parse(document.getElementById("setting-quiz-items").value || "[]"); }
+      catch (_) { setSettingsStatus("Quiz questions must be valid JSON.", true); return; }
+      const valid = Array.isArray(items) && items.length <= 100 && items.every(item =>
+        item && typeof item === "object" && !Array.isArray(item) &&
+        typeof item.id === "string" && item.id.trim().length > 0 && item.id.length <= 80 &&
+        typeof item.category === "string" && item.category.trim().length > 0 && item.category.length <= 32 &&
+        /^\d{4}-\d{2}-\d{2}$/.test(item.publishDate) &&
+        typeof item.published === "boolean" &&
+        typeof item.question === "string" && item.question.trim().length >= 10 && item.question.length <= 500 &&
+        Array.isArray(item.options) && item.options.length === 4 &&
+        item.options.every(option => typeof option === "string" && option.trim().length > 0 && option.length <= 160) &&
+        Number.isInteger(item.correctIndex) && item.correctIndex >= 0 && item.correctIndex <= 3 &&
+        typeof item.explanation === "string" && item.explanation.length <= 1000
+      );
+      if (!valid) {
+        setSettingsStatus("Each quiz question needs valid fields, four options and correctIndex 0–3. Maximum 100 questions.", true);
+        return;
+      }
+      saveSetting("home.quiz.items", items, button)
+        .then(() => saveSetting("home.quiz.enabled", document.getElementById("setting-quiz-enabled").checked, button));
     }
   }));
   if (refreshSettingsButton) refreshSettingsButton.addEventListener("click", loadSettings);
