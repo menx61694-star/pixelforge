@@ -1673,7 +1673,6 @@ const firebaseConfig = {
       status.textContent = "Sign-out failed. Please retry.";
     }
   });
-})();
 
 
   async function loadFeedbackInbox() {
@@ -1696,7 +1695,7 @@ const firebaseConfig = {
           const message = document.createElement("p"); message.textContent = item.message;
           const date = document.createElement("small"); date.textContent = item.created_at ? new Date(item.created_at).toLocaleString() : "";
           card.append(heading, message, date);
-          if (item.status === "pending") {
+          if (item.status === "pending" && currentPermissions.has("settings.manage")) {
             const actions = document.createElement("div"); actions.className = "feedback-inbox-actions";
             ["approved","rejected"].forEach(nextStatus => {
               const button = document.createElement("button"); button.type = "button"; button.textContent = nextStatus === "approved" ? "Approve" : "Reject";
@@ -1721,3 +1720,5 @@ const firebaseConfig = {
       await loadFeedbackInbox();
     } catch (error) { setSettingsStatus(error.message || "Could not moderate feedback.", true); button.disabled = false; }
   });
+
+})();
