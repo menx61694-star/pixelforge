@@ -285,3 +285,27 @@ test("Learning Corner paths are admin-managed and expose only published steps wi
   assert.match(publicScript, /payload\.learningCorner/);
   assert.match(publicScript, /noopener noreferrer/);
 });
+
+
+test("User Feedback is moderated, privacy-conscious and controlled from Admin Settings", () => {
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  const edge = read("supabase/functions/site-settings/index.ts");
+  const migration = read("supabase/phase-13-user-feedback.sql");
+  const homepage = read("index.html");
+  const publicScript = read("script.js");
+  assert.match(adminHtml, /setting-feedback-enabled/);
+  assert.match(adminHtml, /feedback-inbox-list/);
+  assert.match(adminJs, /feedback-moderate/);
+  assert.match(edge, /action === "submit-feedback"/);
+  assert.match(edge, /action === "feedback-list"/);
+  assert.match(edge, /action === "feedback-moderate"/);
+  assert.match(edge, /submission_hash/);
+  assert.match(migration, /pixel_forge_public_feedback/);
+  assert.match(migration, /pixel_forge_feedback_audit/);
+  assert.match(migration, /pixel_forge_moderate_feedback/);
+  assert.match(migration, /enable row level security/);
+  assert.match(homepage, /id="public-feedback-form"/);
+  assert.match(publicScript, /action=submit-feedback/);
+  assert.match(publicScript, /approvedFeedback/);
+});
