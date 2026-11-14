@@ -249,7 +249,7 @@ Deno.serve(async (request) => {
       let approvedFeedback: Array<Record<string, unknown>> = [];
       if (feedbackSettings.displayApproved) {
         const { data: feedbackRows, error: feedbackError } = await db.from("pixel_forge_public_feedback")
-          .select("name,category,rating,message").eq("status", "approved")
+          .select("name,category,rating,message").eq("status", "approved").eq("consent", true)
           .order("created_at", { ascending: false }).limit(feedbackSettings.maxDisplay);
         if (feedbackError) throw feedbackError;
         approvedFeedback = feedbackRows ?? [];
@@ -370,12 +370,12 @@ Deno.serve(async (request) => {
       if (raw.length > 4000) return json({ error: "Feedback submission is too large." }, 413, request);
       const input = (() => { try { return JSON.parse(raw); } catch (_) { return null; } })();
       if (!input || typeof input !== "object" || Array.isArray(input) ||
-          Object.keys(input).length !== 5 ||
+          Object.keys(input).length !== 6 ||
           typeof input.name !== "string" || input.name.length > 60 ||
           typeof input.category !== "string" ||
           !Number.isInteger(input.rating) || input.rating < 1 || input.rating > 5 ||
           typeof input.message !== "string" || input.message.trim().length < 20 || input.message.length > 1000 ||
-          typeof input.website !== "string" || input.website.length > 200) {
+          typeof input.website !== "string" || input.website.length > 200 || input.consent !== true) {
         return json({ error: "Please check your feedback details and try again." }, 400, request);
       }
       if (input.website.trim()) return json({ ok: true, message: "Thank you. Your feedback has been sent for review." }, 200, request);
@@ -405,7 +405,7 @@ Deno.serve(async (request) => {
       }
       const { error: insertError } = await db.from("pixel_forge_public_feedback").insert({
         name: input.name.trim() || null, category: input.category, rating: input.rating,
-        message: input.message.trim(), status: "pending", submission_hash: submissionHash,
+        message: input.message.trim(), status: "pending", consent: true, submission_hash: submissionHash,
       });
       if (insertError) throw insertError;
       return json({ ok: true, message: "Thank you. Your feedback has been sent for review." }, 200, request);
