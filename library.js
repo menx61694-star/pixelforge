@@ -81,7 +81,7 @@
     const full = title + " " + category + " " + ext;
     if (full.includes(query)) return title.includes(query) ? 100 : 70;
     if (!state.searchConfig.smartEnabled) return -1;
-    const tokens = query.split(/\\s+/).filter(Boolean);
+    const tokens = query.split(/\s+/).filter(Boolean);
     let score = 0;
     for (const token of tokens) {
       if (title.includes(token)) score += 20;
