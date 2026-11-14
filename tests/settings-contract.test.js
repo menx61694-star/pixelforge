@@ -255,3 +255,13 @@ test("Smart Document Search is admin-configurable and exposes only validated pub
   assert.match(libraryHtml, /library-category-filter/);
   assert.match(libraryHtml, /library-type-filter/);
 });
+
+test("All library category pages receive the same Smart Search controls and pagination", () => {
+  for (const page of ["pdf-documents.html","study-notes.html","books-resources.html","other-documents.html","exam-materials.html","technology-guides.html"]) {
+    const html = read(page);
+    assert.match(html, /id="library-category-filter"/, page + " category filter");
+    assert.match(html, /id="library-type-filter"/, page + " file type filter");
+    assert.match(html, /id="library-load-more"/, page + " load more");
+  }
+  assert.match(read("library.js"), /query\.split\(\/\\s\+\//);
+});
