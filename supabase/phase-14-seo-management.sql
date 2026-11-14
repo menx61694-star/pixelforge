@@ -339,7 +339,7 @@ begin
             select 1 from jsonb_array_elements(p_value) as page(value)
             where jsonb_typeof(page.value) <> 'object'
               or coalesce(jsonb_typeof(page.value->'page'), '') <> 'string'
-              or (page.value->>'page') !~ '^/[A-Za-z0-9/_-]*$'
+              or (page.value->>'page') !~ '^/[A-Za-z0-9/._-]*$'
               or (page.value->>'page') like '%..%'
               or coalesce(jsonb_typeof(page.value->'title'), '') <> 'string'
               or length(trim(coalesce(page.value->>'title',''))) < 5 or length(page.value->>'title') > 70
