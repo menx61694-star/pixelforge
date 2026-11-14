@@ -76,6 +76,26 @@ async function rateLimitKey(request: Request): Promise<string | null> {
   const forwarded = request.headers.get("cf-connecting-ip") ?? request.headers.get("x-real-ip");
   return forwarded ? await hmacHash("rate:" + forwarded) : null;
 }
+async function verifyGeoProxy(request: Request) {
+  const timestamp = request.headers.get("x-pf-geo-timestamp") ?? "";
+  const country = request.headers.get("x-pf-geo-country") ?? "";
+  const region = request.headers.get("x-pf-geo-region") ?? "";
+  const clientIp = request.headers.get("x-pf-geo-client-ip") ?? "";
+  const signature = request.headers.get("x-pf-geo-signature") ?? "";
+  const timestampMs = Number(timestamp);
+  if (!/^\d{13}$/.test(timestamp) || !Number.isFinite(timestampMs) ||
+      Math.abs(Date.now() - timestampMs) > 5 * 60 * 1000 ||
+      (country !== "" && !/^[A-Z]{2}$/.test(country)) ||
+      region.length > 80 || /[\r\n]/.test(region) ||
+      !clientIp || clientIp.length > 64 || !/^[0-9a-f:.]+$/i.test(clientIp) ||
+      !/^[0-9a-f]{64}$/i.test(signature)) return null;
+  const message = [timestamp, country, region, clientIp].join("\n");
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(required("PIXELFORGE_GEO_PROXY_SECRET")), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+  const signatureBytes = Uint8Array.from(signature.match(/.{2}/g) ?? [], byte => parseInt(byte, 16));
+  const valid = await crypto.subtle.verify("HMAC", key, signatureBytes, new TextEncoder().encode(message));
+  return valid ? { countryCode: country || null, regionName: region || null, clientIp } : null;
+}
+
 function getTrustedLocation(request: Request) {
   const rawCountry = request.headers.get("cf-ipcountry") ?? "";
   const countryCode = /^[A-Za-z]{2}$/.test(rawCountry) ? rawCountry.toUpperCase() : null;
@@ -100,7 +120,7 @@ function getClientIp(request: Request): { address: string; source: "cf-connectin
     const lower = ip.toLowerCase();
     if (lower === "::" || lower === "::1" || lower.startsWith("fc") || lower.startsWith("fd") || lower.startsWith("fe8") || lower.startsWith("fe9") || lower.startsWith("fea") || lower.startsWith("feb") || lower.startsWith("ff")) return null;
   }
-  return { address: ip, source: "cf-connecting-ip" };
+  return { address: ip, source: trustedProxyIp ? "cloudflare-geo-proxy" : "cf-connecting-ip" };
 }
 function isPrivateLocalIp(ip: string): boolean {
   if (ip.length > 64) return false;
@@ -193,7 +213,7 @@ Deno.serve(async (request) => {
           (visitorSessionId !== "" && !validSessionId)) {
         return json({ error: "Invalid analytics event." }, 400, request);
       }
-      const keyHash = await rateLimitKey(request);
+      const proxyContext = await verifyGeoProxy(request);\n      if (!proxyContext) return json({ error: "Trusted analytics proxy verification failed." }, 403, request);\n      const keyHash = await rateLimitKey(request, proxyContext.clientIp);
       if (!keyHash) return json({ error: "Unable to apply request rate limit." }, 400, request);
       const now = new Date();
       const windowStart = new Date(Math.floor(now.getTime() / 60000) * 60000).toISOString();
@@ -204,7 +224,7 @@ Deno.serve(async (request) => {
       if (rateError) throw rateError;
       if (permitted !== true) return json({ error: "Rate limit exceeded." }, 429, request);
       const visitorHash = validSessionId ? await hmacHash("visitor:" + visitorSessionId) : null;
-      const location = getTrustedLocation(request);
+      const location = proxyContext;
       const { error } = await db.from("pixel_forge_analytics_events").insert({
         page_path: pagePath,
         visitor_hash: visitorHash,
@@ -212,7 +232,7 @@ Deno.serve(async (request) => {
         region_name: location.regionName,
       });
       if (error) throw error;
-      await storeSecurityLog(request, pagePath, db);
+      await storeSecurityLog(request, pagePath, db, proxyContext.clientIp);
       return json({ recorded: true }, 202, request);
     }
 
