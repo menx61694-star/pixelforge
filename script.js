@@ -101,3 +101,63 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
     }
   });
 }
+
+/* Admin-managed public knowledge cards. The browser only receives the
+   explicitly public allow-listed settings from the site-settings endpoint. */
+(() => {
+  const factText = document.getElementById("fact-text");
+  const refresh = document.getElementById("refresh-fact");
+  if (!factText || !refresh) return;
+  const defaults = [
+    { category: "SPACE", text: "A day on Venus is longer than its year: Venus takes about 243 Earth days to rotate once, but only about 225 Earth days to orbit the Sun." },
+    { category: "HUMAN BODY", text: "Your brain uses roughly 20% of your body's energy, even though it makes up only about 2% of your body weight." },
+    { category: "OCEANS", text: "The ocean contains underwater mountains and volcanoes; the global mid-ocean ridge system stretches for around 65,000 kilometres." },
+    { category: "COMPUTING", text: "The first computer mouse, built in the 1960s, was made of wood and had just one button." },
+    { category: "NATURE", text: "Octopuses have three hearts: two pump blood to the gills, while one pumps it to the rest of the body." },
+    { category: "MATHEMATICS", text: "A googol is the number 1 followed by 100 zeroes. It is much larger than the number of atoms estimated in the observable universe." },
+    { category: "SPACE", text: "Light from the Sun takes about 8 minutes and 20 seconds to reach Earth." },
+    { category: "ANIMALS", text: "A group of flamingos is called a flamboyance." },
+    { category: "TECHNOLOGY", text: "The word 'robot' comes from the Czech word 'robota', which refers to forced labour." },
+    { category: "EARTH", text: "Earth is not a perfect sphere; its rotation makes it slightly wider around the equator than from pole to pole." },
+    { category: "BIOLOGY", text: "A single human cell contains about two metres of DNA when stretched out." },
+    { category: "INVENTION", text: "The microwave oven was developed after an engineer noticed that a chocolate bar had melted near radar equipment." }
+  ];
+  let facts = defaults.slice();
+  let lastIndex = -1;
+  let shown = 0;
+  const category = document.getElementById("fact-category");
+  const count = document.getElementById("knowledge-count");
+  function showNext() {
+    if (!facts.length) return;
+    let next = 0;
+    if (facts.length > 1) {
+      do { next = Math.floor(Math.random() * facts.length); } while (next === lastIndex);
+    }
+    lastIndex = next;
+    shown += 1;
+    factText.textContent = facts[next].text;
+    if (category) category.textContent = String(facts[next].category || "QUICK KNOWLEDGE").slice(0, 32).toUpperCase();
+    if (count) count.textContent = "Discovery " + shown.toString().padStart(2, "0");
+  }
+  refresh.addEventListener("click", showNext);
+  showNext();
+  fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
+    method: "GET", headers: { "Accept": "application/json" }, credentials: "omit"
+  }).then(response => {
+    if (!response.ok) throw new Error("Public content unavailable");
+    return response.json();
+  }).then(payload => {
+    if (payload.knowledge && payload.knowledge.enabled === true &&
+        Array.isArray(payload.knowledge.items) && payload.knowledge.items.length) {
+      facts = payload.knowledge.items.filter(item => item && typeof item.text === "string" && item.text.trim())
+        .map(item => ({ category: String(item.category || "QUICK KNOWLEDGE"), text: item.text }));
+      lastIndex = -1;
+      showNext();
+    } else if (payload.knowledge && payload.knowledge.enabled === false) {
+      const section = document.getElementById("knowledge");
+      if (section) section.hidden = true;
+    }
+  }).catch(() => {
+    // Keep the built-in fact collection available if the settings service is offline.
+  });
+})();
