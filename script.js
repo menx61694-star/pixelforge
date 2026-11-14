@@ -235,3 +235,33 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
     }
   });
 })();
+
+/* Admin-managed Quick Tools catalogue. */
+(() => {
+  const section = document.getElementById("quick-tools");
+  const grid = document.getElementById("quick-tools-grid");
+  if (!section || !grid) return;
+  const catalogue = {
+    calculator: { title: "Basic Calculator", description: "Quick arithmetic for everyday calculations.", symbol: "＋", href: "tools.html#calculator", label: "Calculate" },
+    percentage: { title: "Percentage Calculator", description: "Find percentages and percentage values.", symbol: "%", href: "tools.html#percentage", label: "Calculate" },
+    "word-counter": { title: "Word Counter", description: "Count words, characters and reading time.", symbol: "Aa", href: "tools.html#word-counter", label: "Count words" },
+    "unit-converter": { title: "Length Converter", description: "Convert metres, kilometres, centimetres and more.", symbol: "↔", href: "tools.html#unit-converter", label: "Convert" }
+  };
+  fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
+    method: "GET", headers: { "Accept": "application/json" }, credentials: "omit"
+  }).then(response => { if (!response.ok) throw new Error("Quick Tools unavailable"); return response.json(); })
+    .then(payload => {
+      const config = payload.quickTools;
+      if (!config || config.enabled !== true || !Array.isArray(config.items)) return;
+      config.items.filter(id => Object.prototype.hasOwnProperty.call(catalogue, id)).forEach(id => {
+        const item = catalogue[id], card = document.createElement("a");
+        card.className = "quick-tool-card"; card.href = item.href;
+        const symbol = document.createElement("span"); symbol.className = "quick-tool-symbol"; symbol.textContent = item.symbol;
+        const title = document.createElement("strong"); title.textContent = item.title;
+        const description = document.createElement("p"); description.textContent = item.description;
+        const action = document.createElement("span"); action.className = "quick-tool-action"; action.textContent = item.label + " ↗";
+        card.append(symbol, title, description, action); grid.append(card);
+      });
+      if (grid.children.length) section.hidden = false;
+    }).catch(() => { section.hidden = true; });
+})();
