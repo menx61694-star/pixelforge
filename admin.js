@@ -1026,6 +1026,11 @@ const firebaseConfig = {
       setChecked("setting-tools-enabled", values["home.tools.enabled"]);
       setChecked("setting-featured-enabled", values["home.featured.enabled"]);
       setChecked("setting-announcements-enabled", values["home.announcements.enabled"]);
+      setChecked("setting-search-enabled", values["home.search.enabled"]);
+      setChecked("setting-search-smart", values["home.search.smart_enabled"]);
+      setChecked("setting-search-filters", values["home.search.filters_enabled"]);
+      setInputValue("setting-search-max-results", values["home.search.max_results"] ?? 30);
+      setInputValue("setting-search-placeholder", values["home.search.placeholder"] ?? "Search documents, notes and guides…");
       const announcementsTextarea = document.getElementById("setting-announcements-items");
       if (announcementsTextarea) announcementsTextarea.value = JSON.stringify(Array.isArray(values["home.announcements.items"]) ? values["home.announcements.items"] : [], null, 2);
       const featuredTextarea = document.getElementById("setting-featured-items");
@@ -1113,6 +1118,17 @@ const firebaseConfig = {
       }
       saveSetting("home.knowledge.items", items, button)
         .then(() => saveSetting("home.knowledge.enabled", document.getElementById("setting-knowledge-enabled").checked, button));
+    } else if (group === "home.search") {
+      const maxResults = Number(document.getElementById("setting-search-max-results").value);
+      const placeholder = document.getElementById("setting-search-placeholder").value.trim();
+      if (!Number.isInteger(maxResults) || maxResults < 6 || maxResults > 100 || placeholder.length < 5 || placeholder.length > 100) {
+        setSettingsStatus("Results per page must be 6–100 and the placeholder must be 5–100 characters.", true); return;
+      }
+      saveSetting("home.search.enabled", document.getElementById("setting-search-enabled").checked, button)
+        .then(() => saveSetting("home.search.smart_enabled", document.getElementById("setting-search-smart").checked, button))
+        .then(() => saveSetting("home.search.filters_enabled", document.getElementById("setting-search-filters").checked, button))
+        .then(() => saveSetting("home.search.max_results", maxResults, button))
+        .then(() => saveSetting("home.search.placeholder", placeholder, button));
     } else if (group === "home.announcements") {
       let items;
       try { items = JSON.parse(document.getElementById("setting-announcements-items").value || "[]"); }
