@@ -227,3 +227,31 @@ test("Announcements are admin-managed, date-validated, scheduled in India time a
   assert.match(publicScript, /payload\.announcements/);
   assert.match(publicScript, /noopener noreferrer/);
 });
+
+
+test("Smart Document Search is admin-configurable and exposes only validated public search settings", () => {
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  const edge = read("supabase/functions/site-settings/index.ts");
+  const migration = read("supabase/phase-11-smart-search.sql");
+  const homepage = read("index.html");
+  const publicScript = read("script.js");
+  const library = read("library.js");
+  const libraryHtml = read("library.html");
+  assert.match(adminHtml, /setting-search-enabled/);
+  assert.match(adminHtml, /setting-search-smart/);
+  assert.match(adminHtml, /setting-search-filters/);
+  assert.match(adminJs, /saveSetting\("home\.search\.max_results"/);
+  assert.match(edge, /home\.search\.smart_enabled/);
+  assert.match(edge, /home\.search\.max_results/);
+  assert.match(migration, /home\.search\.placeholder/);
+  assert.match(migration, /between 6 and 100/);
+  assert.match(homepage, /id="smart-document-search"/);
+  assert.match(publicScript, /payload\.search/);
+  assert.match(library, /editDistanceAtMostOne/);
+  assert.match(library, /selectedCategory/);
+  assert.match(library, /selectedType/);
+  assert.match(library, /library-load-more/);
+  assert.match(libraryHtml, /library-category-filter/);
+  assert.match(libraryHtml, /library-type-filter/);
+});
