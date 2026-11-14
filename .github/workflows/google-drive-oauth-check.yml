@@ -19,6 +19,8 @@ on:
       - "supabase/functions/site-settings/**"
       - "maintenance-mode.js"
       - "index.html"
+      - "tools.html"
+      - "tools.js"
       - "styles.css"
       - "library.html"
       - "tests/maintenance-mode.test.js"
@@ -63,6 +65,8 @@ on:
       - "tests/analytics-contract.test.js"
       - "tests/settings-contract.test.js"
       - "index.html"
+      - "tools.html"
+      - "tools.js"
       - "styles.css"
       - "admin.js"
       - "script.js"
@@ -92,6 +96,7 @@ jobs:
           node --check admin.js
           node --check maintenance-mode.js
           node --check script.js
+          node --check tools.js
           node --check library.js
           node --check vault-storage-utils.js
 
