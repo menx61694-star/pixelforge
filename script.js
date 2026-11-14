@@ -226,7 +226,7 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Could not check your answer.");
       result.className = "daily-quiz-result " + (payload.correct ? "is-correct" : "is-wrong");
-      result.textContent = (payload.correct ? "Correct! " : "Not quite. ") + (payload.explanation || "");
+      result.textContent = (payload.correct ? "Correct! Score: 1/1. " : "Not quite. Score: 0/1. ") + (payload.explanation || "");
       optionsNode.querySelectorAll("input").forEach(input => { input.disabled = true; });
       submit.textContent = "Answer submitted";
     } catch (error) {
