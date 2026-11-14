@@ -106,7 +106,9 @@ function validSettingValue(key: string, value: unknown): boolean {
       Object.keys(item).every((field) => ["id","category","publishDate","published","question","options","correctIndex","explanation"].includes(field)) &&
       typeof item.id === "string" && item.id.trim().length > 0 && item.id.length <= 80 &&
       typeof item.category === "string" && item.category.trim().length > 0 && item.category.length <= 32 &&
-      typeof item.publishDate === "string" && /^\\d{4}-\\d{2}-\\d{2}$/.test(item.publishDate) &&
+      typeof item.publishDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(item.publishDate) &&
+      !Number.isNaN(Date.parse(item.publishDate + "T00:00:00.000Z")) &&
+      new Date(item.publishDate + "T00:00:00.000Z").toISOString().slice(0, 10) === item.publishDate &&
       typeof item.published === "boolean" &&
       typeof item.question === "string" && item.question.trim().length >= 10 && item.question.length <= 500 &&
       Array.isArray(item.options) && item.options.length === 4 &&
