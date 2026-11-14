@@ -35,6 +35,13 @@ const settingKeys = new Set([
   "home.feedback.allow_anonymous",
   "home.feedback.display_approved",
   "home.feedback.max_display",
+  "home.seo.enabled",
+  "home.seo.default_title",
+  "home.seo.default_description",
+  "home.seo.default_keywords",
+  "home.seo.canonical_base",
+  "home.seo.og_image",
+  "home.seo.page_overrides",
 ]);
 
 function cors(request: Request) {
@@ -122,7 +129,7 @@ function isValidIsoDate(value: string): boolean {
 }
 function validSettingValue(key: string, value: unknown): boolean {
   if (!settingKeys.has(key)) return false;
-  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled" || key === "home.quiz.enabled" || key === "home.tools.enabled" || key === "home.featured.enabled" || key === "home.announcements.enabled" || key === "home.search.enabled" || key === "home.search.smart_enabled" || key === "home.search.filters_enabled" || key === "home.learning.enabled" || key === "home.feedback.enabled" || key === "home.feedback.allow_anonymous" || key === "home.feedback.display_approved") return typeof value === "boolean";
+  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled" || key === "home.quiz.enabled" || key === "home.tools.enabled" || key === "home.featured.enabled" || key === "home.announcements.enabled" || key === "home.search.enabled" || key === "home.search.smart_enabled" || key === "home.search.filters_enabled" || key === "home.learning.enabled" || key === "home.feedback.enabled" || key === "home.feedback.allow_anonymous" || key === "home.feedback.display_approved" || key === "home.seo.enabled") return typeof value === "boolean";
   if (key === "home.knowledge.items") {
     return Array.isArray(value) && value.length <= 50 && value.every((item) =>
       item && typeof item === "object" && !Array.isArray(item) &&
@@ -167,6 +174,24 @@ function validSettingValue(key: string, value: unknown): boolean {
         typeof resource.label === "string" && resource.label.trim().length > 0 && resource.label.length <= 32 &&
         typeof resource.published === "boolean";
     }) && new Set(value.map((item: { id?: unknown }) => item.id)).size === value.length;
+  }
+  if (key === "home.seo.default_title") return typeof value === "string" && value.trim().length >= 5 && value.length <= 70;
+  if (key === "home.seo.default_description") return typeof value === "string" && value.trim().length >= 50 && value.length <= 160;
+  if (key === "home.seo.default_keywords") return typeof value === "string" && value.length <= 250;
+  if (key === "home.seo.canonical_base") return typeof value === "string" && value.length <= 300 && (value === "" || isSafeHttpsUrl(value));
+  if (key === "home.seo.og_image") return typeof value === "string" && value.length <= 1200 && (value === "" || isSafeHttpsUrl(value));
+  if (key === "home.seo.page_overrides") {
+    return Array.isArray(value) && value.length <= 20 && value.every((item: unknown) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+      const page = item as Record<string, unknown>;
+      return Object.keys(page).every(field => ["page","title","description","keywords","robots","canonical"].includes(field)) &&
+        typeof page.page === "string" && /^\\/[a-z0-9/_-]*$/i.test(page.page) && !page.page.includes("..") &&
+        typeof page.title === "string" && page.title.trim().length >= 5 && page.title.length <= 70 &&
+        typeof page.description === "string" && page.description.trim().length >= 50 && page.description.length <= 160 &&
+        typeof page.keywords === "string" && page.keywords.length <= 250 &&
+        ["index,follow","noindex,follow","noindex,nofollow"].includes(String(page.robots)) &&
+        typeof page.canonical === "string" && page.canonical.length <= 1200 && (page.canonical === "" || isSafeHttpsUrl(page.canonical));
+    }) && new Set(value.map((item: { page?: unknown }) => item.page)).size === value.length;
   }
   if (key === "home.feedback.categories") {
     return Array.isArray(value) && value.length >= 1 && value.length <= 8 &&
@@ -237,7 +262,7 @@ Deno.serve(async (request) => {
       const db = dbAdmin();
       const { data, error } = await db.from("pixel_forge_site_settings")
         .select("setting_key,setting_value")
-        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items", "home.tools.enabled", "home.tools.items", "home.featured.enabled", "home.featured.items", "home.announcements.enabled", "home.announcements.items", "home.search.enabled", "home.search.smart_enabled", "home.search.filters_enabled", "home.search.max_results", "home.search.placeholder", "home.learning.enabled", "home.learning.items", "home.feedback.enabled", "home.feedback.categories", "home.feedback.allow_anonymous", "home.feedback.display_approved", "home.feedback.max_display"]);
+        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items", "home.tools.enabled", "home.tools.items", "home.featured.enabled", "home.featured.items", "home.announcements.enabled", "home.announcements.items", "home.search.enabled", "home.search.smart_enabled", "home.search.filters_enabled", "home.search.max_results", "home.search.placeholder", "home.learning.enabled", "home.learning.items", "home.feedback.enabled", "home.feedback.categories", "home.feedback.allow_anonymous", "home.feedback.display_approved", "home.feedback.max_display", "home.seo.enabled", "home.seo.default_title", "home.seo.default_description", "home.seo.default_keywords", "home.seo.canonical_base", "home.seo.og_image", "home.seo.page_overrides"]);
       if (error) throw error;
       const values = Object.fromEntries((data ?? []).map((row) => [row.setting_key, row.setting_value]));
       const items = Array.isArray(values["home.knowledge.items"]) ? values["home.knowledge.items"] : [];
@@ -276,6 +301,15 @@ Deno.serve(async (request) => {
                 .filter(item => item.published === true && typeof item.url === "string" && isSafeHttpsUrl(item.url))
                 .slice(0, 12)
             : [],
+        },
+        seo: {
+          enabled: values["home.seo.enabled"] === true,
+          defaultTitle: typeof values["home.seo.default_title"] === "string" ? values["home.seo.default_title"] : "PixelForge — Digital resources and learning tools",
+          defaultDescription: typeof values["home.seo.default_description"] === "string" ? values["home.seo.default_description"] : "Discover curated documents, study notes, digital tools and guided learning resources on PixelForge.",
+          defaultKeywords: typeof values["home.seo.default_keywords"] === "string" ? values["home.seo.default_keywords"] : "",
+          canonicalBase: typeof values["home.seo.canonical_base"] === "string" ? values["home.seo.canonical_base"] : "",
+          ogImage: typeof values["home.seo.og_image"] === "string" ? values["home.seo.og_image"] : "",
+          pageOverrides: Array.isArray(values["home.seo.page_overrides"]) ? values["home.seo.page_overrides"] : [],
         },
         feedback: {
           enabled: values["home.feedback.enabled"] === true,
