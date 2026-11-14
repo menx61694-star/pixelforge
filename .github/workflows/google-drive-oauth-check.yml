@@ -1,4 +1,5 @@
 name: PixelForge Admin and Edge Function Checks
+# PDF preview contract changes are covered by the same regression workflow.
 
 on:
   workflow_dispatch:
