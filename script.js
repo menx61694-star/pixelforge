@@ -328,3 +328,32 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
       if (list.children.length) section.hidden = false;
     }).catch(() => { section.hidden = true; });
 })();
+
+/* Homepage Smart Document Search launcher. */
+(() => {
+  const section = document.getElementById("smart-document-search");
+  const form = document.getElementById("homepage-smart-search");
+  if (!section || !form) return;
+  fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
+    method: "GET", headers: { "Accept": "application/json" }, credentials: "omit"
+  }).then(response => { if (!response.ok) throw new Error("Search settings unavailable"); return response.json(); })
+    .then(payload => {
+      const config = payload.search || {};
+      if (config.enabled !== true) return;
+      section.hidden = false;
+      const input = document.getElementById("homepage-search-query");
+      if (typeof config.placeholder === "string" && config.placeholder) input.placeholder = config.placeholder;
+      if (config.filtersEnabled === false) document.querySelector(".smart-search-filters").hidden = true;
+    }).catch(() => { section.hidden = true; });
+  form.addEventListener("submit", event => {
+    event.preventDefault();
+    const params = new URLSearchParams();
+    const query = document.getElementById("homepage-search-query").value.trim();
+    const category = document.getElementById("homepage-search-category").value;
+    const type = document.getElementById("homepage-search-type").value;
+    if (query) params.set("q", query);
+    if (category !== "all") params.set("category", category);
+    if (type !== "all") params.set("type", type);
+    window.location.href = "library.html" + (params.toString() ? "?" + params.toString() : "");
+  });
+})();
