@@ -1026,6 +1026,12 @@ const firebaseConfig = {
       setChecked("setting-tools-enabled", values["home.tools.enabled"]);
       setChecked("setting-featured-enabled", values["home.featured.enabled"]);
       setChecked("setting-announcements-enabled", values["home.announcements.enabled"]);
+      setChecked("setting-feedback-enabled", values["home.feedback.enabled"]);
+      setChecked("setting-feedback-anonymous", values["home.feedback.allow_anonymous"]);
+      setChecked("setting-feedback-display", values["home.feedback.display_approved"]);
+      setInputValue("setting-feedback-max-display", values["home.feedback.max_display"] ?? 6);
+      const feedbackCategories = document.getElementById("setting-feedback-categories");
+      if (feedbackCategories) feedbackCategories.value = (Array.isArray(values["home.feedback.categories"]) ? values["home.feedback.categories"] : ["General","Website","Resources","Suggestion"]).join("\n");
       setChecked("setting-learning-enabled", values["home.learning.enabled"]);
       const learningTextarea = document.getElementById("setting-learning-items");
       if (learningTextarea) learningTextarea.value = JSON.stringify(Array.isArray(values["home.learning.items"]) ? values["home.learning.items"] : [], null, 2);
@@ -1048,6 +1054,7 @@ const firebaseConfig = {
         String(item.category || "GENERAL") + " | " + String(item.text || "")
       ).join("\n");
       renderSettingsAudit(auditPayload.audit || []);
+      loadFeedbackInbox();
       document.querySelectorAll("[data-setting-save]").forEach(button => {
         button.hidden = !currentPermissions.has("settings.manage");
         button.disabled = !currentPermissions.has("settings.manage");
@@ -1121,6 +1128,19 @@ const firebaseConfig = {
       }
       saveSetting("home.knowledge.items", items, button)
         .then(() => saveSetting("home.knowledge.enabled", document.getElementById("setting-knowledge-enabled").checked, button));
+    } else if (group === "home.feedback") {
+      const categories = document.getElementById("setting-feedback-categories").value.split(/\\r?\\n/).map(value => value.trim()).filter(Boolean);
+      const maxDisplay = Number(document.getElementById("setting-feedback-max-display").value);
+      if (!categories.length || categories.length > 8 || categories.some(value => value.length < 2 || value.length > 32) ||
+          new Set(categories.map(value => value.toLowerCase())).size !== categories.length ||
+          !Number.isInteger(maxDisplay) || maxDisplay < 1 || maxDisplay > 12) {
+        setSettingsStatus("Add 1–8 unique categories (2–32 characters) and choose 1–12 approved comments to display.", true); return;
+      }
+      saveSetting("home.feedback.categories", categories, button)
+        .then(() => saveSetting("home.feedback.allow_anonymous", document.getElementById("setting-feedback-anonymous").checked, button))
+        .then(() => saveSetting("home.feedback.display_approved", document.getElementById("setting-feedback-display").checked, button))
+        .then(() => saveSetting("home.feedback.max_display", maxDisplay, button))
+        .then(() => saveSetting("home.feedback.enabled", document.getElementById("setting-feedback-enabled").checked, button));
     } else if (group === "home.learning") {
       let items;
       try { items = JSON.parse(document.getElementById("setting-learning-items").value || "[]"); }
@@ -1654,3 +1674,50 @@ const firebaseConfig = {
     }
   });
 })();
+
+
+  async function loadFeedbackInbox() {
+    const container = document.getElementById("feedback-inbox-list");
+    const status = document.getElementById("feedback-inbox-status");
+    if (!container || !currentPermissions.has("settings.view")) return;
+    try {
+      const payload = await settingsRequest("feedback-list");
+      container.replaceChildren();
+      const entries = Array.isArray(payload.feedback) ? payload.feedback : [];
+      if (!entries.length) {
+        const empty = document.createElement("p"); empty.className = "empty-state"; empty.textContent = "No feedback submissions yet."; container.append(empty);
+      } else {
+        entries.forEach(item => {
+          const card = document.createElement("article"); card.className = "feedback-inbox-card";
+          const heading = document.createElement("div"); heading.className = "feedback-inbox-heading";
+          const title = document.createElement("strong"); title.textContent = (item.name || "Anonymous") + " · " + item.category;
+          const meta = document.createElement("span"); meta.textContent = "★".repeat(Number(item.rating) || 0) + " · " + item.status;
+          heading.append(title, meta);
+          const message = document.createElement("p"); message.textContent = item.message;
+          const date = document.createElement("small"); date.textContent = item.created_at ? new Date(item.created_at).toLocaleString() : "";
+          card.append(heading, message, date);
+          if (item.status === "pending") {
+            const actions = document.createElement("div"); actions.className = "feedback-inbox-actions";
+            ["approved","rejected"].forEach(nextStatus => {
+              const button = document.createElement("button"); button.type = "button"; button.textContent = nextStatus === "approved" ? "Approve" : "Reject";
+              button.dataset.feedbackAction = nextStatus; button.dataset.feedbackId = item.id;
+              actions.append(button);
+            });
+            card.append(actions);
+          }
+          container.append(card);
+        });
+      }
+      if (status) status.textContent = entries.length + " recent submission(s).";
+    } catch (error) { if (status) status.textContent = error.message || "Could not load feedback inbox."; }
+  }
+  document.getElementById("refresh-feedback")?.addEventListener("click", loadFeedbackInbox);
+  document.getElementById("feedback-inbox-list")?.addEventListener("click", async event => {
+    const button = event.target.closest("[data-feedback-action]");
+    if (!button) return;
+    button.disabled = true;
+    try {
+      await settingsRequest("feedback-moderate", { method: "POST", body: { id: button.dataset.feedbackId, status: button.dataset.feedbackAction } });
+      await loadFeedbackInbox();
+    } catch (error) { setSettingsStatus(error.message || "Could not moderate feedback.", true); button.disabled = false; }
+  });
