@@ -64,9 +64,11 @@ begin
         not exists (
           select 1 from jsonb_array_elements(p_value) as item(value)
           where jsonb_typeof(item.value) <> 'object'
-            or jsonb_typeof(item.value->'category') <> 'string'
+            or not (item.value ? 'category')
+              or jsonb_typeof(item.value->'category') <> 'string'
             or length(item.value->>'category') > 32
-            or jsonb_typeof(item.value->'text') <> 'string'
+            or not (item.value ? 'text')
+              or jsonb_typeof(item.value->'text') <> 'string'
             or length(trim(item.value->>'text')) < 8
             or length(item.value->>'text') > 240
         )
