@@ -147,6 +147,14 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
     if (!response.ok) throw new Error("Public content unavailable");
     return response.json();
   }).then(payload => {
+    if (payload.site && typeof payload.site.name === "string" && payload.site.name.trim()) {
+      document.querySelectorAll(".brand span:last-child").forEach(node => { node.textContent = payload.site.name; });
+      document.title = payload.site.name + " — Explore. Learn. Create.";
+    }
+    if (payload.site && typeof payload.site.description === "string") {
+      const description = document.querySelector('meta[name="description"]');
+      if (description && payload.site.description.trim()) description.setAttribute("content", payload.site.description);
+    }
     if (payload.knowledge && payload.knowledge.enabled === true &&
         Array.isArray(payload.knowledge.items) && payload.knowledge.items.length) {
       facts = payload.knowledge.items.filter(item => item && typeof item.text === "string" && item.text.trim())
