@@ -391,3 +391,62 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
       if (grid.children.length) section.hidden = false;
     }).catch(() => { section.hidden = true; });
 })();
+
+
+/* Public feedback submission and moderated community comments. */
+(() => {
+  const section = document.getElementById("user-feedback");
+  const form = document.getElementById("public-feedback-form");
+  if (!section || !form) return;
+  const status = document.getElementById("feedback-status");
+  const submit = document.getElementById("feedback-submit");
+  const category = document.getElementById("feedback-category");
+  const approvedPanel = document.getElementById("approved-feedback-panel");
+  const approvedList = document.getElementById("approved-feedback-list");
+  fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
+    method: "GET", headers: { "Accept": "application/json" }, credentials: "omit"
+  }).then(response => { if (!response.ok) throw new Error("Feedback settings unavailable"); return response.json(); })
+    .then(payload => {
+      const config = payload.feedback || {};
+      if (config.enabled === true) {
+        const categories = Array.isArray(config.categories) ? config.categories : [];
+        categories.forEach(name => { const option = document.createElement("option"); option.value = name; option.textContent = name; category.append(option); });
+        if (!categories.length) return;
+        document.getElementById("feedback-name").required = config.allowAnonymous === false;
+        section.hidden = false;
+      } else {
+        form.hidden = true;
+      }
+      if (config.displayApproved === true && Array.isArray(config.approvedFeedback) && config.approvedFeedback.length) {
+        config.approvedFeedback.forEach(item => {
+          const card = document.createElement("article"); card.className = "approved-feedback-card";
+          const rating = document.createElement("span"); rating.className = "feedback-stars"; rating.textContent = "★".repeat(Math.max(1, Math.min(5, Number(item.rating) || 0)));
+          const message = document.createElement("p"); message.textContent = item.message;
+          const author = document.createElement("small"); author.textContent = (item.name || "Community member") + " · " + item.category;
+          card.append(rating, message, author); approvedList.append(card);
+        });
+        approvedPanel.hidden = false; section.hidden = false;
+      }
+    }).catch(() => { section.hidden = true; });
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    submit.disabled = true; status.textContent = "Submitting your feedback…";
+    try {
+      const response = await fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=submit-feedback", {
+        method: "POST", headers: { "Content-Type": "application/json" }, credentials: "omit",
+        body: JSON.stringify({
+          name: document.getElementById("feedback-name").value.trim(),
+          category: category.value,
+          rating: Number(document.getElementById("feedback-rating").value),
+          message: document.getElementById("feedback-message").value.trim(),
+          website: document.getElementById("feedback-website").value
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not submit feedback.");
+      status.textContent = payload.message || "Thank you. Your feedback has been sent for review.";
+      form.reset();
+    } catch (error) { status.textContent = error.message || "Could not submit feedback."; }
+    finally { submit.disabled = false; }
+  });
+})();
