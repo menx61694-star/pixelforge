@@ -333,3 +333,9 @@ test("SEO Management validates metadata and applies page-specific canonical and 
   assert.match(seoScript, /canonical/);
   assert.match(seoScript, /robots/);
 });
+
+test("All public pages load the SEO metadata runtime", () => {
+  for (const page of ["index.html","library.html","tools.html","pdf-documents.html","study-notes.html","books-resources.html","other-documents.html","exam-materials.html","technology-guides.html"]) {
+    assert.match(read(page), /src="seo\.js"/, page + " SEO runtime");
+  }
+});
