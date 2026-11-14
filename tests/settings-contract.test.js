@@ -92,3 +92,23 @@ test("admin workspace exposes a permission-gated Settings page for the existing 
   assert.ok(adminJs.includes('settingsRequest("update", { method: "POST"'));
   assert.ok(adminJs.includes('settingsRequest("audit")'));
 });
+
+test("public homepage knowledge is admin-managed, allow-listed, and safely exposed", () => {
+  const migration = read("supabase/phase-6-homepage-content.sql");
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  const publicScript = read("script.js");
+  assert.match(edge, /action === "public-content"/);
+  assert.match(edge, /"home\.knowledge\.enabled", "home\.knowledge\.items"/);
+  assert.match(edge, /key === "home\.knowledge\.items"/);
+  assert.match(edge, /item\.text\.length <= 240/);
+  assert.match(migration, /home\.knowledge\.items/);
+  assert.match(migration, /jsonb_array_length\(p_value\) <= 50/);
+  assert.match(adminHtml, /setting-knowledge-enabled/);
+  assert.match(adminHtml, /setting-knowledge-items/);
+  assert.match(adminJs, /saveSetting\("home\.knowledge\.items"/);
+  assert.match(adminJs, /saveSetting\("home\.knowledge\.enabled"/);
+  assert.match(publicScript, /action=public-content/);
+  assert.match(publicScript, /textContent = facts\[next\]\.text/);
+  assert.doesNotMatch(publicScript, /innerHTML\s*=\s*facts/);
+});
