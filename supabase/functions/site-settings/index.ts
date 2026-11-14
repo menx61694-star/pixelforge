@@ -28,6 +28,8 @@ const settingKeys = new Set([
   "home.search.filters_enabled",
   "home.search.max_results",
   "home.search.placeholder",
+  "home.learning.enabled",
+  "home.learning.items",
 ]);
 
 function cors(request: Request) {
@@ -115,7 +117,7 @@ function isValidIsoDate(value: string): boolean {
 }
 function validSettingValue(key: string, value: unknown): boolean {
   if (!settingKeys.has(key)) return false;
-  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled" || key === "home.quiz.enabled" || key === "home.tools.enabled" || key === "home.featured.enabled" || key === "home.announcements.enabled" || key === "home.search.enabled" || key === "home.search.smart_enabled" || key === "home.search.filters_enabled") return typeof value === "boolean";
+  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled" || key === "home.quiz.enabled" || key === "home.tools.enabled" || key === "home.featured.enabled" || key === "home.announcements.enabled" || key === "home.search.enabled" || key === "home.search.smart_enabled" || key === "home.search.filters_enabled" || key === "home.learning.enabled") return typeof value === "boolean";
   if (key === "home.knowledge.items") {
     return Array.isArray(value) && value.length <= 50 && value.every((item) =>
       item && typeof item === "object" && !Array.isArray(item) &&
@@ -161,6 +163,27 @@ function validSettingValue(key: string, value: unknown): boolean {
         typeof resource.published === "boolean";
     }) && new Set(value.map((item: { id?: unknown }) => item.id)).size === value.length;
   }
+  if (key === "home.learning.items") {
+    return Array.isArray(value) && value.length <= 12 && value.every((item: unknown) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+      const path = item as Record<string, unknown>;
+      if (!Object.keys(path).every(field => ["id","title","description","topic","level","duration","published","steps"].includes(field)) ||
+          typeof path.id !== "string" || path.id.trim().length < 1 || path.id.length > 64 ||
+          typeof path.title !== "string" || path.title.trim().length < 1 || path.title.length > 100 ||
+          typeof path.description !== "string" || path.description.trim().length < 1 || path.description.length > 240 ||
+          typeof path.topic !== "string" || path.topic.trim().length < 1 || path.topic.length > 40 ||
+          !["beginner","intermediate","advanced"].includes(String(path.level)) ||
+          typeof path.duration !== "string" || path.duration.length > 32 ||
+          typeof path.published !== "boolean" || !Array.isArray(path.steps) || path.steps.length < 1 || path.steps.length > 8) return false;
+      return path.steps.every((step: unknown) => {
+        if (!step || typeof step !== "object" || Array.isArray(step)) return false;
+        const entry = step as Record<string, unknown>;
+        return Object.keys(entry).every(field => ["title","url"].includes(field)) &&
+          typeof entry.title === "string" && entry.title.trim().length > 0 && entry.title.length <= 100 &&
+          typeof entry.url === "string" && entry.url.length <= 1200 && isSafeHttpsUrl(entry.url);
+      });
+    }) && new Set(value.map((item: { id?: unknown }) => item.id)).size === value.length;
+  }
   if (key === "home.search.max_results") return typeof value === "number" && Number.isInteger(value) && value >= 6 && value <= 100;
   if (key === "home.search.placeholder") return typeof value === "string" && value.trim().length >= 5 && value.length <= 100;
   if (key === "home.announcements.items") {
@@ -203,7 +226,7 @@ Deno.serve(async (request) => {
       const db = dbAdmin();
       const { data, error } = await db.from("pixel_forge_site_settings")
         .select("setting_key,setting_value")
-        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items", "home.tools.enabled", "home.tools.items", "home.featured.enabled", "home.featured.items", "home.announcements.enabled", "home.announcements.items", "home.search.enabled", "home.search.smart_enabled", "home.search.filters_enabled", "home.search.max_results", "home.search.placeholder"]);
+        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items", "home.tools.enabled", "home.tools.items", "home.featured.enabled", "home.featured.items", "home.announcements.enabled", "home.announcements.items", "home.search.enabled", "home.search.smart_enabled", "home.search.filters_enabled", "home.search.max_results", "home.search.placeholder", "home.learning.enabled", "home.learning.items"]);
       if (error) throw error;
       const values = Object.fromEntries((data ?? []).map((row) => [row.setting_key, row.setting_value]));
       const items = Array.isArray(values["home.knowledge.items"]) ? values["home.knowledge.items"] : [];
@@ -228,6 +251,19 @@ Deno.serve(async (request) => {
             ? (values["home.featured.items"] as Array<Record<string, unknown>>)
                 .filter(item => item.published === true && typeof item.url === "string" && isSafeHttpsUrl(item.url))
                 .slice(0, 12)
+            : [],
+        },
+        learningCorner: {
+          enabled: values["home.learning.enabled"] === true,
+          items: Array.isArray(values["home.learning.items"])
+            ? (values["home.learning.items"] as Array<Record<string, unknown>>).filter(path =>
+                path.published === true && Array.isArray(path.steps) &&
+                path.steps.every((step: unknown) => {
+                  if (!step || typeof step !== "object") return false;
+                  const entry = step as Record<string, unknown>;
+                  return typeof entry.title === "string" && typeof entry.url === "string" && isSafeHttpsUrl(entry.url);
+                })
+              ).slice(0, 12)
             : [],
         },
         search: {
