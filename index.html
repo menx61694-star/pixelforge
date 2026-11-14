@@ -80,10 +80,11 @@
           <label for="feedback-category">Feedback category</label><select id="feedback-category" required></select>
           <label for="feedback-rating">Your rating</label><select id="feedback-rating" required><option value="5">★★★★★ — Excellent</option><option value="4">★★★★☆ — Good</option><option value="3">★★★☆☆ — Average</option><option value="2">★★☆☆☆ — Needs improvement</option><option value="1">★☆☆☆☆ — Poor</option></select>
           <label for="feedback-message">Your feedback</label><textarea id="feedback-message" rows="5" minlength="20" maxlength="1000" required placeholder="Tell us what you think (20–1000 characters)…"></textarea>
-          <label class="feedback-honeypot" aria-hidden="true" for="feedback-website">Leave this field empty</label><input class="feedback-honeypot" id="feedback-website" type="text" tabindex="-1" autocomplete="off">
+          <label class="feedback-honeypot" aria-hidden="true" for="feedback-website">Leave this field empty</label><input class="feedback-honeypot" id="feedback-website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <label class="feedback-consent"><input id="feedback-consent" type="checkbox" required> I agree that my feedback may be displayed publicly after moderation.</label>
           <button class="button button-dark" id="feedback-submit" type="submit">Submit feedback</button>
           <p id="feedback-status" class="feedback-status" role="status" aria-live="polite"></p>
-          <p class="feedback-privacy-note">Feedback is reviewed by the PixelForge team before it can appear publicly. Name is optional.</p>
+          <p class="feedback-privacy-note">Your feedback is reviewed before publication. If you include a name, it may appear with an approved comment.</p>
         </form>
         <div class="approved-feedback-panel" id="approved-feedback-panel" hidden>
           <p class="eyebrow dark">COMMUNITY VOICES</p><h3>What visitors say</h3>
