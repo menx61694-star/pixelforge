@@ -313,15 +313,21 @@ Deno.serve(async (request) => {
         if (metricsError) throw metricsError;
         const storagePaths = (metrics ?? []).filter(item => item.source === "supabase").map(item => item.resource_id);
         const driveIds = (metrics ?? []).filter(item => item.source === "google_drive").map(item => item.resource_id);
-        const [storageResult, driveResult] = await Promise.all([
-          storagePaths.length ? db.from("pixel_forge_published_documents").select("source,storage_path,title,category,size_bytes").eq("source","supabase").eq("published",true).in("storage_path",storagePaths) : Promise.resolve({ data: [], error: null }),
-          driveIds.length ? db.from("pixel_forge_published_documents").select("source,drive_file_id,title,category,size_bytes").eq("source","google_drive").eq("published",true).in("drive_file_id",driveIds) : Promise.resolve({ data: [], error: null }),
-        ]);
-        if (storageResult.error) throw storageResult.error;
-        if (driveResult.error) throw driveResult.error;
         const docs = new Map<string, Record<string, unknown>>();
-        for (const item of storageResult.data ?? []) docs.set("supabase:" + item.storage_path, item);
-        for (const item of driveResult.data ?? []) docs.set("google_drive:" + item.drive_file_id, item);
+        if (storagePaths.length) {
+          const { data, error } = await db.from("pixel_forge_published_documents")
+            .select("source,storage_path,title,category,size_bytes").eq("source","supabase")
+            .eq("published",true).in("storage_path",storagePaths);
+          if (error) throw error;
+          for (const item of data ?? []) docs.set("supabase:" + item.storage_path, item);
+        }
+        if (driveIds.length) {
+          const { data, error } = await db.from("pixel_forge_published_documents")
+            .select("source,drive_file_id,title,category,size_bytes").eq("source","google_drive")
+            .eq("published",true).in("drive_file_id",driveIds);
+          if (error) throw error;
+          for (const item of data ?? []) docs.set("google_drive:" + item.drive_file_id, item);
+        }
         for (const metric of metrics ?? []) {
           const doc = docs.get(metric.source + ":" + metric.resource_id);
           if (!doc) continue;
@@ -508,6 +514,36 @@ Deno.serve(async (request) => {
       });
       if (insertError) throw insertError;
       return json({ ok: true, message: "Thank you. Your feedback has been sent for review." }, 200, request);
+    }
+
+    if (request.method === "POST" && action === "track-resource") {
+      const raw = await request.text();
+      if (raw.length > 2000) return json({ error: "Resource tracking request is too large." }, 413, request);
+      const input = (() => { try { return JSON.parse(raw); } catch (_) { return null; } })();
+      if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).length !== 3 ||
+          !["supabase","google_drive"].includes(input.source) ||
+          typeof input.resourceId !== "string" || !input.resourceId.trim() || input.resourceId.length > 512 ||
+          typeof input.visitorId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.visitorId)) {
+        return json({ error: "Invalid resource tracking request." }, 400, request);
+      }
+      const db = dbAdmin();
+      const referenceColumn = input.source === "supabase" ? "storage_path" : "drive_file_id";
+      const { data: published, error: publishedError } = await db.from("pixel_forge_published_documents")
+        .select("id").eq("source", input.source).eq("published", true)
+        .eq(referenceColumn, input.resourceId).maybeSingle();
+      if (publishedError) throw publishedError;
+      if (!published) return json({ error: "Resource is not publicly published." }, 404, request);
+      const hmacKey = await crypto.subtle.importKey(
+        "raw", new TextEncoder().encode(required("SUPABASE_SERVICE_ROLE_KEY")),
+        { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+      );
+      const signature = await crypto.subtle.sign("HMAC", hmacKey, new TextEncoder().encode(input.visitorId));
+      const visitorHash = Array.from(new Uint8Array(signature)).map(byte => byte.toString(16).padStart(2, "0")).join("");
+      const { data: recorded, error: trackError } = await db.rpc("pixel_forge_track_resource_view", {
+        p_source: input.source, p_resource_id: input.resourceId, p_visitor_hash: visitorHash,
+      });
+      if (trackError) throw trackError;
+      return json({ ok: true, recorded: recorded === true }, 200, request);
     }
 
     if (request.method === "GET" && action === "public-status") {
