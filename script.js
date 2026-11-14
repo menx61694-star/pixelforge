@@ -357,3 +357,37 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
     window.location.href = "library.html" + (params.toString() ? "?" + params.toString() : "");
   });
 })();
+
+
+/* Admin-curated Learning Corner paths. */
+(() => {
+  const section = document.getElementById("learning-corner");
+  const grid = document.getElementById("learning-path-grid");
+  if (!section || !grid) return;
+  fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
+    method: "GET", headers: { "Accept": "application/json" }, credentials: "omit"
+  }).then(response => { if (!response.ok) throw new Error("Learning paths unavailable"); return response.json(); })
+    .then(payload => {
+      const config = payload.learningCorner;
+      if (!config || config.enabled !== true || !Array.isArray(config.items)) return;
+      config.items.filter(path => path && path.published === true && Array.isArray(path.steps))
+        .slice(0, 12).forEach(path => {
+          const card = document.createElement("article"); card.className = "learning-path-card";
+          const meta = document.createElement("div"); meta.className = "learning-path-meta";
+          const level = document.createElement("span"); level.textContent = String(path.level || "BEGINNER").toUpperCase();
+          const duration = document.createElement("span"); duration.textContent = String(path.duration || "");
+          meta.append(level, duration);
+          const topic = document.createElement("p"); topic.className = "learning-path-topic"; topic.textContent = String(path.topic || "LEARNING PATH").toUpperCase();
+          const title = document.createElement("h3"); title.textContent = path.title;
+          const description = document.createElement("p"); description.textContent = path.description;
+          const steps = document.createElement("ol"); steps.className = "learning-path-steps";
+          path.steps.forEach((step, index) => {
+            const li = document.createElement("li");
+            const link = document.createElement("a"); link.href = step.url; link.target = "_blank"; link.rel = "noopener noreferrer";
+            link.textContent = step.title || ("Step " + (index + 1)); li.append(link); steps.append(li);
+          });
+          card.append(meta, topic, title, description, steps); grid.append(card);
+        });
+      if (grid.children.length) section.hidden = false;
+    }).catch(() => { section.hidden = true; });
+})();
