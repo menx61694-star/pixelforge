@@ -1025,6 +1025,9 @@ const firebaseConfig = {
       setChecked("setting-quiz-enabled", values["home.quiz.enabled"]);
       setChecked("setting-tools-enabled", values["home.tools.enabled"]);
       setChecked("setting-featured-enabled", values["home.featured.enabled"]);
+      setChecked("setting-announcements-enabled", values["home.announcements.enabled"]);
+      const announcementsTextarea = document.getElementById("setting-announcements-items");
+      if (announcementsTextarea) announcementsTextarea.value = JSON.stringify(Array.isArray(values["home.announcements.items"]) ? values["home.announcements.items"] : [], null, 2);
       const featuredTextarea = document.getElementById("setting-featured-items");
       if (featuredTextarea) featuredTextarea.value = JSON.stringify(Array.isArray(values["home.featured.items"]) ? values["home.featured.items"] : [], null, 2);
       const toolsTextarea = document.getElementById("setting-tools-items");
@@ -1110,6 +1113,34 @@ const firebaseConfig = {
       }
       saveSetting("home.knowledge.items", items, button)
         .then(() => saveSetting("home.knowledge.enabled", document.getElementById("setting-knowledge-enabled").checked, button));
+    } else if (group === "home.announcements") {
+      let items;
+      try { items = JSON.parse(document.getElementById("setting-announcements-items").value || "[]"); }
+      catch (_) { setSettingsStatus("Announcements must be valid JSON.", true); return; }
+      const valid = Array.isArray(items) && items.length <= 20 && items.every(item => {
+        if (!item || typeof item !== "object" || Array.isArray(item) ||
+            !Object.keys(item).every(key => ["id","title","message","type","startDate","endDate","published","url","label"].includes(key)) ||
+            typeof item.id !== "string" || !item.id.trim() || item.id.length > 64 ||
+            typeof item.title !== "string" || !item.title.trim() || item.title.length > 120 ||
+            typeof item.message !== "string" || !item.message.trim() || item.message.length > 500 ||
+            !["info","update","important"].includes(item.type) ||
+            typeof item.startDate !== "string" || typeof item.endDate !== "string" ||
+            !/^\\d{4}-\\d{2}-\\d{2}$/.test(item.startDate) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(item.endDate) ||
+            Number.isNaN(Date.parse(item.startDate + "T00:00:00.000Z")) || Number.isNaN(Date.parse(item.endDate + "T00:00:00.000Z")) ||
+            new Date(item.startDate + "T00:00:00.000Z").toISOString().slice(0, 10) !== item.startDate ||
+            new Date(item.endDate + "T00:00:00.000Z").toISOString().slice(0, 10) !== item.endDate ||
+            item.startDate > item.endDate || typeof item.published !== "boolean" ||
+            typeof item.url !== "string" || item.url.length > 1200 ||
+            typeof item.label !== "string" || item.label.length > 32) return false;
+        if (!item.url) return item.label === "";
+        try { const url = new URL(item.url); return url.protocol === "https:" && !url.username && !url.password && item.label.trim().length > 0; }
+        catch (_) { return false; }
+      });
+      if (!valid || new Set(items.map(item => item.id)).size !== items.length) {
+        setSettingsStatus("Add up to 20 valid announcements with unique IDs and valid dates.", true); return;
+      }
+      saveSetting("home.announcements.items", items, button)
+        .then(() => saveSetting("home.announcements.enabled", document.getElementById("setting-announcements-enabled").checked, button));
     } else if (group === "home.featured") {
       let items;
       try { items = JSON.parse(document.getElementById("setting-featured-items").value || "[]"); }
