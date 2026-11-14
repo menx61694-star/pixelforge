@@ -42,6 +42,8 @@ const settingKeys = new Set([
   "home.seo.canonical_base",
   "home.seo.og_image",
   "home.seo.page_overrides",
+  "home.layout.enabled",
+  "home.layout.sections",
 ]);
 
 function cors(request: Request) {
@@ -129,7 +131,7 @@ function isValidIsoDate(value: string): boolean {
 }
 function validSettingValue(key: string, value: unknown): boolean {
   if (!settingKeys.has(key)) return false;
-  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled" || key === "home.quiz.enabled" || key === "home.tools.enabled" || key === "home.featured.enabled" || key === "home.announcements.enabled" || key === "home.search.enabled" || key === "home.search.smart_enabled" || key === "home.search.filters_enabled" || key === "home.learning.enabled" || key === "home.feedback.enabled" || key === "home.feedback.allow_anonymous" || key === "home.feedback.display_approved" || key === "home.seo.enabled") return typeof value === "boolean";
+  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled" || key === "home.quiz.enabled" || key === "home.tools.enabled" || key === "home.featured.enabled" || key === "home.announcements.enabled" || key === "home.search.enabled" || key === "home.search.smart_enabled" || key === "home.search.filters_enabled" || key === "home.learning.enabled" || key === "home.feedback.enabled" || key === "home.feedback.allow_anonymous" || key === "home.feedback.display_approved" || key === "home.seo.enabled" || key === "home.layout.enabled") return typeof value === "boolean";
   if (key === "home.knowledge.items") {
     return Array.isArray(value) && value.length <= 50 && value.every((item) =>
       item && typeof item === "object" && !Array.isArray(item) &&
@@ -174,6 +176,18 @@ function validSettingValue(key: string, value: unknown): boolean {
         typeof resource.label === "string" && resource.label.trim().length > 0 && resource.label.length <= 32 &&
         typeof resource.published === "boolean";
     }) && new Set(value.map((item: { id?: unknown }) => item.id)).size === value.length;
+  }
+  if (key === "home.layout.sections") {
+    const allowed = new Set(["smart-document-search","discover","user-feedback","learning-corner","announcements","featured-resources","quick-tools","knowledge","daily-quiz","about","contact"]);
+    return Array.isArray(value) && value.length === 11 && value.every((item: unknown) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+      const section = item as Record<string, unknown>;
+      return Object.keys(section).every(field => ["id","enabled","title","subtitle"].includes(field)) &&
+        typeof section.id === "string" && allowed.has(section.id) &&
+        typeof section.enabled === "boolean" &&
+        typeof section.title === "string" && section.title.length <= 80 &&
+        typeof section.subtitle === "string" && section.subtitle.length <= 160;
+    }) && new Set(value.map((item: { id?: unknown }) => item.id)).size === 11;
   }
   if (key === "home.seo.default_title") return typeof value === "string" && value.trim().length >= 5 && value.length <= 70;
   if (key === "home.seo.default_description") return typeof value === "string" && value.trim().length >= 50 && value.length <= 160;
@@ -262,7 +276,7 @@ Deno.serve(async (request) => {
       const db = dbAdmin();
       const { data, error } = await db.from("pixel_forge_site_settings")
         .select("setting_key,setting_value")
-        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items", "home.tools.enabled", "home.tools.items", "home.featured.enabled", "home.featured.items", "home.announcements.enabled", "home.announcements.items", "home.search.enabled", "home.search.smart_enabled", "home.search.filters_enabled", "home.search.max_results", "home.search.placeholder", "home.learning.enabled", "home.learning.items", "home.feedback.enabled", "home.feedback.categories", "home.feedback.allow_anonymous", "home.feedback.display_approved", "home.feedback.max_display", "home.seo.enabled", "home.seo.default_title", "home.seo.default_description", "home.seo.default_keywords", "home.seo.canonical_base", "home.seo.og_image", "home.seo.page_overrides"]);
+        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items", "home.tools.enabled", "home.tools.items", "home.featured.enabled", "home.featured.items", "home.announcements.enabled", "home.announcements.items", "home.search.enabled", "home.search.smart_enabled", "home.search.filters_enabled", "home.search.max_results", "home.search.placeholder", "home.learning.enabled", "home.learning.items", "home.feedback.enabled", "home.feedback.categories", "home.feedback.allow_anonymous", "home.feedback.display_approved", "home.feedback.max_display", "home.seo.enabled", "home.seo.default_title", "home.seo.default_description", "home.seo.default_keywords", "home.seo.canonical_base", "home.seo.og_image", "home.seo.page_overrides", "home.layout.enabled", "home.layout.sections"]);
       if (error) throw error;
       const values = Object.fromEntries((data ?? []).map((row) => [row.setting_key, row.setting_value]));
       const items = Array.isArray(values["home.knowledge.items"]) ? values["home.knowledge.items"] : [];
@@ -301,6 +315,10 @@ Deno.serve(async (request) => {
                 .filter(item => item.published === true && typeof item.url === "string" && isSafeHttpsUrl(item.url))
                 .slice(0, 12)
             : [],
+        },
+        layout: {
+          enabled: values["home.layout.enabled"] === true,
+          sections: Array.isArray(values["home.layout.sections"]) ? values["home.layout.sections"] : [],
         },
         seo: {
           enabled: values["home.seo.enabled"] === true,
