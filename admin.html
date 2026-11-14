@@ -253,6 +253,24 @@
                 <button type="button" data-setting-save="home.quiz">Save Daily Quiz</button>
               </article>
               <article class="settings-card">
+                <h3>SEO Management</h3>
+                <label class="settings-toggle"><input id="setting-seo-enabled" type="checkbox"><span>Enable dynamic SEO metadata</span></label>
+                <label for="setting-seo-title">Default page title (5–70 characters)</label>
+                <input id="setting-seo-title" type="text" maxlength="70" value="PixelForge — Digital resources and learning tools">
+                <label for="setting-seo-description">Default meta description (50–160 characters)</label>
+                <textarea id="setting-seo-description" rows="3" maxlength="160">Discover curated documents, study notes, digital tools and guided learning resources on PixelForge.</textarea>
+                <label for="setting-seo-keywords">Default keywords (up to 250 characters)</label>
+                <input id="setting-seo-keywords" type="text" maxlength="250" value="study notes, documents, learning resources, digital tools">
+                <label for="setting-seo-canonical">Canonical base URL (optional HTTPS URL)</label>
+                <input id="setting-seo-canonical" type="url" maxlength="300" placeholder="https://your-domain.example">
+                <label for="setting-seo-og-image">Open Graph image URL (optional HTTPS URL)</label>
+                <input id="setting-seo-og-image" type="url" maxlength="1200" placeholder="https://your-domain.example/social-preview.png">
+                <label for="setting-seo-pages">Page-specific SEO overrides (JSON)</label>
+                <textarea id="setting-seo-pages" rows="10" maxlength="18000" spellcheck="false" placeholder='[{"page":"/library.html","title":"Document Library | PixelForge","description":"Browse published study notes, documents and learning resources on PixelForge.","keywords":"document library, study notes","robots":"index,follow","canonical":""}]'></textarea>
+                <p class="settings-help">Add up to 20 page overrides. Page paths must be local paths beginning with /. Robots options: index,follow; noindex,follow; noindex,nofollow. Titles and descriptions must meet the limits above.</p>
+                <button type="button" data-setting-save="home.seo">Save SEO Settings</button>
+              </article>
+              <article class="settings-card">
                 <h3>User Feedback</h3>
                 <label class="settings-toggle"><input id="setting-feedback-enabled" type="checkbox"><span>Enable the public feedback form</span></label>
                 <label class="settings-toggle"><input id="setting-feedback-anonymous" type="checkbox"><span>Allow anonymous feedback (name optional)</span></label>
