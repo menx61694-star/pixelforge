@@ -100,7 +100,7 @@ test("Storage RLS enforces per-user private-vault access and publish permissions
 
 test("Admin UI hides controls that are not included in the signed-in role permissions", () => {
   assert.match(adminJs, /currentPermissions = new Set\(session\.permissions \|\| \[\]\)/);
-  assert.match(adminJs, /document\.querySelectorAll\("\\[data-permission\\]"\)/);
+  assert.ok(adminJs.includes('document.querySelectorAll("[data-permission]")'));
   assert.match(adminJs, /element\.hidden = !currentPermissions\.has\(element\.getAttribute\("data-permission"\)\)/);
   assert.match(adminJs, /uploadPanel\.hidden = !currentPermissions\.has\("vault\.write"\)/);
 });
