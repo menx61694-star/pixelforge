@@ -63,7 +63,7 @@ test("public homepage and library send allowlisted page paths without visitor cr
   assert.match(homepage, /sessionStorage\.getItem\(key\)/);
   assert.match(homepage, /visitorSessionId/);
   assert.match(homepage, /credentials: "omit"/);
-  assert.match(library, /\/api\/analytics/);
+  assert.match(library, /functions\/v1\/analytics\?action=collect/);
   assert.match(library, /credentials: "omit"/);
 });
 
