@@ -1024,6 +1024,9 @@ const firebaseConfig = {
       setChecked("setting-knowledge-enabled", values["home.knowledge.enabled"]);
       setChecked("setting-quiz-enabled", values["home.quiz.enabled"]);
       setChecked("setting-tools-enabled", values["home.tools.enabled"]);
+      setChecked("setting-featured-enabled", values["home.featured.enabled"]);
+      const featuredTextarea = document.getElementById("setting-featured-items");
+      if (featuredTextarea) featuredTextarea.value = JSON.stringify(Array.isArray(values["home.featured.items"]) ? values["home.featured.items"] : [], null, 2);
       const toolsTextarea = document.getElementById("setting-tools-items");
       if (toolsTextarea) toolsTextarea.value = (Array.isArray(values["home.tools.items"]) ? values["home.tools.items"] : ["calculator","percentage","word-counter","unit-converter"]).join("\n");
       const quizTextarea = document.getElementById("setting-quiz-items");
@@ -1107,6 +1110,28 @@ const firebaseConfig = {
       }
       saveSetting("home.knowledge.items", items, button)
         .then(() => saveSetting("home.knowledge.enabled", document.getElementById("setting-knowledge-enabled").checked, button));
+    } else if (group === "home.featured") {
+      let items;
+      try { items = JSON.parse(document.getElementById("setting-featured-items").value || "[]"); }
+      catch (_) { setSettingsStatus("Featured resources must be valid JSON.", true); return; }
+      const valid = Array.isArray(items) && items.length <= 12 && items.every(item => {
+        if (!item || typeof item !== "object" || Array.isArray(item) ||
+            !Object.keys(item).every(key => ["id","title","description","category","url","label","published"].includes(key)) ||
+            typeof item.id !== "string" || !item.id.trim() || item.id.length > 64 ||
+            typeof item.title !== "string" || !item.title.trim() || item.title.length > 100 ||
+            typeof item.description !== "string" || item.description.length > 240 ||
+            typeof item.category !== "string" || !item.category.trim() || item.category.length > 40 ||
+            typeof item.url !== "string" || item.url.length > 1200 ||
+            typeof item.label !== "string" || !item.label.trim() || item.label.length > 32 ||
+            typeof item.published !== "boolean") return false;
+        try { const url = new URL(item.url); return url.protocol === "https:" && !url.username && !url.password; }
+        catch (_) { return false; }
+      });
+      if (!valid || new Set(items.map(item => item.id)).size !== items.length) {
+        setSettingsStatus("Add up to 12 valid resources with unique IDs and HTTPS links.", true); return;
+      }
+      saveSetting("home.featured.items", items, button)
+        .then(() => saveSetting("home.featured.enabled", document.getElementById("setting-featured-enabled").checked, button));
     } else if (group === "home.tools") {
       const items = document.getElementById("setting-tools-items").value.split(/\r?\n/).map(item => item.trim()).filter(Boolean);
       const allowed = new Set(["calculator","percentage","word-counter","unit-converter"]);
