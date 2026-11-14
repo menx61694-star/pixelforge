@@ -173,3 +173,32 @@
 .learning-path-steps a{color:#4d5bd1;font-weight:750;text-decoration:none}
 @media(max-width:850px){.learning-path-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.learning-path-grid{grid-template-columns:1fr}}
+
+/* Public feedback and admin moderation */
+.user-feedback-section[hidden]{display:none}
+.user-feedback-section{padding-top:clamp(3rem,7vw,6rem);padding-bottom:clamp(3rem,7vw,6rem);background:#f5f6fb}
+.feedback-layout{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-top:2rem;align-items:start}
+.public-feedback-form,.approved-feedback-panel{display:grid;gap:.65rem;padding:1.5rem;border:1px solid #e1e6f0;border-radius:18px;background:#fff}
+.public-feedback-form label{font-size:.85rem;font-weight:750;color:#34415f}
+.public-feedback-form label span{font-weight:400;color:#7a8499}
+.public-feedback-form input,.public-feedback-form select,.public-feedback-form textarea{width:100%;min-height:44px;padding:.7rem .8rem;border:1px solid #d9dfeb;border-radius:10px;background:#fff;color:#1b2948;font:inherit}
+.public-feedback-form textarea{resize:vertical}
+.feedback-honeypot{position:absolute!important;left:-10000px!important;width:1px!important;height:1px!important;overflow:hidden!important}
+.feedback-status{min-height:1.3rem;color:#43518a;font-size:.88rem}
+.feedback-privacy-note{margin:0;color:#7b8499;font-size:.76rem;line-height:1.5}
+.approved-feedback-panel h3{margin:.2rem 0 .5rem;color:#1b2948;font-size:1.2rem}
+.approved-feedback-list{display:grid;gap:.75rem}
+.approved-feedback-card{padding:1rem;border-radius:12px;background:#f5f6fb}
+.feedback-stars{color:#c28b22;letter-spacing:.08em}
+.approved-feedback-card p{margin:.5rem 0;color:#45516a;line-height:1.6;font-size:.9rem}
+.approved-feedback-card small{color:#7a8499;font-size:.76rem}
+.feedback-inbox-list{display:grid;gap:.8rem}
+.feedback-inbox-card{padding:1rem;border:1px solid #e0e5ef;border-radius:12px;background:#fff}
+.feedback-inbox-heading{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.feedback-inbox-heading span{font-size:.8rem;color:#7a8499}
+.feedback-inbox-card p{color:#46536e;line-height:1.6;white-space:pre-wrap}
+.feedback-inbox-card small{color:#7a8499}
+.feedback-inbox-actions{display:flex;gap:.5rem;margin-top:.8rem}
+.feedback-inbox-actions button{padding:.5rem .85rem;border:0;border-radius:8px;background:#edf0ff;color:#3e4db9;font-weight:750;cursor:pointer}
+.feedback-inbox-actions button:last-child{background:#fff0ed;color:#a74b3d}
+@media(max-width:760px){.feedback-layout{grid-template-columns:1fr}}
