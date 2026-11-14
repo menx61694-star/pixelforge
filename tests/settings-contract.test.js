@@ -401,5 +401,6 @@ test("PDF preview is a public-library-only feature controlled by an audited admi
   assert.ok(edge.includes('pdfPreviewEnabled: values["home.library.pdf_preview_enabled"] !== false'));
   assert.ok(migration.includes("home.library.pdf_preview_enabled"));
   assert.ok(migration.includes("when 'home.library.pdf_preview_enabled' then jsonb_typeof(p_value) = 'boolean'"));
-  assert.ok(migration.includes("enable row level security"));
+  assert.ok(migration.includes("revoke all on function public.pixel_forge_update_site_setting(text, jsonb, text) from public, anon, authenticated"));
+  assert.ok(migration.includes("grant execute on function public.pixel_forge_update_site_setting(text, jsonb, text) to service_role"));
 });
