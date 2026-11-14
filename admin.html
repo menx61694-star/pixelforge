@@ -253,6 +253,20 @@
                 <button type="button" data-setting-save="home.quiz">Save Daily Quiz</button>
               </article>
               <article class="settings-card">
+                <h3>User Feedback</h3>
+                <label class="settings-toggle"><input id="setting-feedback-enabled" type="checkbox"><span>Enable the public feedback form</span></label>
+                <label class="settings-toggle"><input id="setting-feedback-anonymous" type="checkbox"><span>Allow anonymous feedback (name optional)</span></label>
+                <label class="settings-toggle"><input id="setting-feedback-display" type="checkbox"><span>Display approved feedback on the homepage</span></label>
+                <label for="setting-feedback-categories">Feedback categories (one per line)</label>
+                <textarea id="setting-feedback-categories" rows="5" maxlength="320">General
+Website
+Resources
+Suggestion</textarea>
+                <label for="setting-feedback-max-display">Approved feedback to display (1–12)</label>
+                <input id="setting-feedback-max-display" type="number" min="1" max="12" step="1" value="6">
+                <button type="button" data-setting-save="home.feedback">Save Feedback Settings</button>
+              </article>
+              <article class="settings-card">
                 <h3>Learning Corner</h3>
                 <label class="settings-toggle"><input id="setting-learning-enabled" type="checkbox"><span>Show Learning Corner on the homepage</span></label>
                 <label for="setting-learning-items">Guided learning paths (JSON)</label>
@@ -306,6 +320,11 @@ unit-converter</textarea>
                 <p class="settings-help">These preferences are stored only; they do not independently start background sync jobs.</p>
               </article>
             </div>
+          </section>
+          <section class="panel settings-panel">
+            <div class="panel-heading"><div><p class="eyebrow">COMMUNITY MODERATION</p><h2>Feedback inbox</h2></div><button id="refresh-feedback" class="refresh-button" type="button">↻ Refresh</button></div>
+            <p id="feedback-inbox-status" class="panel-copy" role="status" aria-live="polite">Loading feedback submissions…</p>
+            <div id="feedback-inbox-list" class="feedback-inbox-list"><p class="empty-state">Loading feedback…</p></div>
           </section>
           <section class="panel settings-panel">
             <div class="panel-heading"><div><p class="eyebrow">CHANGE HISTORY</p><h2>Settings audit log</h2></div></div>
