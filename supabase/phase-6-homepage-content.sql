@@ -60,7 +60,8 @@ begin
     when 'sync.vault.auto_enabled' then jsonb_typeof(p_value) = 'boolean'
     when 'home.knowledge.enabled' then jsonb_typeof(p_value) = 'boolean'
     when 'home.knowledge.items' then
-      case when jsonb_typeof(p_value) = 'array' and jsonb_array_length(p_value) <= 50 then
+      case when jsonb_typeof(p_value) = 'array' then
+        case when jsonb_array_length(p_value) <= 50 then
         not exists (
           select 1 from jsonb_array_elements(p_value) as item(value)
           where jsonb_typeof(item.value) <> 'object'
@@ -72,6 +73,7 @@ begin
             or length(trim(item.value->>'text')) < 8
             or length(item.value->>'text') > 240
         )
+        else false end
       else false end
     else false
   end;
@@ -99,5 +101,14 @@ grant execute on function public.pixel_forge_update_site_setting(text, jsonb, te
 
 insert into public.pixel_forge_site_settings (setting_key, setting_value, updated_by) values
   ('home.knowledge.enabled', 'true'::jsonb, 'system'),
-  ('home.knowledge.items', '[]'::jsonb, 'system')
+  ('home.knowledge.items', jsonb_build_array(
+    jsonb_build_object('category','SPACE','text','A day on Venus is longer than its year: Venus takes about 243 Earth days to rotate once, but about 225 Earth days to orbit the Sun.'),
+    jsonb_build_object('category','HUMAN BODY','text','Your brain uses roughly 20% of your body’s energy, even though it makes up only about 2% of your body weight.'),
+    jsonb_build_object('category','COMPUTING','text','The first computer mouse, built in the 1960s, was made of wood and had just one button.'),
+    jsonb_build_object('category','NATURE','text','Octopuses have three hearts: two pump blood to the gills, while one pumps it to the rest of the body.'),
+    jsonb_build_object('category','SPACE','text','Light from the Sun takes about 8 minutes and 20 seconds to reach Earth.'),
+    jsonb_build_object('category','TECHNOLOGY','text','The word robot comes from the Czech word robota, which refers to forced labour.'),
+    jsonb_build_object('category','EARTH','text','Earth is not a perfect sphere; its rotation makes it slightly wider around the equator.'),
+    jsonb_build_object('category','BIOLOGY','text','A single human cell contains about two metres of DNA when stretched out.')
+  ), 'system')
 on conflict (setting_key) do nothing;
