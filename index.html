@@ -47,6 +47,21 @@
       <div><span class="strip-icon">⌘</span><span><strong>Made for curiosity</strong><small>Explore at your own pace</small></span></div>
     </section>
 
+    <section class="smart-search-section section" id="smart-document-search" hidden aria-labelledby="smart-search-title">
+      <div class="smart-search-copy"><p class="eyebrow dark">FIND IT FASTER</p><h2 id="smart-search-title">Search the<br><em>library.</em></h2><p>Find notes, documents and guides with relevant results and useful filters.</p></div>
+      <form id="homepage-smart-search" class="smart-search-form">
+        <label for="homepage-search-query">What are you looking for?</label>
+        <input id="homepage-search-query" type="search" placeholder="Search notes, PDFs and guides…" autocomplete="off">
+        <div class="smart-search-filters">
+          <label for="homepage-search-category">Category</label>
+          <select id="homepage-search-category"><option value="all">All categories</option><option value="pdf-documents">PDF Documents</option><option value="study-notes">Study Notes</option><option value="books-resources">Books & Resources</option><option value="other-documents">Other Documents</option><option value="exam-materials">Exam Materials</option><option value="technology-guides">Technology Guides</option></select>
+          <label for="homepage-search-type">File type</label>
+          <select id="homepage-search-type"><option value="all">Any type</option><option value="pdf">PDF</option><option value="image">Images</option><option value="other">Other files</option></select>
+        </div>
+        <button class="button button-dark" type="submit">Search documents <span>↗</span></button>
+      </form>
+    </section>
+
     <section class="section discover-section" id="discover">
       <div class="section-heading section-heading-v2"><div><p class="eyebrow dark">THE PIXELFORGE COLLECTION</p><h2>Find your next<br><em>starting point.</em></h2></div><p class="section-lead">A growing collection of learning material, practical guides and resources — organized to help you find the right thing faster.</p></div>
       <div class="discover-grid">
