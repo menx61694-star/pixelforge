@@ -172,7 +172,7 @@ Deno.serve(async (request) => {
 
     if (request.method === "POST" && action === "update") {
       const contentLength = Number(request.headers.get("Content-Length") ?? "0");
-      if (contentLength > 4096) return json({ error: "Settings request is too large." }, 413, request);
+      if (contentLength > 20000) return json({ error: "Settings request is too large." }, 413, request);
       const input = await request.json().catch(() => null);
       if (!input || typeof input !== "object" || Array.isArray(input) ||
           Object.keys(input).length !== 2 || !Object.hasOwn(input, "key") || !Object.hasOwn(input, "value") ||
