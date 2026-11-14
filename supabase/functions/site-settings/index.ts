@@ -15,6 +15,8 @@ const settingKeys = new Set([
   "sync.vault.auto_enabled",
   "home.knowledge.enabled",
   "home.knowledge.items",
+  "home.quiz.enabled",
+  "home.quiz.items",
 ]);
 
 function cors(request: Request) {
@@ -89,13 +91,28 @@ async function authorize(request: Request, permission: "settings.view" | "settin
 }
 function validSettingValue(key: string, value: unknown): boolean {
   if (!settingKeys.has(key)) return false;
-  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled") return typeof value === "boolean";
+  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled" || key === "home.quiz.enabled") return typeof value === "boolean";
   if (key === "home.knowledge.items") {
     return Array.isArray(value) && value.length <= 50 && value.every((item) =>
       item && typeof item === "object" && !Array.isArray(item) &&
       Object.keys(item).every((field) => field === "category" || field === "text") &&
       typeof item.category === "string" && item.category.length <= 32 &&
       typeof item.text === "string" && item.text.trim().length >= 8 && item.text.length <= 240
+    );
+  }
+  if (key === "home.quiz.items") {
+    return Array.isArray(value) && value.length <= 100 && value.every((item) =>
+      item && typeof item === "object" && !Array.isArray(item) &&
+      Object.keys(item).every((field) => ["id","category","publishDate","published","question","options","correctIndex","explanation"].includes(field)) &&
+      typeof item.id === "string" && item.id.trim().length > 0 && item.id.length <= 80 &&
+      typeof item.category === "string" && item.category.trim().length > 0 && item.category.length <= 32 &&
+      typeof item.publishDate === "string" && /^\\d{4}-\\d{2}-\\d{2}$/.test(item.publishDate) &&
+      typeof item.published === "boolean" &&
+      typeof item.question === "string" && item.question.trim().length >= 10 && item.question.length <= 500 &&
+      Array.isArray(item.options) && item.options.length === 4 &&
+      item.options.every((option) => typeof option === "string" && option.trim().length > 0 && option.length <= 160) &&
+      Number.isInteger(item.correctIndex) && item.correctIndex >= 0 && item.correctIndex <= 3 &&
+      typeof item.explanation === "string" && item.explanation.length <= 1000
     );
   }
   if (typeof value !== "string") return false;
@@ -120,7 +137,7 @@ Deno.serve(async (request) => {
       const db = dbAdmin();
       const { data, error } = await db.from("pixel_forge_site_settings")
         .select("setting_key,setting_value")
-        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items"]);
+        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items"]);
       if (error) throw error;
       const values = Object.fromEntries((data ?? []).map((row) => [row.setting_key, row.setting_value]));
       const items = Array.isArray(values["home.knowledge.items"]) ? values["home.knowledge.items"] : [];
@@ -135,6 +152,52 @@ Deno.serve(async (request) => {
             item && typeof item === "object" && typeof (item as { text?: unknown }).text === "string"
           ).slice(0, 50),
         },
+        quiz: {
+          enabled: values["home.quiz.enabled"] === true,
+          question: values["home.quiz.enabled"] === true && Array.isArray(values["home.quiz.items"])
+            ? (values["home.quiz.items"] as Array<Record<string, unknown>>).find((item) =>
+                item.published === true && item.publishDate === new Intl.DateTimeFormat("en-CA", {
+                  timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+                }).format(new Date())
+              ) ? (() => {
+                const item = (values["home.quiz.items"] as Array<Record<string, unknown>>).find((entry) =>
+                  entry.published === true && entry.publishDate === new Intl.DateTimeFormat("en-CA", {
+                    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+                  }).format(new Date())
+                )!;
+                return { id: item.id, category: item.category, question: item.question, options: item.options };
+              })() : null
+            : null,
+        },
+      }, 200, request);
+    }
+
+    if (request.method === "POST" && action === "quiz-answer") {
+      const length = Number(request.headers.get("Content-Length") ?? "0");
+      if (length > 2000) return json({ error: "Quiz answer request is too large." }, 413, request);
+      const input = await request.json().catch(() => null);
+      if (!input || typeof input !== "object" || Array.isArray(input) ||
+          Object.keys(input).length !== 2 || typeof input.questionId !== "string" ||
+          !Number.isInteger(input.selectedIndex) || input.selectedIndex < 0 || input.selectedIndex > 3) {
+        return json({ error: "Invalid quiz answer." }, 400, request);
+      }
+      const db = dbAdmin();
+      const { data, error } = await db.from("pixel_forge_site_settings")
+        .select("setting_key,setting_value").in("setting_key", ["home.quiz.enabled", "home.quiz.items"]);
+      if (error) throw error;
+      const values = Object.fromEntries((data ?? []).map((row) => [row.setting_key, row.setting_value]));
+      const today = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+      }).format(new Date());
+      const item = Array.isArray(values["home.quiz.items"])
+        ? (values["home.quiz.items"] as Array<Record<string, unknown>>).find((entry) =>
+            entry.id === input.questionId && entry.publishDate === today && entry.published === true
+          )
+        : null;
+      if (values["home.quiz.enabled"] !== true || !item) return json({ error: "Today's quiz is not available." }, 404, request);
+      return json({
+        correct: input.selectedIndex === item.correctIndex,
+        explanation: typeof item.explanation === "string" ? item.explanation : "",
       }, 200, request);
     }
 
