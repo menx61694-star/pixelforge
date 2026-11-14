@@ -16,7 +16,7 @@ test("analytics Edge Function is registered with platform JWT verification disab
 test("public collection accepts only the allowlisted page_path and rejects extra event fields", () => {
   assert.match(edge, /const allowedPaths = new Set\(/);
   assert.match(edge, /!allowedPaths\.has\(pagePath\)/);
-  assert.match(edge, /"\\/tools\\.html"/);
+  assert.ok(edge.includes('"/tools.html"'));
   assert.match(edge, /key !== "pagePath" && key !== "visitorSessionId"/);
   assert.match(edge, /visitor_hash: visitorHash/);
   assert.match(edge, /insert\(\{[\s\S]*page_path: pagePath/);
