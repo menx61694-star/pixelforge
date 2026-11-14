@@ -1026,6 +1026,14 @@ const firebaseConfig = {
       setChecked("setting-tools-enabled", values["home.tools.enabled"]);
       setChecked("setting-featured-enabled", values["home.featured.enabled"]);
       setChecked("setting-announcements-enabled", values["home.announcements.enabled"]);
+      setChecked("setting-seo-enabled", values["home.seo.enabled"]);
+      setInputValue("setting-seo-title", values["home.seo.default_title"] ?? "PixelForge — Digital resources and learning tools");
+      setInputValue("setting-seo-description", values["home.seo.default_description"] ?? "Discover curated documents, study notes, digital tools and guided learning resources on PixelForge.");
+      setInputValue("setting-seo-keywords", values["home.seo.default_keywords"] ?? "study notes, documents, learning resources, digital tools");
+      setInputValue("setting-seo-canonical", values["home.seo.canonical_base"] ?? "");
+      setInputValue("setting-seo-og-image", values["home.seo.og_image"] ?? "");
+      const seoOverrides = document.getElementById("setting-seo-pages");
+      if (seoOverrides) seoOverrides.value = JSON.stringify(Array.isArray(values["home.seo.page_overrides"]) ? values["home.seo.page_overrides"] : [], null, 2);
       setChecked("setting-feedback-enabled", values["home.feedback.enabled"]);
       setChecked("setting-feedback-anonymous", values["home.feedback.allow_anonymous"]);
       setChecked("setting-feedback-display", values["home.feedback.display_approved"]);
@@ -1128,6 +1136,42 @@ const firebaseConfig = {
       }
       saveSetting("home.knowledge.items", items, button)
         .then(() => saveSetting("home.knowledge.enabled", document.getElementById("setting-knowledge-enabled").checked, button));
+    } else if (group === "home.seo") {
+      const title = document.getElementById("setting-seo-title").value.trim();
+      const description = document.getElementById("setting-seo-description").value.trim();
+      const keywords = document.getElementById("setting-seo-keywords").value.trim();
+      const canonical = document.getElementById("setting-seo-canonical").value.trim();
+      const ogImage = document.getElementById("setting-seo-og-image").value.trim();
+      let overrides;
+      try { overrides = JSON.parse(document.getElementById("setting-seo-pages").value || "[]"); }
+      catch (_) { setSettingsStatus("SEO page overrides must be valid JSON.", true); return; }
+      const safeUrl = value => {
+        if (!value) return true;
+        try { const url = new URL(value); return url.protocol === "https:" && !url.username && !url.password; }
+        catch (_) { return false; }
+      };
+      const validOverrides = Array.isArray(overrides) && overrides.length <= 20 && overrides.every(item =>
+        item && typeof item === "object" && !Array.isArray(item) &&
+        Object.keys(item).every(key => ["page","title","description","keywords","robots","canonical"].includes(key)) &&
+        typeof item.page === "string" && /^\/[a-z0-9/_-]*$/i.test(item.page) && !item.page.includes("..") &&
+        typeof item.title === "string" && item.title.trim().length >= 5 && item.title.length <= 70 &&
+        typeof item.description === "string" && item.description.trim().length >= 50 && item.description.length <= 160 &&
+        typeof item.keywords === "string" && item.keywords.length <= 250 &&
+        ["index,follow","noindex,follow","noindex,nofollow"].includes(item.robots) &&
+        typeof item.canonical === "string" && item.canonical.length <= 1200 && safeUrl(item.canonical)
+      );
+      if (title.length < 5 || title.length > 70 || description.length < 50 || description.length > 160 ||
+          keywords.length > 250 || !safeUrl(canonical) || canonical.length > 300 || !safeUrl(ogImage) ||
+          ogImage.length > 1200 || !validOverrides || new Set(overrides.map(item => item.page)).size !== overrides.length) {
+        setSettingsStatus("Check SEO title/description lengths, HTTPS URLs and unique page override paths.", true); return;
+      }
+      saveSetting("home.seo.default_title", title, button)
+        .then(() => saveSetting("home.seo.default_description", description, button))
+        .then(() => saveSetting("home.seo.default_keywords", keywords, button))
+        .then(() => saveSetting("home.seo.canonical_base", canonical, button))
+        .then(() => saveSetting("home.seo.og_image", ogImage, button))
+        .then(() => saveSetting("home.seo.page_overrides", overrides, button))
+        .then(() => saveSetting("home.seo.enabled", document.getElementById("setting-seo-enabled").checked, button));
     } else if (group === "home.feedback") {
       const categories = document.getElementById("setting-feedback-categories").value.split(/\\r?\\n/).map(value => value.trim()).filter(Boolean);
       const maxDisplay = Number(document.getElementById("setting-feedback-max-display").value);
