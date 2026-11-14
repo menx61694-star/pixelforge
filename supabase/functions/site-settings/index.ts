@@ -23,6 +23,11 @@ const settingKeys = new Set([
   "home.featured.items",
   "home.announcements.enabled",
   "home.announcements.items",
+  "home.search.enabled",
+  "home.search.smart_enabled",
+  "home.search.filters_enabled",
+  "home.search.max_results",
+  "home.search.placeholder",
 ]);
 
 function cors(request: Request) {
@@ -110,7 +115,7 @@ function isValidIsoDate(value: string): boolean {
 }
 function validSettingValue(key: string, value: unknown): boolean {
   if (!settingKeys.has(key)) return false;
-  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled" || key === "home.quiz.enabled" || key === "home.tools.enabled" || key === "home.featured.enabled" || key === "home.announcements.enabled") return typeof value === "boolean";
+  if (key === "maintenance.enabled" || key.startsWith("sync.") || key === "home.knowledge.enabled" || key === "home.quiz.enabled" || key === "home.tools.enabled" || key === "home.featured.enabled" || key === "home.announcements.enabled" || key === "home.search.enabled" || key === "home.search.smart_enabled" || key === "home.search.filters_enabled") return typeof value === "boolean";
   if (key === "home.knowledge.items") {
     return Array.isArray(value) && value.length <= 50 && value.every((item) =>
       item && typeof item === "object" && !Array.isArray(item) &&
@@ -156,6 +161,8 @@ function validSettingValue(key: string, value: unknown): boolean {
         typeof resource.published === "boolean";
     }) && new Set(value.map((item: { id?: unknown }) => item.id)).size === value.length;
   }
+  if (key === "home.search.max_results") return Number.isInteger(value) && value >= 6 && value <= 100;
+  if (key === "home.search.placeholder") return typeof value === "string" && value.trim().length >= 5 && value.length <= 100;
   if (key === "home.announcements.items") {
     return Array.isArray(value) && value.length <= 20 && value.every((item: unknown) => {
       if (!item || typeof item !== "object" || Array.isArray(item)) return false;
@@ -196,7 +203,7 @@ Deno.serve(async (request) => {
       const db = dbAdmin();
       const { data, error } = await db.from("pixel_forge_site_settings")
         .select("setting_key,setting_value")
-        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items", "home.tools.enabled", "home.tools.items", "home.featured.enabled", "home.featured.items", "home.announcements.enabled", "home.announcements.items"]);
+        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items", "home.tools.enabled", "home.tools.items", "home.featured.enabled", "home.featured.items", "home.announcements.enabled", "home.announcements.items", "home.search.enabled", "home.search.smart_enabled", "home.search.filters_enabled", "home.search.max_results", "home.search.placeholder"]);
       if (error) throw error;
       const values = Object.fromEntries((data ?? []).map((row) => [row.setting_key, row.setting_value]));
       const items = Array.isArray(values["home.knowledge.items"]) ? values["home.knowledge.items"] : [];
@@ -222,6 +229,13 @@ Deno.serve(async (request) => {
                 .filter(item => item.published === true && typeof item.url === "string" && isSafeHttpsUrl(item.url))
                 .slice(0, 12)
             : [],
+        },
+        search: {
+          enabled: values["home.search.enabled"] === true,
+          smartEnabled: values["home.search.smart_enabled"] !== false,
+          filtersEnabled: values["home.search.filters_enabled"] !== false,
+          maxResults: Number.isInteger(values["home.search.max_results"]) ? values["home.search.max_results"] : 30,
+          placeholder: typeof values["home.search.placeholder"] === "string" ? values["home.search.placeholder"] : "Search documents, notes and guides…",
         },
         announcements: {
           enabled: values["home.announcements.enabled"] === true,
