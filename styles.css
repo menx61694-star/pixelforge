@@ -145,3 +145,16 @@
 .announcement-dates{grid-area:dates;color:#7a8499;font-size:.75rem;white-space:nowrap}
 .announcement-card a{grid-area:link;color:#4d5bd1;font-size:.85rem;font-weight:800;text-decoration:none}
 @media(max-width:680px){.announcement-card{grid-template-columns:1fr auto;grid-template-areas:"type dates" "title title" "message message" "link link";gap:.65rem}}
+
+/* Homepage Smart Document Search */
+.smart-search-section[hidden]{display:none}
+.smart-search-section{display:grid;grid-template-columns:.8fr 1.2fr;gap:2.5rem;align-items:center;padding:clamp(3rem,7vw,6rem) max(6vw,calc((100vw - 1180px)/2));background:#eef1fb}
+.smart-search-copy h2{font-size:clamp(2rem,4vw,3.2rem);letter-spacing:-.045em;margin:.5rem 0}
+.smart-search-copy>p:last-child{color:#66718a;line-height:1.7}
+.smart-search-form{display:grid;gap:.7rem;padding:1.4rem;border:1px solid #e0e5f0;border-radius:20px;background:#fff}
+.smart-search-form>label,.smart-search-filters label{font-size:.85rem;font-weight:750;color:#34415f}
+.smart-search-form input,.smart-search-form select{width:100%;min-height:46px;padding:.7rem .85rem;border:1px solid #d9dfeb;border-radius:10px;background:#fff;color:#1b2948;font:inherit}
+.smart-search-filters{display:grid;grid-template-columns:1fr 1fr;gap:.5rem .8rem}
+.smart-search-filters[hidden]{display:none}
+.smart-search-form .button{justify-self:start;margin-top:.3rem}
+@media(max-width:760px){.smart-search-section{grid-template-columns:1fr;gap:1.3rem;padding:3rem 6vw}}
