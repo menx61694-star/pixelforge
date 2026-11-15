@@ -412,7 +412,7 @@ test("Google Drive and Private Vault support sequential multi-file uploads", () 
   assert.match(html, /id="google-drive-file"[^>]*multiple/);
   assert.ok(js.includes("Array.from(fileInput.files || [])"));
   assert.ok(js.includes("Array.from(googleDriveFileInput ? googleDriveFileInput.files : [])"));
-  assert.ok(js.includes("uploadLargeFile(BUCKET, currentUserUid + \"/\" + objectName, file, index + 1, files.length)"));
+  assert.ok(js.includes("uploadLargeFile(BUCKET, currentUserUid + \"/\" + objectName, file, index + 1, uploadable.length)"));
   assert.ok(js.includes("uploadGoogleDriveSingleFile(files[index], index + 1, files.length)"));
   assert.ok(js.includes('currentPermissions.has("vault.write")'));
   assert.ok(js.includes('currentPermissions.has("drive.write")'));
