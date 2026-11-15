@@ -30,6 +30,15 @@ const firebaseConfig = {
   const uploadButton = document.getElementById("upload-button");
   const fileInput = document.getElementById("document-file");
   const vaultStatus = document.getElementById("vault-status");
+  const bulkToolbar = document.getElementById("bulk-actions-toolbar");
+  const selectAllVaultFiles = document.getElementById("select-all-vault-files");
+  const bulkSelectionCount = document.getElementById("bulk-selection-count");
+  const bulkPublishCategory = document.getElementById("bulk-publish-category");
+  const bulkTagsInput = document.getElementById("bulk-tags-input");
+  const bulkApplyTagsButton = document.getElementById("bulk-apply-tags");
+  const bulkPublishButton = document.getElementById("bulk-publish");
+  const bulkUnpublishButton = document.getElementById("bulk-unpublish");
+  const bulkDeleteButton = document.getElementById("bulk-delete");
   const fileList = document.getElementById("file-list");
   const refreshButton = document.getElementById("refresh-files");
   const fileSearch = document.getElementById("file-search");
@@ -745,8 +754,18 @@ const firebaseConfig = {
           meta.textContent = sizeBytes === null ? "Size unavailable" : formatBytes(sizeBytes);
           info.append(name, meta);
 
+          li.dataset.storagePath = path;
+          li.dataset.fileName = item.name;
+          li.dataset.publishedCategory = publishedCategory || "";
           const actions = document.createElement("div");
           actions.className = "file-actions";
+          const selectionLabel = document.createElement("label");
+          selectionLabel.className = "bulk-file-select";
+          const selection = document.createElement("input");
+          selection.type = "checkbox";
+          selection.className = "bulk-select-checkbox";
+          selection.setAttribute("aria-label", "Select " + item.name);
+          selectionLabel.append(selection);
           const download = document.createElement("button");
           download.type = "button";
           download.textContent = "Download";
@@ -802,12 +821,24 @@ const firebaseConfig = {
           publish.hidden = !currentPermissions.has("vault.publish");
           unpublish.hidden = !currentPermissions.has("vault.publish");
           remove.hidden = !currentPermissions.has("vault.delete");
-          actions.append(download, category, tagsInput, saveTags, publish, unpublish, remove);
+          selectionLabel.hidden = !(
+            currentPermissions.has("vault.write") || currentPermissions.has("vault.publish") ||
+            currentPermissions.has("vault.delete")
+          );
+          actions.append(selectionLabel, download, category, tagsInput, saveTags, publish, unpublish, remove);
           li.append(info, actions);
           fileList.append(li);
         });
       }
+      const canBulkAct = currentPermissions.has("vault.write") || currentPermissions.has("vault.publish") || currentPermissions.has("vault.delete");
+      if (bulkToolbar) bulkToolbar.hidden = !canBulkAct;
+      if (bulkApplyTagsButton) bulkApplyTagsButton.hidden = !currentPermissions.has("vault.write");
+      if (bulkPublishButton) bulkPublishButton.hidden = !currentPermissions.has("vault.publish");
+      if (bulkUnpublishButton) bulkUnpublishButton.hidden = !currentPermissions.has("vault.publish");
+      if (bulkDeleteButton) bulkDeleteButton.hidden = !currentPermissions.has("vault.delete");
+      if (selectAllVaultFiles) selectAllVaultFiles.checked = false;
       applyVaultSearch();
+      updateBulkSelectionUi();
       setVaultStatus(files.length + " private document(s) listed." + publishStatusWarning, Boolean(publishStatusWarning));
     } catch (error) {
       showEmpty("Could not load documents. Check the Storage policies and Firebase token.");
