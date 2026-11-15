@@ -299,7 +299,7 @@ const firebaseConfig = {
         remove.textContent = "Delete";
         remove.addEventListener("click", () => deleteGoogleDriveFile(file, item, remove));
         remove.hidden = !currentPermissions.has("drive.delete");
-        actions.append(download, category, tagsInput, saveTags, publish, unpublish, remove);
+        actions.append(download, category, tagsInput, publish, unpublish, remove);
         item.append(info, actions);
         googleDriveFileList.append(item);
       });
@@ -802,7 +802,7 @@ const firebaseConfig = {
           publish.hidden = !currentPermissions.has("vault.publish");
           unpublish.hidden = !currentPermissions.has("vault.publish");
           remove.hidden = !currentPermissions.has("vault.delete");
-          actions.append(download, category, tagsInput, publish, unpublish, remove);
+          actions.append(download, category, tagsInput, saveTags, publish, unpublish, remove);
           li.append(info, actions);
           fileList.append(li);
         });
