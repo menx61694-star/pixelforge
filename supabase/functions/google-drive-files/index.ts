@@ -201,11 +201,12 @@ Deno.serve(async (request) => {
       const title = typeof input.title === "string" ? input.title.trim().slice(0, 240) : "";
       const mimeType = typeof input.mimeType === "string" ? input.mimeType.slice(0, 160) : "application/octet-stream";
       const sizeBytes = Number(input.sizeBytes);
-      if (!allowedCategories.includes(category) || !title) return json({ error: "A valid public category and document title are required." }, 400, request);
+      const tags = normalizeTags(input.tags);
+      if (!allowedCategories.includes(category) || !title || !tags) return json({ error: "A valid category, title and up to 10 valid tags are required." }, 400, request);
       const { error } = await db.from("pixel_forge_published_documents").upsert({
         source: "google_drive", owner_uid: uid, drive_file_id: fileId, storage_path: null,
         category, title, mime_type: mimeType, size_bytes: Number.isSafeInteger(sizeBytes) && sizeBytes > 0 ? sizeBytes : null,
-        published: true, updated_at: new Date().toISOString()
+        tags, published: true, updated_at: new Date().toISOString()
       }, { onConflict: "source,drive_file_id" });
       if (error) throw error;
       return json({ published: true }, 200, request);
