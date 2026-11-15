@@ -241,3 +241,5 @@ button:disabled{opacity:.6;cursor:wait}
 .bulk-actions-controls button:disabled{opacity:.5;cursor:not-allowed}
 .bulk-file-select{display:inline-flex;align-items:center;margin-right:4px}
 @media(max-width:650px){.bulk-actions-controls{align-items:stretch}.bulk-actions-controls select,.bulk-actions-controls input{max-width:none;flex:1 1 100%;width:100%}.bulk-actions-controls button{flex:1 1 calc(50% - 7px)}}
+
+.bulk-actions-toolbar[hidden],.bulk-file-select[hidden]{display:none}
