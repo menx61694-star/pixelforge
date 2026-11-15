@@ -3,9 +3,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const OWNER_UID = "5PcOkyDEcNc1puSeB2lQ6dLFVOF2";
 const FIREBASE_PROJECT_ID = "pixelforge-66f0c";
 const allowedOrigins = new Set([
-  Deno.env.get("PIXELFORGE_ADMIN_ORIGIN") ?? "https://pixelforge.jo3.org",
+  "https://pixelforge.jo3.org",
+  "https://pixelforge-z2in.onrender.com",
+  Deno.env.get("PIXELFORGE_ADMIN_ORIGIN") ?? "",
   "http://localhost:8000",
-]);
+].filter(Boolean));
 
 function cors(request: Request) {
   const origin = request.headers.get("Origin") ?? "";
