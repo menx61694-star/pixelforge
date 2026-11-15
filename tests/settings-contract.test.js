@@ -437,3 +437,16 @@ test("Published documents support safe admin-managed tags and public tag search"
   assert.ok(migration.includes("add column if not exists tags text[]"));
   assert.match(migration, /using gin \(tags\)/);
 });
+
+
+test("Document uploads protect existing names in Private Vault and Google Drive", () => {
+  const admin = read("admin.js");
+  const drive = read("supabase/functions/google-drive-files/index.ts");
+  assert.ok(admin.includes("Overwrite protection: skipped existing/duplicate name(s)"));
+  assert.ok(admin.includes("const latestFiles = await listAllStorageFiles(BUCKET, currentUserUid)"));
+  assert.ok(admin.includes("safeFileName(displayFileName(item.name)).toLocaleLowerCase()"));
+  assert.ok(admin.includes("No existing documents were overwritten."));
+  assert.ok(drive.includes("DUPLICATE_FILE_NAME"));
+  assert.ok(drive.includes("Could not check existing Google Drive filenames. Upload was stopped"));
+  assert.ok(drive.includes("duplicatePayload.files.length"));
+});
