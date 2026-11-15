@@ -211,7 +211,8 @@ test("public local IP diagnostic is user-initiated, disclosed and does not auto-
   assert.match(index, /Share my location &amp; IP \(optional\)/);
   assert.match(index, /browser for location permission/);
   assert.match(script, /window\.confirm\("Share your approximate location/);
-  assert.match(script, /navigator\.geolocation\.getCurrentPosition/);\n  assert.match(script, /getPixelForgePrivateLocalIp\(\)/);
+  assert.match(script, /navigator\.geolocation\.getCurrentPosition/);
+  assert.match(script, /getPixelForgePrivateLocalIp\(\)/);
   assert.match(script, /action=local-ip-diagnostic/);
   assert.doesNotMatch(script.slice(0, script.indexOf("async function getPixelForgePrivateLocalIp")), /getPixelForgePrivateLocalIp\(\)/);
   assert.match(read("admin.js"), /browser-reported/);
