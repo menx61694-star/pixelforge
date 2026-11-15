@@ -324,7 +324,8 @@ const firebaseConfig = {
           category,
           title: file.name || "Drive document",
           mimeType: file.mimeType || "application/octet-stream",
-          sizeBytes: Number(file.size || 0) || null
+          sizeBytes: Number(file.size || 0) || null,
+          tags
         })
       });
       const payload = await response.json();
@@ -736,6 +737,12 @@ const firebaseConfig = {
           });
           const publishedCategory = publishedFiles.get(item.name);
           if (publishedCategory) category.value = publishedCategory;
+          const tagsInput = document.createElement("input");
+          tagsInput.type = "text";
+          tagsInput.className = "publish-tags";
+          tagsInput.placeholder = "Tags: CTET, UP Police";
+          tagsInput.maxLength = 320;
+          tagsInput.setAttribute("aria-label", "Public search tags for " + item.name);
           const publish = document.createElement("button");
           publish.type = "button";
           publish.className = "publish-button";
@@ -786,6 +793,7 @@ const firebaseConfig = {
       const { error: uploadError } = await supabaseClient.storage.from(PUBLIC_BUCKET).upload(publicPath, downloaded, {
         cacheControl: "60",
         contentType: downloaded.type || "application/octet-stream",
+        metadata: { tags },
         upsert: true
       });
       if (uploadError) throw uploadError;
