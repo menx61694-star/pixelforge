@@ -1362,6 +1362,7 @@ const firebaseConfig = {
       ).join("\n");
       renderSettingsAudit(auditPayload.audit || []);
       loadFeedbackInbox();
+      loadContactInbox();
       document.querySelectorAll("[data-setting-save]").forEach(button => {
         button.hidden = !currentPermissions.has("settings.manage");
         button.disabled = !currentPermissions.has("settings.manage");
@@ -2084,6 +2085,34 @@ const firebaseConfig = {
       if (status) status.textContent = entries.length + " recent submission(s).";
     } catch (error) { if (status) status.textContent = error.message || "Could not load feedback inbox."; }
   }
+  async function loadContactInbox() {
+    const container=document.getElementById("contact-inbox-list"), status=document.getElementById("contact-inbox-status");
+    if(!container||!currentPermissions.has("settings.view"))return;
+    try {
+      const payload=await settingsRequest("contact-list"), entries=Array.isArray(payload.messages)?payload.messages:[]; container.replaceChildren();
+      if(!entries.length){const empty=document.createElement("p");empty.className="empty-state";empty.textContent="No contact messages yet.";container.append(empty);}
+      else entries.forEach(item=>{
+        const card=document.createElement("article");card.className="feedback-inbox-card";
+        const heading=document.createElement("div");heading.className="feedback-inbox-heading";
+        const title=document.createElement("strong");title.textContent=item.subject||"(No subject)";
+        const meta=document.createElement("span");meta.textContent=item.status==="new"?"NEW":String(item.status||"").toUpperCase();heading.append(title,meta);
+        const sender=document.createElement("p");sender.textContent=(item.name||"Visitor")+" · "+(item.email||"");
+        const message=document.createElement("p");message.textContent=item.message||"";
+        const date=document.createElement("small");date.textContent=item.created_at?new Date(item.created_at).toLocaleString():"";card.append(heading,sender,message,date);
+        const actions=document.createElement("div");actions.className="feedback-inbox-actions";
+        const reply=document.createElement("a");reply.className="button button-small";reply.textContent="Reply by email";reply.href="mailto:"+encodeURIComponent(item.email||"")+"?subject="+encodeURIComponent("Re: "+(item.subject||"Your message"));actions.append(reply);
+        if(item.status!=="archived"&&currentPermissions.has("settings.manage")){const next=item.status==="new"?"read":"archived";const button=document.createElement("button");button.type="button";button.textContent=next==="read"?"Mark as read":"Archive";button.dataset.contactAction=next;button.dataset.contactId=item.id;actions.append(button);}
+        card.append(actions);container.append(card);
+      });
+      if(status)status.textContent=entries.length+" message(s), newest first.";
+    }catch(error){if(status)status.textContent=error.message||"Could not load contact messages.";}
+  }
+  document.getElementById("refresh-contact-messages")?.addEventListener("click",loadContactInbox);
+  document.getElementById("contact-inbox-list")?.addEventListener("click",async event=>{
+    const button=event.target.closest("[data-contact-action]");if(!button)return;button.disabled=true;
+    try{await settingsRequest("contact-status",{method:"POST",body:{id:button.dataset.contactId,status:button.dataset.contactAction}});await loadContactInbox();}
+    catch(error){setSettingsStatus(error.message||"Could not update contact message.",true);button.disabled=false;}
+  });
   document.getElementById("refresh-feedback")?.addEventListener("click", loadFeedbackInbox);
   document.getElementById("feedback-inbox-list")?.addEventListener("click", async event => {
     const button = event.target.closest("[data-feedback-action]");
