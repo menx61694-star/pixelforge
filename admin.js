@@ -69,6 +69,9 @@ const firebaseConfig = {
   let currentFiles = [];
   let currentDriveFiles = [];
   let driveFilesLoaded = false;
+  const driveBulkToolbar=document.getElementById("drive-bulk-toolbar"), driveSelectAll=document.getElementById("drive-select-all"), driveSelectedCount=document.getElementById("drive-selected-count"), driveBulkCategory=document.getElementById("drive-bulk-category"), driveBulkTags=document.getElementById("drive-bulk-tags"), driveBulkPublish=document.getElementById("drive-bulk-publish"), driveBulkUnpublish=document.getElementById("drive-bulk-unpublish"), driveBulkDelete=document.getElementById("drive-bulk-delete");
+  const selectedDriveFileIds=new Set();
+  function updateDriveBulkSelection(){const boxes=googleDriveFileList?Array.from(googleDriveFileList.querySelectorAll(".drive-file-select")):[], selected=boxes.filter(box=>selectedDriveFileIds.has(box.value)).length;if(driveBulkToolbar)driveBulkToolbar.hidden=!boxes.length;if(driveSelectedCount)driveSelectedCount.textContent=selected+" selected";if(driveSelectAll){driveSelectAll.checked=boxes.length>0&&selected===boxes.length;driveSelectAll.indeterminate=selected>0&&selected<boxes.length;}[driveBulkPublish,driveBulkUnpublish,driveBulkDelete].forEach(button=>{if(button)button.disabled=!selected;});}
   let currentUserUid = null;
   let currentUserRole = null;
   let currentPermissions = new Set();
@@ -246,6 +249,9 @@ const firebaseConfig = {
       files.forEach(file => {
         const item = document.createElement("li");
         item.className = "file-item";
+        const selectWrap=document.createElement("label");selectWrap.className="drive-file-select-wrap";
+        const select=document.createElement("input");select.type="checkbox";select.className="drive-file-select";select.value=file.id;select.checked=selectedDriveFileIds.has(file.id);select.setAttribute("aria-label","Select "+(file.name||"Drive file"));
+        select.addEventListener("change",()=>{if(select.checked)selectedDriveFileIds.add(file.id);else selectedDriveFileIds.delete(file.id);updateDriveBulkSelection();});selectWrap.append(select);
         const info = document.createElement("div");
         info.className = "file-info";
         const name = document.createElement("div");
@@ -309,9 +315,10 @@ const firebaseConfig = {
         remove.addEventListener("click", () => deleteGoogleDriveFile(file, item, remove));
         remove.hidden = !currentPermissions.has("drive.delete");
         actions.append(download, category, tagsInput, publish, unpublish, remove);
-        item.append(info, actions);
+        item.append(selectWrap, info, actions);
         googleDriveFileList.append(item);
       });
+      updateDriveBulkSelection();
       setDriveFilesStatus(files.length + " Google Drive file(s) listed.");
     } catch (error) {
       setDriveFilesStatus(error.message || "Google Drive listing failed.", true);
@@ -320,6 +327,20 @@ const firebaseConfig = {
     }
   }
 
+  if(driveBulkCategory)PUBLIC_CATEGORIES.forEach(value=>{const option=document.createElement("option");option.value=value;option.textContent=value.replace(/-/g," ").toUpperCase();driveBulkCategory.append(option);});
+  if(driveSelectAll)driveSelectAll.addEventListener("change",()=>{(googleDriveFileList?googleDriveFileList.querySelectorAll(".drive-file-select"):[]).forEach(box=>{box.checked=driveSelectAll.checked;if(box.checked)selectedDriveFileIds.add(box.value);else selectedDriveFileIds.delete(box.value);});updateDriveBulkSelection();});
+  async function runDriveBulkAction(action){
+    const selected=currentDriveFiles.filter(file=>selectedDriveFileIds.has(file.id));if(!selected.length)return;
+    if(action==="publish"&&(!currentPermissions.has("vault.publish")||!driveBulkCategory.value)){setDriveFilesStatus("Choose a category and ensure you have publish permission.",true);return;}
+    if(action==="unpublish"&&!currentPermissions.has("vault.publish")){setDriveFilesStatus("Your account does not have publish permission.",true);return;}
+    if(action==="delete"&&!currentPermissions.has("drive.delete")){setDriveFilesStatus("Your account does not have Drive delete permission.",true);return;}
+    const tags=normalizeDocumentTags(driveBulkTags?driveBulkTags.value:"");if(action==="publish"&&!tags){setDriveFilesStatus("Use up to 10 valid tags separated by commas.",true);return;}
+    if(!window.confirm(action+" "+selected.length+" selected Google Drive file(s)?"))return;
+    [driveBulkPublish,driveBulkUnpublish,driveBulkDelete].forEach(button=>{if(button)button.disabled=true;});let succeeded=0;const failures=[];
+    for(const file of selected){try{let response;if(action==="publish"){if(!ALLOWED_TYPES.has(file.mimeType))throw new Error("Unsupported file type");response=await googleDriveRequest("publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fileId:file.id,category:driveBulkCategory.value,title:file.name||"Drive document",mimeType:file.mimeType||"application/octet-stream",sizeBytes:Number(file.size||0)||null,tags})});}else if(action==="unpublish"){response=await googleDriveRequest("unpublish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fileId:file.id})});}else{response=await googleDriveRequest("delete",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:file.id})});}const payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload.error||"Action failed");succeeded++;selectedDriveFileIds.delete(file.id);}catch(error){failures.push((file.name||file.id)+": "+(error.message||"Failed"));}}
+    await loadGoogleDriveFiles();setDriveFilesStatus("Bulk "+action+": "+succeeded+"/"+selected.length+" succeeded."+(failures.length?" Failures: "+failures.slice(0,3).join("; "):""),failures.length>0);
+  }
+  if(driveBulkPublish)driveBulkPublish.addEventListener("click",()=>runDriveBulkAction("publish"));if(driveBulkUnpublish)driveBulkUnpublish.addEventListener("click",()=>runDriveBulkAction("unpublish"));if(driveBulkDelete)driveBulkDelete.addEventListener("click",()=>runDriveBulkAction("delete"));
   async function publishGoogleDriveFile(file, category, tagsText, button) {
     if (!currentPermissions.has("vault.publish")) {
       setDriveFilesStatus("Your role cannot publish documents.", true);
