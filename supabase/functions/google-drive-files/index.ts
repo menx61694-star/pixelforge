@@ -182,6 +182,7 @@ Deno.serve(async (request) => {
     const requiredPermission = ["publish", "unpublish"].includes(action ?? "") ? "vault.publish"
       : action === "delete" ? "drive.delete"
       : action === "private-tags-save" ? "vault.write"
+      : action === "private-tags-delete" ? "vault.delete"
       : action === "private-tags-list" ? "vault.read"
       : ["create-upload-session", "upload-chunk"].includes(action ?? "") ? "drive.write" : "drive.read";
     if (!(await hasDrivePermission(uid, requiredPermission))) {
@@ -192,6 +193,20 @@ Deno.serve(async (request) => {
         .select("storage_path,tags").eq("owner_uid", uid);
       if (error) throw error;
       return json({ documents: data ?? [] }, 200, request);
+    }
+    if (request.method === "POST" && action === "private-tags-delete") {
+      const input = await request.json();
+      const storagePaths = Array.isArray(input.storagePaths) ? input.storagePaths : [];
+      if (!storagePaths.length || storagePaths.length > 100 ||
+          storagePaths.some((path: unknown) => typeof path !== "string" ||
+            path.length > 512 || !path.startsWith(uid + "/") ||
+            path.split("/").some((part: string) => !part || part === "." || part === ".."))) {
+        return json({ error: "A valid list of up to 100 owned private document paths is required." }, 400, request);
+      }
+      const { error } = await supabaseAdmin().from("pixel_forge_private_document_tags")
+        .delete().eq("owner_uid", uid).in("storage_path", storagePaths);
+      if (error) throw error;
+      return json({ deleted: true, count: storagePaths.length }, 200, request);
     }
     if (request.method === "POST" && action === "private-tags-save") {
       const input = await request.json();
