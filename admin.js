@@ -1209,6 +1209,25 @@ const firebaseConfig = {
   });
   refreshButton.addEventListener("click", loadFiles);
   fileSearch.addEventListener("input", applyVaultSearch);
+  if (bulkPublishCategory && bulkPublishCategory.options.length === 1) {
+    PUBLIC_CATEGORIES.forEach(category => {
+      const option = document.createElement("option");
+      option.value = category;
+      option.textContent = category.replace(/-/g, " ");
+      bulkPublishCategory.append(option);
+    });
+  }
+  fileList.addEventListener("change", event => {
+    if (event.target.matches(".bulk-select-checkbox")) updateBulkSelectionUi();
+  });
+  selectAllVaultFiles?.addEventListener("change", () => {
+    fileList.querySelectorAll(".bulk-select-checkbox").forEach(input => { input.checked = selectAllVaultFiles.checked; });
+    updateBulkSelectionUi();
+  });
+  bulkApplyTagsButton?.addEventListener("click", applyBulkPrivateTags);
+  bulkPublishButton?.addEventListener("click", publishSelectedVaultFiles);
+  bulkUnpublishButton?.addEventListener("click", unpublishSelectedVaultFiles);
+  bulkDeleteButton?.addEventListener("click", deleteSelectedVaultFiles);
 
   fileInput.addEventListener("change", () => {
     const files = Array.from(fileInput.files || []);
