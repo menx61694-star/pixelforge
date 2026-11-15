@@ -181,9 +181,46 @@ Deno.serve(async (request) => {
     if (!uid) return json({ error: "Firebase authentication required." }, 401, request);
     const requiredPermission = ["publish", "unpublish"].includes(action ?? "") ? "vault.publish"
       : action === "delete" ? "drive.delete"
+      : action === "private-tags-save" ? "vault.write"
+      : action === "private-tags-list" ? "vault.read"
       : ["create-upload-session", "upload-chunk"].includes(action ?? "") ? "drive.write" : "drive.read";
     if (!(await hasDrivePermission(uid, requiredPermission))) {
       return json({ error: "Your role does not allow this Google Drive action." }, 403, request);
+    }
+    if (request.method === "GET" && action === "private-tags-list") {
+      const { data, error } = await supabaseAdmin().from("pixel_forge_private_document_tags")
+        .select("storage_path,tags").eq("owner_uid", uid);
+      if (error) throw error;
+      return json({ documents: data ?? [] }, 200, request);
+    }
+    if (request.method === "POST" && action === "private-tags-save") {
+      const input = await request.json();
+      const storagePath = typeof input.storagePath === "string" ? input.storagePath.trim() : "";
+      const tags = normalizeTags(input.tags);
+      if (!storagePath || storagePath.length > 512 || !storagePath.startsWith(uid + "/") ||
+          storagePath.split("/").some((part) => !part || part === "." || part === "..") || !tags) {
+        return json({ error: "A valid private document path and up to 10 valid tags are required." }, 400, request);
+      }
+      const fileName = storagePath.slice(uid.length + 1);
+      const db = supabaseAdmin();
+      const { data: files, error: listError } = await db.storage.from("private-documents").list(uid, {
+        limit: 1000, search: fileName
+      });
+      if (listError) throw listError;
+      if (!(files ?? []).some((file) => file.name === fileName && Boolean(file.id))) {
+        return json({ error: "The private document was not found. Refresh the vault and try again." }, 404, request);
+      }
+      if (tags.length === 0) {
+        const { error } = await db.from("pixel_forge_private_document_tags").delete()
+          .eq("owner_uid", uid).eq("storage_path", storagePath);
+        if (error) throw error;
+        return json({ saved: true, tags: [] }, 200, request);
+      }
+      const { error } = await db.from("pixel_forge_private_document_tags").upsert({
+        owner_uid: uid, storage_path: storagePath, tags, updated_at: new Date().toISOString()
+      }, { onConflict: "owner_uid,storage_path" });
+      if (error) throw error;
+      return json({ saved: true, tags }, 200, request);
     }
     if (request.method === "GET" && action === "status") {
       const { data, error } = await supabaseAdmin().from("google_drive_oauth_tokens")
