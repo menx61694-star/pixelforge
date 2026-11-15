@@ -114,7 +114,7 @@ test("public homepage knowledge is admin-managed, allow-listed, and safely expos
 });
 
 test("public settings expose admin-managed branding without leaking private settings", () => {
-  assert.match(edge, /"site\.name", "site\.description", "home\.knowledge\.enabled"/);
+  assert.match(edge, /\.in\("setting_key", \["site\\.name", "site\\.description", "site\\.contact_email", "home\\.knowledge\\.enabled"/);
   assert.match(edge, /name: typeof values\["site\.name"\]/);
   assert.match(edge, /description: typeof values\["site\.description"\]/);
   const publicScript = read("script.js");
@@ -505,7 +505,7 @@ test("location sharing requires browser geolocation permission and explicit cons
   const analytics = read("supabase/functions/analytics/index.ts");
   const migration = read("supabase/phase-20-location-sharing.sql");
   assert.match(publicScript, /navigator\.geolocation\.getCurrentPosition/);
-  assert.match(publicScript, /Share your approximate location[\s\S]*?confirm/);
+  assert.match(publicScript, /window\.confirm\("Share your approximate location[\\s\\S]*?consent/);
   assert.match(publicScript, /location, consent: true/);
   assert.match(analytics, /browser-geolocation-explicit-consent/);
   assert.match(analytics, /location_latitude: location\.latitude/);
