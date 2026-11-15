@@ -27,7 +27,6 @@ on:
       - "supabase/phase-16-popular-resources.sql"
       - "supabase/phase-17-library-pdf-preview.sql"
       - "supabase/phase-18-document-tags.sql"
-      - "supabase/phase-18-document-tags.sql"
       - "tools.html"
       - "tools.js"
       - "styles.css"
