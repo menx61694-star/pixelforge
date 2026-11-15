@@ -187,7 +187,7 @@ test("security logs explain local LAN IP is unavailable and show IP source", () 
   const adminJs = read("admin.js");
   const securitySql = read("supabase/phase-4-security-logs.sql");
   assert.match(adminHtml, /Observed public IP/);
-  assert.match(adminHtml, /Local\/private LAN IPs are not available/);
+  assert.match(adminHtml, /location explicitly shared by a visitor after browser permission and consent/);
   assert.match(adminJs, /Not shared/);
   assert.match(adminJs, /Hosting IP unavailable/);
   assert.match(securitySql, /ip_source text/);
