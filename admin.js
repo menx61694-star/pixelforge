@@ -273,7 +273,7 @@ const firebaseConfig = {
         publish.type = "button";
         publish.className = "publish-button";
         publish.textContent = publishedCategory ? "Republish" : "Publish";
-        publish.addEventListener("click", () => publishGoogleDriveFile(file, category.value, publish));
+        const tagsInput = document.createElement("input");\n        tagsInput.type = "text"; tagsInput.className = "publish-tags"; tagsInput.placeholder = "Tags: CTET, UP Police";\n        tagsInput.maxLength = 320; tagsInput.setAttribute("aria-label", "Public search tags for " + (file.name || "Drive file"));\n        const publishedInfo = publishedFiles.get(file.id);\n        tagsInput.value = publishedInfo && Array.isArray(publishedInfo.tags) ? publishedInfo.tags.join(", ") : "";\n        publish.addEventListener("click", () => publishGoogleDriveFile(file, category.value, tagsInput.value, publish));
         const unpublish = document.createElement("button");
         unpublish.type = "button";
         unpublish.className = "unpublish-button";
@@ -291,7 +291,7 @@ const firebaseConfig = {
         remove.textContent = "Delete";
         remove.addEventListener("click", () => deleteGoogleDriveFile(file, item, remove));
         remove.hidden = !currentPermissions.has("drive.delete");
-        actions.append(download, category, publish, unpublish, remove);
+        actions.append(download, category, tagsInput, publish, unpublish, remove);
         item.append(info, actions);
         googleDriveFileList.append(item);
       });
@@ -303,7 +303,7 @@ const firebaseConfig = {
     }
   }
 
-  async function publishGoogleDriveFile(file, category, button) {
+  async function publishGoogleDriveFile(file, category, tagsText, button) {
     if (!currentPermissions.has("vault.publish")) {
       setDriveFilesStatus("Your role cannot publish documents.", true);
       return;
@@ -312,7 +312,7 @@ const firebaseConfig = {
       setDriveFilesStatus("Choose a public category before publishing.", true);
       return;
     }
-    if (!window.confirm("Publish " + (file.name || "this Drive file") + " publicly in " + category.replace(/-/g, " ") + "? Anyone with the public library link can access it.")) return;
+    const tags = normalizeDocumentTags(tagsText);\n    if (!tags) { setDriveFilesStatus("Use up to 10 tags, each 1–32 characters, separated by commas.", true); return; }\n    if (!window.confirm("Publish " + (file.name || "this Drive file") + " publicly in " + category.replace(/-/g, " ") + "? Anyone with the public library link can access it.")) return;
     button.disabled = true;
     try {
       setDriveFilesStatus("Publishing Drive reference…");
@@ -493,7 +493,7 @@ const firebaseConfig = {
     }
   }
 
-  function safeFileName(name) {
+  function normalizeDocumentTags(value) {\n    const tags = String(value || "").split(",").map(tag => tag.trim().replace(/\\s+/g, " ")).filter(Boolean);\n    const normalized = [];\n    const seen = new Set();\n    for (const tag of tags) {\n      const key = tag.toLocaleLowerCase();\n      if (tag.length > 32 || !/^[\\p{L}\\p{N}][\\p{L}\\p{N} _-]*$/u.test(tag)) return null;\n      if (!seen.has(key)) { seen.add(key); normalized.push(tag); }\n    }\n    return normalized.length <= 10 ? normalized : null;\n  }\n\n  function safeFileName(name) {
     const cleaned = name.normalize("NFKD")
       .replace(/[^a-zA-Z0-9._-]+/g, "-")
       .replace(/-+/g, "-")
@@ -670,14 +670,14 @@ const firebaseConfig = {
     }));
     results.flat().forEach(file => {
       if (file.name.startsWith(currentUserUid + "-")) {
-        published.set(file.name.slice(currentUserUid.length + 1), file.category);
+        published.set(file.name.slice(currentUserUid.length + 1), { category: file.category, tags: [] });
       }
     });
     const driveResponse = await googleDriveRequest("published-list");
     const drivePayload = await driveResponse.json();
     if (!driveResponse.ok) throw new Error(drivePayload.error || "Could not load published Drive files.");
     (drivePayload.documents || []).forEach(item => {
-      if (item.drive_file_id) published.set(item.drive_file_id, item.category);
+      if (item.drive_file_id) published.set(item.drive_file_id, { category: item.category, tags: Array.isArray(item.tags) ? item.tags : [] });
     });
     return published;
   }
@@ -757,7 +757,7 @@ const firebaseConfig = {
           publish.hidden = !currentPermissions.has("vault.publish");
           unpublish.hidden = !currentPermissions.has("vault.publish");
           remove.hidden = !currentPermissions.has("vault.delete");
-          actions.append(download, category, publish, unpublish, remove);
+          actions.append(download, category, tagsInput, publish, unpublish, remove);
           li.append(info, actions);
           fileList.append(li);
         });
@@ -772,12 +772,12 @@ const firebaseConfig = {
     }
   }
 
-  async function publishFile(privatePath, fileName, category, button) {
+  async function publishFile(privatePath, fileName, category, tagsText, button) {
     if (!category || !PUBLIC_CATEGORIES.includes(category)) {
       setVaultStatus("Choose a public category before publishing.", true);
       return;
     }
-    if (!window.confirm("Publish this file publicly in " + category.replace(/-/g, " ") + "? Anyone with the public library link will be able to access it.")) return;
+    const tags = normalizeDocumentTags(tagsText);\n    if (!tags) { setVaultStatus("Use up to 10 tags, each 1–32 characters, separated by commas.", true); return; }\n    if (!window.confirm("Publish this file publicly in " + category.replace(/-/g, " ") + "? Anyone with the public library link will be able to access it.")) return;
     button.disabled = true;
     try {
       const { data: downloaded, error: downloadError } = await supabaseClient.storage.from(BUCKET).download(privatePath);
