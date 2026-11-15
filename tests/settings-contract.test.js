@@ -549,3 +549,25 @@ test("Private Vault assigns publishedCategory only after it is initialized", () 
   assert.notEqual(datasetAssignment, -1);
   assert.ok(datasetAssignment > declaration, "dataset assignment must follow the publishedCategory declaration");
 });
+
+
+test("Public Contact form delivers messages to a private admin inbox", () => {
+  const homepage = read("index.html");
+  const publicScript = read("script.js");
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  const edge = read("supabase/functions/site-settings/index.ts");
+  const migration = read("supabase/phase-21-contact-inbox.sql");
+  assert.match(homepage, /id="public-contact-form"/);
+  assert.match(publicScript, /action=submit-contact/);
+  assert.doesNotMatch(publicScript, /window\.location\.href\s*=\s*"mailto:/);
+  assert.match(edge, /action === "submit-contact"/);
+  assert.match(edge, /pixel_forge_contact_messages/);
+  assert.match(edge, /action === "contact-list"/);
+  assert.match(edge, /action === "contact-status"/);
+  assert.match(adminHtml, /id="contact-inbox-list"/);
+  assert.match(adminJs, /loadContactInbox/);
+  assert.match(adminJs, /Reply by email/);
+  assert.match(migration, /enable row level security/);
+  assert.match(migration, /revoke all on public\.pixel_forge_contact_messages from anon, authenticated/);
+});
