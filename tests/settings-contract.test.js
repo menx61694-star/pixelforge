@@ -473,3 +473,28 @@ test("Private Vault documents support independently saved private tags", () => {
   assert.ok(migration.includes("enable row level security"));
   assert.ok(migration.includes("revoke all"));
 });
+
+
+test("Private Vault supports bulk publish, unpublish, delete and shared private tags", () => {
+  const html = read("admin.html");
+  const admin = read("admin.js");
+  const drive = read("supabase/functions/google-drive-files/index.ts");
+  const css = read("admin.css");
+  assert.ok(html.includes('id="bulk-actions-toolbar"'));
+  assert.ok(html.includes('id="select-all-vault-files"'));
+  assert.ok(html.includes('id="bulk-publish-category"'));
+  assert.ok(html.includes('id="bulk-tags-input"'));
+  assert.ok(html.includes('id="bulk-apply-tags"'));
+  assert.ok(html.includes('id="bulk-publish"'));
+  assert.ok(html.includes('id="bulk-unpublish"'));
+  assert.ok(html.includes('id="bulk-delete"'));
+  assert.ok(admin.includes('selection.className = "bulk-select-checkbox"'));
+  assert.ok(admin.includes("async function applyBulkPrivateTags()"));
+  assert.ok(admin.includes("async function publishSelectedVaultFiles()"));
+  assert.ok(admin.includes("async function unpublishSelectedVaultFiles()"));
+  assert.ok(admin.includes("async function deleteSelectedVaultFiles()"));
+  assert.ok(admin.includes('privateVaultTagsRequest("private-tags-delete"'));
+  assert.ok(drive.includes('action === "private-tags-delete" ? "vault.delete"'));
+  assert.ok(drive.includes('action === "private-tags-delete"'));
+  assert.ok(css.includes(".bulk-actions-toolbar"));
+});
