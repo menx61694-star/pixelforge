@@ -404,3 +404,17 @@ test("PDF preview is a public-library-only feature controlled by an audited admi
   assert.ok(migration.includes("revoke all on function public.pixel_forge_update_site_setting(text, jsonb, text) from public, anon, authenticated"));
   assert.ok(migration.includes("grant execute on function public.pixel_forge_update_site_setting(text, jsonb, text) to service_role"));
 });
+
+test("Google Drive and Private Vault support sequential multi-file uploads", () => {
+  const html = read("admin.html");
+  const js = read("admin.js");
+  assert.match(html, /id="document-file"[^>]*multiple/);
+  assert.match(html, /id="google-drive-file"[^>]*multiple/);
+  assert.ok(js.includes("Array.from(fileInput.files || [])"));
+  assert.ok(js.includes("Array.from(googleDriveFileInput ? googleDriveFileInput.files : [])"));
+  assert.ok(js.includes("uploadLargeFile(BUCKET, currentUserUid + \"/\" + objectName, file, index + 1, files.length)"));
+  assert.ok(js.includes("uploadGoogleDriveSingleFile(files[index], index + 1, files.length)"));
+  assert.ok(js.includes('currentPermissions.has("vault.write")'));
+  assert.ok(js.includes('currentPermissions.has("drive.write")'));
+  assert.ok(js.includes("Uploaded \" + succeeded + \" of \" + files.length"));
+});
