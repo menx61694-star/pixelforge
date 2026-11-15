@@ -1781,12 +1781,12 @@ const firebaseConfig = {
       if (!payload.logs || !payload.logs.length) {
         const row = document.createElement("tr");
         const cell = document.createElement("td");
-        cell.colSpan = 7; cell.className = "empty-state"; cell.textContent = "No security logs recorded yet.";
+        cell.colSpan = 8; cell.className = "empty-state"; cell.textContent = "No security logs recorded yet.";
         row.append(cell); securityLogsBody.append(row);
       } else {
         payload.logs.forEach(log => {
           const row = document.createElement("tr");
-          [log.ipAddress, log.ipAddress && log.ipAddress.includes(":") ? "IPv6" : "IPv4", log.ipSource === "supabase-edge-cf-connecting-ip" ? "Supabase trusted edge" : log.ipSource === "unavailable" ? "Hosting IP unavailable" : log.ipSource === "cf-connecting-ip" ? "Legacy edge IP" : "Unknown / legacy", (log.localIpAddress ? log.localIpAddress + " (browser-reported)" : "Not shared"), log.eventType, log.pagePath, new Date(log.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }) + " IST"].forEach(value => {
+          [log.ipAddress, log.ipAddress && log.ipAddress.includes(":") ? "IPv6" : "IPv4", log.ipSource === "supabase-edge-cf-connecting-ip" ? "Supabase trusted edge" : log.ipSource === "unavailable" ? "Hosting IP unavailable" : log.ipSource === "cf-connecting-ip" ? "Legacy edge IP" : "Unknown / legacy", (log.localIpAddress ? log.localIpAddress + " (browser-reported)" : "Not shared"), (Number.isFinite(log.latitude) && Number.isFinite(log.longitude) ? log.latitude.toFixed(5) + ", " + log.longitude.toFixed(5) + " · ±" + Math.round(log.locationAccuracyM || 0) + " m" : "Not shared"), log.eventType, log.pagePath, new Date(log.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }) + " IST"].forEach(value => {
             const cell = document.createElement("td"); cell.textContent = String(value ?? "—"); row.append(cell);
           });
           securityLogsBody.append(row);
