@@ -180,7 +180,7 @@ Deno.serve(async (request) => {
     }
     if (request.method === "GET" && action === "published-list") {
       const { data, error } = await supabaseAdmin().from("pixel_forge_published_documents")
-        .select("drive_file_id,category,title")
+        .select("drive_file_id,category,title,tags")
         .eq("source", "google_drive").eq("owner_uid", uid).eq("published", true);
       if (error) throw error;
       return json({ documents: data ?? [] }, 200, request);
