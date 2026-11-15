@@ -267,13 +267,21 @@ const firebaseConfig = {
           category.append(option);
         });
         const safeName = safeFileName(file.name || "drive-file");
-        const publishedCategory = publishedFiles.get(file.id);
+        const publishedInfo = publishedFiles.get(file.id);
+        const publishedCategory = publishedInfo && publishedInfo.category;
         if (publishedCategory) category.value = publishedCategory;
         const publish = document.createElement("button");
         publish.type = "button";
         publish.className = "publish-button";
         publish.textContent = publishedCategory ? "Republish" : "Publish";
-        const tagsInput = document.createElement("input");\n        tagsInput.type = "text"; tagsInput.className = "publish-tags"; tagsInput.placeholder = "Tags: CTET, UP Police";\n        tagsInput.maxLength = 320; tagsInput.setAttribute("aria-label", "Public search tags for " + (file.name || "Drive file"));\n        const publishedInfo = publishedFiles.get(file.id);\n        tagsInput.value = publishedInfo && Array.isArray(publishedInfo.tags) ? publishedInfo.tags.join(", ") : "";\n        publish.addEventListener("click", () => publishGoogleDriveFile(file, category.value, tagsInput.value, publish));
+        const tagsInput = document.createElement("input");
+        tagsInput.type = "text";
+        tagsInput.className = "publish-tags";
+        tagsInput.placeholder = "Tags: CTET, UP Police";
+        tagsInput.maxLength = 320;
+        tagsInput.setAttribute("aria-label", "Public search tags for " + (file.name || "Drive file"));
+        tagsInput.value = publishedInfo && Array.isArray(publishedInfo.tags) ? publishedInfo.tags.join(", ") : "";
+        publish.addEventListener("click", () => publishGoogleDriveFile(file, category.value, tagsInput.value, publish));
         const unpublish = document.createElement("button");
         unpublish.type = "button";
         unpublish.className = "unpublish-button";
@@ -312,7 +320,9 @@ const firebaseConfig = {
       setDriveFilesStatus("Choose a public category before publishing.", true);
       return;
     }
-    const tags = normalizeDocumentTags(tagsText);\n    if (!tags) { setDriveFilesStatus("Use up to 10 tags, each 1–32 characters, separated by commas.", true); return; }\n    if (!window.confirm("Publish " + (file.name || "this Drive file") + " publicly in " + category.replace(/-/g, " ") + "? Anyone with the public library link can access it.")) return;
+    const tags = normalizeDocumentTags(tagsText);
+    if (!tags) { setDriveFilesStatus("Use up to 10 tags, each 1–32 characters, separated by commas.", true); return; }
+    if (!window.confirm("Publish " + (file.name || "this Drive file") + " publicly in " + category.replace(/-/g, " ") + "? Anyone with the public library link can access it.")) return;
     button.disabled = true;
     try {
       setDriveFilesStatus("Publishing Drive reference…");
@@ -735,7 +745,8 @@ const firebaseConfig = {
             option.textContent = value.replace(/-/g, " ").replace(/\\b\\w/g, char => char.toUpperCase());
             category.append(option);
           });
-          const publishedCategory = publishedFiles.get(item.name);
+          const publishedInfo = publishedFiles.get(item.name);
+          const publishedCategory = publishedInfo && publishedInfo.category;
           if (publishedCategory) category.value = publishedCategory;
           const tagsInput = document.createElement("input");
           tagsInput.type = "text";
@@ -784,7 +795,9 @@ const firebaseConfig = {
       setVaultStatus("Choose a public category before publishing.", true);
       return;
     }
-    const tags = normalizeDocumentTags(tagsText);\n    if (!tags) { setVaultStatus("Use up to 10 tags, each 1–32 characters, separated by commas.", true); return; }\n    if (!window.confirm("Publish this file publicly in " + category.replace(/-/g, " ") + "? Anyone with the public library link will be able to access it.")) return;
+    const tags = normalizeDocumentTags(tagsText);
+    if (!tags) { setVaultStatus("Use up to 10 tags, each 1–32 characters, separated by commas.", true); return; }
+    if (!window.confirm("Publish this file publicly in " + category.replace(/-/g, " ") + "? Anyone with the public library link will be able to access it.")) return;
     button.disabled = true;
     try {
       const { data: downloaded, error: downloadError } = await supabaseClient.storage.from(BUCKET).download(privatePath);
