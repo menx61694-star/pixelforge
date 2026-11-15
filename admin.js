@@ -896,6 +896,72 @@ const firebaseConfig = {
     } finally { bulkApplyTagsButton.disabled = false; }
   }
 
+  async function publishSelectedVaultFiles() {
+    const rows = getSelectedVaultRows();
+    const category = bulkPublishCategory?.value || "";
+    if (!rows.length) return;
+    if (!currentPermissions.has("vault.publish")) { setVaultStatus("Your account cannot publish documents.", true); return; }
+    if (!PUBLIC_CATEGORIES.includes(category)) { setVaultStatus("Choose a category for bulk publishing.", true); return; }
+    const prepared = rows.map(row => ({ row, tags: normalizeDocumentTags(row.querySelector(".publish-tags")?.value || "") }));
+    const invalid = prepared.find(item => !item.tags);
+    if (invalid) { setVaultStatus("Invalid tags for " + invalid.row.dataset.fileName + ". Use up to 10 valid tags.", true); return; }
+    if (!window.confirm("Publish " + rows.length + " selected document(s) publicly in " + category.replace(/-/g, " ") + "? Their private originals will remain in the vault.")) return;
+    bulkPublishButton.disabled = true;
+    let published = 0;
+    const failures = [];
+    try {
+      for (const item of prepared) {
+        const fileName = item.row.dataset.fileName;
+        try {
+          const { data, error: downloadError } = await supabaseClient.storage.from(BUCKET).download(item.row.dataset.storagePath);
+          if (downloadError) throw downloadError;
+          const publicPath = category + "/" + currentUserUid + "-" + fileName;
+          const { error: uploadError } = await supabaseClient.storage.from(PUBLIC_BUCKET).upload(publicPath, data, {
+            cacheControl: "60",
+            contentType: data.type || "application/octet-stream",
+            metadata: { tags: item.tags },
+            upsert: true
+          });
+          if (uploadError) throw uploadError;
+          published++;
+        } catch (error) { failures.push(fileName + ": " + (error.message || "Publish failed")); }
+      }
+      setVaultStatus("Published " + published + "/" + rows.length + " document(s)." +
+        (failures.length ? " Failed: " + failures.slice(0, 3).join("; ") : " Private originals remain unchanged."));
+      await loadFiles();
+    } finally { bulkPublishButton.disabled = false; }
+  }
+
+  async function unpublishSelectedVaultFiles() {
+    const rows = getSelectedVaultRows();
+    const publishedRows = rows.filter(row => row.dataset.publishedCategory);
+    if (!publishedRows.length) { setVaultStatus("None of the selected documents are currently published.", true); return; }
+    if (!currentPermissions.has("vault.publish")) { setVaultStatus("Your account cannot unpublish documents.", true); return; }
+    if (!window.confirm("Unpublish " + publishedRows.length + " selected document(s)? Their private originals will remain in the vault.")) return;
+    bulkUnpublishButton.disabled = true;
+    let removed = 0;
+    const failures = [];
+    try {
+      const byCategory = new Map();
+      publishedRows.forEach(row => {
+        const category = row.dataset.publishedCategory;
+        if (!byCategory.has(category)) byCategory.set(category, []);
+        byCategory.get(category).push(row);
+      });
+      for (const [category, group] of byCategory) {
+        const paths = group.map(row => category + "/" + currentUserUid + "-" + row.dataset.fileName);
+        try {
+          const { error } = await supabaseClient.storage.from(PUBLIC_BUCKET).remove(paths);
+          if (error) throw error;
+          removed += group.length;
+        } catch (error) { failures.push(category + ": " + (error.message || "Unpublish failed")); }
+      }
+      setVaultStatus("Unpublished " + removed + "/" + publishedRows.length + " document(s)." +
+        (failures.length ? " Failed: " + failures.join("; ") : " Private originals remain unchanged."));
+      await loadFiles();
+    } finally { bulkUnpublishButton.disabled = false; }
+  }
+
   async function privateVaultTagsRequest(action, options = {}) {
     const user = auth.currentUser;
     if (!user) throw new Error("Sign in is required to manage private document tags.");
