@@ -208,10 +208,10 @@ test("local IP diagnostic requires explicit consent, accepts only private addres
 test("public local IP diagnostic is user-initiated, disclosed and does not auto-run", () => {
   const script = read("script.js");
   const index = read("index.html");
-  assert.match(index, /Check &amp; share local IP \(optional\)/);
-  assert.match(index, /Nothing is checked or shared unless you choose/);
-  assert.match(script, /window\.confirm\("Consent to check/);
-  assert.match(script, /RTCPeerConnection/);
+  assert.match(index, /Share my location &amp; IP \(optional\)/);
+  assert.match(index, /browser for location permission/);
+  assert.match(script, /window\.confirm\("Share your approximate location/);
+  assert.match(script, /navigator\.geolocation\.getCurrentPosition/);\n  assert.match(script, /getPixelForgePrivateLocalIp\(\)/);
   assert.match(script, /action=local-ip-diagnostic/);
   assert.doesNotMatch(script.slice(0, script.indexOf("async function getPixelForgePrivateLocalIp")), /getPixelForgePrivateLocalIp\(\)/);
   assert.match(read("admin.js"), /browser-reported/);
