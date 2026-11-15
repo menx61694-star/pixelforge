@@ -962,6 +962,43 @@ const firebaseConfig = {
     } finally { bulkUnpublishButton.disabled = false; }
   }
 
+  async function deleteSelectedVaultFiles() {
+    const rows = getSelectedVaultRows();
+    if (!rows.length) return;
+    if (!currentPermissions.has("vault.delete")) { setVaultStatus("Your account cannot delete documents.", true); return; }
+    if (!window.confirm("Permanently delete " + rows.length + " selected private document(s)? This cannot be undone.")) return;
+    bulkDeleteButton.disabled = true;
+    let deleted = 0;
+    const failures = [];
+    try {
+      for (let index = 0; index < rows.length; index += 100) {
+        const batch = rows.slice(index, index + 100);
+        const paths = batch.map(row => row.dataset.storagePath);
+        const { error } = await supabaseClient.storage.from(BUCKET).remove(paths);
+        if (error) {
+          failures.push(...batch.map(row => row.dataset.fileName + ": " + error.message));
+          continue;
+        }
+        deleted += batch.length;
+        try {
+          await privateVaultTagsRequest("private-tags-delete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ storagePaths: paths })
+          });
+        } catch (error) {
+          failures.push("Private tag cleanup: " + (error.message || "Cleanup failed"));
+        }
+      }
+      setVaultStatus("Deleted " + deleted + "/" + rows.length + " private document(s)." +
+        (failures.length ? " Issues: " + failures.slice(0, 3).join("; ") : ""));
+      await loadFiles();
+    } catch (error) {
+      setVaultStatus("Bulk delete stopped: " + (error.message || "Unknown error"), true);
+      await loadFiles();
+    } finally { bulkDeleteButton.disabled = false; }
+  }
+
   async function privateVaultTagsRequest(action, options = {}) {
     const user = auth.currentUser;
     if (!user) throw new Error("Sign in is required to manage private document tags.");
