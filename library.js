@@ -227,7 +227,8 @@
               size: doc.size_bytes ? (doc.size_bytes >= 1048576 ? (doc.size_bytes / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(doc.size_bytes / 1024)) + " KB") : "Size unavailable",
               ext: (doc.title || "").split(".").pop()?.slice(0, 4) || "FILE",
               source: "google_drive",
-              resourceId: doc.drive_file_id
+              resourceId: doc.drive_file_id,
+              tags: Array.isArray(doc.tags) ? doc.tags : []
             }));
         } catch (driveError) {
           console.warn("Published Google Drive documents could not be loaded:", driveError);
