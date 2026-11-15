@@ -75,25 +75,43 @@ const localIpDiagnosticButton = document.getElementById("local-ip-diagnostic-but
 const localIpDiagnosticStatus = document.getElementById("local-ip-diagnostic-status");
 if (localIpDiagnosticButton && localIpDiagnosticStatus) {
   localIpDiagnosticButton.addEventListener("click", async () => {
-    if (!window.confirm("Consent to check whether this browser exposes a private LAN IP through WebRTC and send any detected address to PixelForge Security Logs? It will be encrypted and retained for up to 90 days. Browsers may hide it; no address is sent if none is exposed.")) return;
+    if (!navigator.geolocation) {
+      localIpDiagnosticStatus.textContent = "This browser does not support location access.";
+      return;
+    }
     localIpDiagnosticButton.disabled = true;
-    localIpDiagnosticStatus.textContent = "Checking browser network candidates…";
-    const localIp = await getPixelForgePrivateLocalIp();
-    if (!localIp) {
-      localIpDiagnosticStatus.textContent = "No private LAN IP was exposed by this browser. Nothing was sent.";
+    localIpDiagnosticStatus.textContent = "Please allow location access in your browser…";
+    let location;
+    try {
+      location = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(
+        position => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy }),
+        reject,
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+      ));
+    } catch (error) {
+      localIpDiagnosticStatus.textContent = error.code === 1
+        ? "Location permission was denied. Allow location access in your browser settings and try again."
+        : "Could not get your location. Check device location services and try again.";
       localIpDiagnosticButton.disabled = false;
       return;
     }
+    if (!window.confirm("Share your approximate location and any private LAN IP exposed by this browser with PixelForge Security Logs? Location coordinates are restricted to admins. Continue only if you consent.")) {
+      localIpDiagnosticStatus.textContent = "Sharing cancelled. Nothing was sent.";
+      localIpDiagnosticButton.disabled = false;
+      return;
+    }
+    localIpDiagnosticStatus.textContent = "Checking browser network candidates…";
+    const localIp = await getPixelForgePrivateLocalIp();
     try {
       const response = await fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/analytics?action=local-ip-diagnostic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pagePath: window.location.pathname || "/", localIp, consent: true }),
+        body: JSON.stringify({ pagePath: window.location.pathname || "/", localIp, location, consent: true }),
         credentials: "omit"
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "Could not submit the diagnostic.");
-      localIpDiagnosticStatus.textContent = "Browser-reported local IP was sent over HTTPS and encrypted for the restricted Security Logs.";
+      localIpDiagnosticStatus.textContent = "Your location and available network details were sent securely to restricted PixelForge Security Logs.";
     } catch (error) {
       localIpDiagnosticStatus.textContent = error.message || "Local IP diagnostic failed.";
     } finally {
@@ -479,4 +497,48 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
       });
       if (grid.children.length) section.hidden = false;
     }).catch(() => { section.hidden = true; });
+})();
+
+
+// Public Contact form: opens the visitor's configured email app with a prefilled message.
+(() => {
+  const form = document.getElementById("public-contact-form");
+  if (!form) return;
+  const status = document.getElementById("contact-status");
+  const submit = document.getElementById("contact-submit");
+  const emailLine = document.getElementById("contact-email-line");
+  let destination = "";
+  fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
+    headers: { Accept: "application/json" }, credentials: "omit"
+  }).then(response => {
+    if (!response.ok) throw new Error("Contact details unavailable");
+    return response.json();
+  }).then(payload => {
+    destination = typeof payload.site?.contactEmail === "string" ? payload.site.contactEmail.trim() : "";
+    if (destination) {
+      emailLine.textContent = "Email: " + destination;
+      emailLine.hidden = false;
+    } else {
+      status.textContent = "Contact email has not been configured by the website administrator yet.";
+      submit.disabled = true;
+    }
+  }).catch(() => {
+    status.textContent = "Contact details could not be loaded. Please try again later.";
+    submit.disabled = true;
+  });
+  form.addEventListener("submit", event => {
+    event.preventDefault();
+    if (!destination) return;
+    const data = new FormData(form);
+    const subject = String(data.get("subject") || "").trim();
+    const body = [
+      "Name: " + String(data.get("name") || "").trim(),
+      "Reply email: " + String(data.get("email") || "").trim(),
+      "",
+      String(data.get("message") || "").trim()
+    ].join("\\n");
+    window.location.href = "mailto:" + encodeURIComponent(destination) +
+      "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+    status.textContent = "Your email app should open with the message ready to send.";
+  });
 })();
