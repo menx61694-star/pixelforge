@@ -406,61 +406,53 @@ const firebaseConfig = {
     }
   }
 
-  async function uploadGoogleDriveFile() {
-    const file = googleDriveFileInput && googleDriveFileInput.files && googleDriveFileInput.files[0];
-    if (!file) {
-      setDriveFilesStatus("Choose a file first.", true);
-      return;
-    }
-    if (!ALLOWED_TYPES.has(file.type)) {
-      setDriveFilesStatus("Only PDF, JPEG and PNG files are allowed.", true);
-      return;
-    }
-    if (!file.size || file.size > 2 * 1024 * 1024 * 1024) {
-      setDriveFilesStatus("Choose a non-empty file up to 2 GB.", true);
-      return;
-    }
-    googleDriveUploadButton.disabled = true;
-    googleDriveRefreshButton.disabled = true;
-    try {
-      setDriveFilesStatus("Preparing resumable Google Drive upload…");
-      const sessionResponse = await googleDriveRequest("create-upload-session", {
+  async function uploadGoogleDriveSingleFile(file, fileIndex, fileCount) {
+    setDriveFilesStatus("Preparing Google Drive upload (" + fileIndex + "/" + fileCount + "): " + file.name);
+    const sessionResponse = await googleDriveRequest("create-upload-session", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: file.name, mimeType: file.type, size: file.size })
+    });
+    const session = await sessionResponse.json();
+    if (!sessionResponse.ok || !session.uploadUrl) throw new Error(session.error || "Could not start upload.");
+    const chunkSize = Math.min(Number(session.chunkSize) || 4 * 1024 * 1024, 4 * 1024 * 1024);
+    let uploaded = 0;
+    while (uploaded < file.size) {
+      const endExclusive = Math.min(uploaded + chunkSize, file.size);
+      const response = await googleDriveRequest("upload-chunk", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: file.name, mimeType: file.type, size: file.size })
+        headers: { "X-Drive-Upload-Url": session.uploadUrl, "Content-Range": "bytes " + uploaded + "-" + (endExclusive - 1) + "/" + file.size },
+        body: file.slice(uploaded, endExclusive)
       });
-      const session = await sessionResponse.json();
-      if (!sessionResponse.ok || !session.uploadUrl) throw new Error(session.error || "Could not start upload.");
-      const chunkSize = Math.min(Number(session.chunkSize) || 4 * 1024 * 1024, 4 * 1024 * 1024);
-      let uploaded = 0;
-      while (uploaded < file.size) {
-        const endExclusive = Math.min(uploaded + chunkSize, file.size);
-        const chunk = file.slice(uploaded, endExclusive);
-        const response = await googleDriveRequest("upload-chunk", {
-          method: "POST",
-          headers: {
-            "X-Drive-Upload-Url": session.uploadUrl,
-            "Content-Range": "bytes " + uploaded + "-" + (endExclusive - 1) + "/" + file.size
-          },
-          body: chunk
-        });
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok && response.status !== 308) throw new Error(result.error || "Upload failed at " + formatBytes(uploaded) + ".");
-        uploaded = endExclusive;
-        setDriveFilesStatus("Uploading to Google Drive… " + Math.round(uploaded / file.size * 100) + "%");
-        if (result.complete) break;
-      }
-      googleDriveFileInput.value = "";
-      setDriveFilesStatus("Upload completed. Refreshing Drive files…");
-      await loadGoogleDriveFiles();
-    } catch (error) {
-      setDriveFilesStatus(error.message || "Google Drive upload failed.", true);
-    } finally {
-      googleDriveUploadButton.disabled = !googleDriveConnected;
-      googleDriveRefreshButton.disabled = !googleDriveConnected;
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok && response.status !== 308) throw new Error(result.error || "Upload failed at " + formatBytes(uploaded) + ".");
+      uploaded = endExclusive;
+      setDriveFilesStatus("Uploading " + fileIndex + "/" + fileCount + " · " + file.name + " · " + Math.round(uploaded / file.size * 100) + "%");
+      if (result.complete) break;
     }
   }
 
+  async function uploadGoogleDriveFile() {
+    const files = Array.from(googleDriveFileInput ? googleDriveFileInput.files : []);
+    if (!files.length) { setDriveFilesStatus("Choose one or more files first.", true); return; }
+    const invalid = files.find(file => !ALLOWED_TYPES.has(file.type) || !file.size || file.size > 2 * 1024 * 1024 * 1024);
+    if (invalid) { setDriveFilesStatus("Every selected file must be a non-empty PDF, JPEG or PNG up to 2 GB. Invalid: " + invalid.name, true); return; }
+    if (!googleDriveConnected || !currentPermissions.has("drive.write")) { setDriveFilesStatus("Your account does not have Google Drive upload permission.", true); return; }
+    googleDriveUploadButton.disabled = true;
+    googleDriveRefreshButton.disabled = true;
+    let succeeded = 0;
+    const failures = [];
+    try {
+      for (let index = 0; index < files.length; index++) {
+        try { await uploadGoogleDriveSingleFile(files[index], index + 1, files.length); succeeded++; }
+        catch (error) { failures.push(files[index].name + ": " + (error.message || "Upload failed")); }
+      }
+      googleDriveFileInput.value = "";
+      await loadGoogleDriveFiles();
+      if (failures.length) setDriveFilesStatus("Uploaded " + succeeded + " of " + files.length + " files. Failed: " + failures.join(" · "), true);
+      else setDriveFilesStatus("Successfully uploaded " + succeeded + " file" + (succeeded === 1 ? "" : "s") + " to Google Drive.");
+    } catch (error) { setDriveFilesStatus(error.message || "Google Drive upload failed.", true); }
+    finally { googleDriveUploadButton.disabled = !googleDriveConnected; googleDriveRefreshButton.disabled = !googleDriveConnected; }
+  }
   if (googleDriveButton) googleDriveButton.addEventListener("click", connectGoogleDrive);
   if (googleDriveRefreshButton) googleDriveRefreshButton.addEventListener("click", loadGoogleDriveFiles);
   if (googleDriveUploadButton) googleDriveUploadButton.addEventListener("click", uploadGoogleDriveFile);
@@ -864,7 +856,7 @@ const firebaseConfig = {
     }
   }
 
-  function uploadLargeFile(bucketName, objectPath, file) {
+  function uploadLargeFile(bucketName, objectPath, file, fileIndex = 1, fileCount = 1) {
     return new Promise(async (resolve, reject) => {
       try {
         const user = auth.currentUser;
@@ -895,7 +887,7 @@ const firebaseConfig = {
           },
           onProgress(bytesUploaded, bytesTotal) {
             const percent = Math.min(100, Math.round((bytesUploaded / bytesTotal) * 100));
-            setVaultStatus("Uploading privately… " + percent + "% (" + formatBytes(bytesUploaded) + " / " + formatBytes(bytesTotal) + ")");
+            setVaultStatus("Uploading privately " + fileIndex + "/" + fileCount + " · " + file.name + " · " + percent + "% (" + formatBytes(bytesUploaded) + " / " + formatBytes(bytesTotal) + ")");
           },
           onSuccess() {
             resolve();
@@ -912,57 +904,40 @@ const firebaseConfig = {
 
   uploadForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const file = fileInput.files && fileInput.files[0];
-    if (!file) {
-      setVaultStatus("Choose a PDF, JPG or PNG file first.", true);
-      return;
-    }
-    if (!auth.currentUser || !currentPermissions.has("vault.write")) {
-      setVaultStatus("Your account does not have upload permission.", true);
-      return;
-    }
-    if (!supabaseClient) {
-      setVaultStatus("Storage SDK is unavailable. Refresh and try again.", true);
-      return;
-    }
-    if (!ALLOWED_TYPES.has(file.type)) {
-      setVaultStatus("Only PDF, JPEG and PNG files are allowed.", true);
-      return;
-    }
-    if (file.size <= 0) {
-      setVaultStatus("The selected file is empty. Choose a non-empty document.", true);
-      return;
-    }
-    if (!window.tus || typeof window.tus.Upload !== "function") {
-      setVaultStatus("The resumable upload service could not load. Refresh and try again.", true);
-      return;
-    }
-
+    const files = Array.from(fileInput.files || []);
+    if (!files.length) { setVaultStatus("Choose one or more PDF, JPG or PNG files first.", true); return; }
+    if (!auth.currentUser || !currentPermissions.has("vault.write")) { setVaultStatus("Your account does not have upload permission.", true); return; }
+    if (!supabaseClient) { setVaultStatus("Storage SDK is unavailable. Refresh and try again.", true); return; }
+    const invalid = files.find(file => !ALLOWED_TYPES.has(file.type) || file.size <= 0);
+    if (invalid) { setVaultStatus("Every selected file must be a non-empty PDF, JPEG or PNG. Invalid: " + invalid.name, true); return; }
+    if (!window.tus || typeof window.tus.Upload !== "function") { setVaultStatus("The resumable upload service could not load. Refresh and try again.", true); return; }
     uploadButton.disabled = true;
     uploadButton.textContent = "Uploading…";
-    setVaultStatus("Uploading privately…");
+    let succeeded = 0;
+    const failures = [];
     try {
-      const objectName = Date.now() + "-" + crypto.randomUUID() + "-" + safeFileName(file.name);
-      const objectPath = currentUserUid + "/" + objectName;
-      await uploadLargeFile(BUCKET, objectPath, file);
+      for (let index = 0; index < files.length; index++) {
+        const file = files[index];
+        try {
+          const objectName = Date.now() + "-" + crypto.randomUUID() + "-" + safeFileName(file.name);
+          await uploadLargeFile(BUCKET, currentUserUid + "/" + objectName, file, index + 1, files.length);
+          succeeded++;
+        } catch (error) { failures.push(file.name + ": " + (error.message || "Upload failed")); }
+      }
       fileInput.value = "";
-      setVaultStatus("Upload successful. Refreshing document list…");
+      selectedFile.textContent = "No files selected";
       await loadFiles();
-    } catch (error) {
-      setVaultStatus("Upload failed: " + (error.message || "Unknown error"), true);
-    } finally {
-      uploadButton.disabled = false;
-      uploadButton.textContent = "Upload privately";
-    }
+      if (failures.length) setVaultStatus("Uploaded " + succeeded + " of " + files.length + " files. Failed: " + failures.join(" · "), true);
+      else setVaultStatus("Successfully uploaded " + succeeded + " file" + (succeeded === 1 ? "" : "s") + " privately.");
+    } catch (error) { setVaultStatus("Upload batch failed: " + (error.message || "Unknown error"), true); }
+    finally { uploadButton.disabled = false; uploadButton.textContent = "Upload privately"; }
   });
-
   refreshButton.addEventListener("click", loadFiles);
   fileSearch.addEventListener("input", applyVaultSearch);
 
   fileInput.addEventListener("change", () => {
-    selectedFile.textContent = fileInput.files && fileInput.files[0]
-      ? fileInput.files[0].name + " · " + formatBytes(fileInput.files[0].size)
-      : "No file selected";
+    const files = Array.from(fileInput.files || []);
+    selectedFile.textContent = files.length ? files.length + " file(s) selected · " + files.map(file => file.name).join(", ") : "No files selected";
   });
 
 
