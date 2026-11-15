@@ -283,7 +283,7 @@ Deno.serve(async (request) => {
       const db = dbAdmin();
       const { data, error } = await db.from("pixel_forge_site_settings")
         .select("setting_key,setting_value")
-        .in("setting_key", ["site.name", "site.description", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items", "home.tools.enabled", "home.tools.items", "home.featured.enabled", "home.featured.items", "home.announcements.enabled", "home.announcements.items", "home.search.enabled", "home.search.smart_enabled", "home.search.filters_enabled", "home.search.max_results", "home.search.placeholder", "home.learning.enabled", "home.learning.items", "home.feedback.enabled", "home.feedback.categories", "home.feedback.allow_anonymous", "home.feedback.display_approved", "home.feedback.max_display", "home.seo.enabled", "home.seo.default_title", "home.seo.default_description", "home.seo.default_keywords", "home.seo.canonical_base", "home.seo.og_image", "home.seo.page_overrides", "home.layout.enabled", "home.layout.sections", "home.popular.enabled", "home.popular.max_items", "home.popular.min_views", "home.popular.show_views", "home.library.pdf_preview_enabled"]);
+        .in("setting_key", ["site.name", "site.description", "site.contact_email", "home.knowledge.enabled", "home.knowledge.items", "home.quiz.enabled", "home.quiz.items", "home.tools.enabled", "home.tools.items", "home.featured.enabled", "home.featured.items", "home.announcements.enabled", "home.announcements.items", "home.search.enabled", "home.search.smart_enabled", "home.search.filters_enabled", "home.search.max_results", "home.search.placeholder", "home.learning.enabled", "home.learning.items", "home.feedback.enabled", "home.feedback.categories", "home.feedback.allow_anonymous", "home.feedback.display_approved", "home.feedback.max_display", "home.seo.enabled", "home.seo.default_title", "home.seo.default_description", "home.seo.default_keywords", "home.seo.canonical_base", "home.seo.og_image", "home.seo.page_overrides", "home.layout.enabled", "home.layout.sections", "home.popular.enabled", "home.popular.max_items", "home.popular.min_views", "home.popular.show_views", "home.library.pdf_preview_enabled"]);
       if (error) throw error;
       const values = Object.fromEntries((data ?? []).map((row) => [row.setting_key, row.setting_value]));
       const items = Array.isArray(values["home.knowledge.items"]) ? values["home.knowledge.items"] : [];
@@ -362,6 +362,7 @@ Deno.serve(async (request) => {
         site: {
           name: typeof values["site.name"] === "string" ? values["site.name"] : "PixelForge",
           description: typeof values["site.description"] === "string" ? values["site.description"] : "",
+          contactEmail: typeof values["site.contact_email"] === "string" ? values["site.contact_email"] : "",
         },
         knowledge: {
           enabled: values["home.knowledge.enabled"] !== false,
