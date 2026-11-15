@@ -540,3 +540,12 @@ test("Google Drive file list supports multi-select and permission-gated bulk act
   assert.match(adminJs, /runDriveBulkAction\("unpublish"\)/);
   assert.match(adminJs, /runDriveBulkAction\("delete"\)/);
 });
+
+test("Private Vault assigns publishedCategory only after it is initialized", () => {
+  const adminJs = read("admin.js");
+  const declaration = adminJs.indexOf("const publishedCategory = publishedInfo && publishedInfo.category;");
+  const datasetAssignment = adminJs.indexOf('li.dataset.publishedCategory = publishedCategory || "";');
+  assert.notEqual(declaration, -1);
+  assert.notEqual(datasetAssignment, -1);
+  assert.ok(datasetAssignment > declaration, "dataset assignment must follow the publishedCategory declaration");
+});
