@@ -537,6 +537,31 @@ Deno.serve(async (request) => {
       return json({ ok: true, message: "Thank you. Your feedback has been sent for review." }, 200, request);
     }
 
+    if (request.method === "POST" && action === "submit-contact") {
+      const raw = await request.text();
+      if (raw.length > 5000) return json({ error: "Contact message is too large." }, 413, request);
+      const input = (() => { try { return JSON.parse(raw); } catch (_) { return null; } })();
+      if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).length !== 4 ||
+          typeof input.name !== "string" || input.name.trim().length < 1 || input.name.length > 80 ||
+          typeof input.email !== "string" || input.email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim()) ||
+          typeof input.subject !== "string" || input.subject.trim().length < 3 || input.subject.length > 120 ||
+          typeof input.message !== "string" || input.message.trim().length < 10 || input.message.length > 3000) {
+        return json({ error: "Please check your name, email, subject and message." }, 400, request);
+      }
+      const db = dbAdmin();
+      const ip = request.headers.get("x-real-ip") || request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "";
+      let submissionHash: string | null = null;
+      if (ip) {
+        const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(required("SUPABASE_SERVICE_ROLE_KEY") + "|contact|" + ip));
+        submissionHash = Array.from(new Uint8Array(digest)).map(byte => byte.toString(16).padStart(2, "0")).join("");
+        const { count, error: rateError } = await db.from("pixel_forge_contact_messages").select("id", { count: "exact", head: true }).eq("submission_hash", submissionHash).gte("created_at", new Date(Date.now() - 60 * 60 * 1000).toISOString());
+        if (rateError) throw rateError;
+        if ((count ?? 0) >= 5) return json({ error: "Too many messages. Please try again later." }, 429, request);
+      }
+      const { error } = await db.from("pixel_forge_contact_messages").insert({ name: input.name.trim(), email: input.email.trim().toLowerCase(), subject: input.subject.trim(), message: input.message.trim(), status: "new", submission_hash: submissionHash });
+      if (error) throw error;
+      return json({ ok: true, message: "Your message has been sent to the PixelForge team." }, 200, request);
+    }
     if (request.method === "POST" && action === "track-resource") {
       const raw = await request.text();
       if (raw.length > 2000) return json({ error: "Resource tracking request is too large." }, 413, request);
@@ -602,6 +627,21 @@ Deno.serve(async (request) => {
     const actor = await authorize(request, permission);
     if (!actor) return json({ error: "Active administrator permission is required." }, 403, request);
 
+    if (request.method === "GET" && action === "contact-list") {
+      const { data, error } = await actor.db.from("pixel_forge_contact_messages").select("id,name,email,subject,message,status,created_at,read_at").order("created_at", { ascending: false }).limit(200);
+      if (error) throw error;
+      return json({ messages: data ?? [] }, 200, request);
+    }
+
+    if (request.method === "POST" && action === "contact-status") {
+      const raw = await request.text();
+      if (raw.length > 1000) return json({ error: "Contact update is too large." }, 413, request);
+      const input = (() => { try { return JSON.parse(raw); } catch (_) { return null; } })();
+      if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).length !== 2 || typeof input.id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.id) || !["read","archived"].includes(input.status)) return json({ error: "Invalid contact message update." }, 400, request);
+      const { error } = await actor.db.from("pixel_forge_contact_messages").update({ status: input.status, read_at: input.status === "read" ? new Date().toISOString() : null }).eq("id", input.id);
+      if (error) throw error;
+      return json({ ok: true }, 200, request);
+    }
     if (request.method === "GET" && action === "feedback-list") {
       const { data, error } = await actor.db.from("pixel_forge_public_feedback")
         .select("id,name,category,rating,message,status,created_at,reviewed_at,reviewed_by")
