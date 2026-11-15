@@ -220,3 +220,14 @@
 .popular-resource-card a{margin-top:auto;color:#4d5bd1;font-weight:800;text-decoration:none}
 @media(max-width:800px){.popular-resources-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.popular-resources-grid{grid-template-columns:1fr}}
+
+
+/* Public contact form */
+.contact-section{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,.9fr);gap:clamp(2rem,6vw,5rem);align-items:center}
+.contact-form{display:grid;gap:.7rem;padding:1.5rem;border:1px solid rgba(255,255,255,.2);border-radius:18px;background:rgba(255,255,255,.08)}
+.contact-form label{font-size:.82rem;font-weight:700;color:#fff}
+.contact-form input,.contact-form textarea{width:100%;padding:.8rem .9rem;border:1px solid rgba(255,255,255,.25);border-radius:9px;background:rgba(255,255,255,.96);color:#182344;font:inherit}
+.contact-form textarea{resize:vertical}
+.contact-form button{justify-self:start;margin-top:.5rem}
+.contact-form [role=status],.contact-email-line{color:#fff;font-size:.85rem}
+@media(max-width:800px){.contact-section{grid-template-columns:1fr}.contact-form{padding:1.1rem}}
