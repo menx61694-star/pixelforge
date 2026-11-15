@@ -299,7 +299,7 @@ const firebaseConfig = {
         remove.textContent = "Delete";
         remove.addEventListener("click", () => deleteGoogleDriveFile(file, item, remove));
         remove.hidden = !currentPermissions.has("drive.delete");
-        actions.append(download, category, tagsInput, publish, unpublish, remove);
+        actions.append(download, category, tagsInput, saveTags, publish, unpublish, remove);
         item.append(info, actions);
         googleDriveFileList.append(item);
       });
@@ -712,10 +712,17 @@ const firebaseConfig = {
     try {
       const files = await listAllStorageFiles(BUCKET, currentUserUid);
       currentFiles = files;
+      let privateTags = new Map();
       let publishedFiles = new Map();
       let publishStatusWarning = "";
+      try {
+        const tagPayload = await privateVaultTagsRequest("private-tags-list");
+        (tagPayload.documents || []).forEach(item => {
+          if (typeof item.storage_path === "string" && Array.isArray(item.tags)) privateTags.set(item.storage_path, item.tags);
+        });
+      } catch (tagError) { publishStatusWarning += " Private tags could not be loaded: " + (tagError.message || "Access error"); }
       try { publishedFiles = await getPublishedFilesIndex(); }
-      catch (publishError) { publishStatusWarning = " Published status could not be checked: " + (publishError.message || "Storage access error"); }
+      catch (publishError) { publishStatusWarning += " Published status could not be checked: " + (publishError.message || "Storage access error"); }
       updateStats(files);
       if (publishedCountStat) publishedCountStat.textContent = String(publishedFiles.size);
       updateDashboardActivity();
@@ -765,7 +772,15 @@ const firebaseConfig = {
           tagsInput.className = "publish-tags";
           tagsInput.placeholder = "Tags: CTET, UP Police";
           tagsInput.maxLength = 320;
-          tagsInput.setAttribute("aria-label", "Public search tags for " + item.name);
+          tagsInput.setAttribute("aria-label", "Private document tags for " + item.name);
+          tagsInput.value = (privateTags.get(path) || (publishedInfo && publishedInfo.tags) || []).join(", ");
+          const saveTags = document.createElement("button");
+          saveTags.type = "button";
+          saveTags.className = "save-tags-button";
+          saveTags.textContent = "Save tags";
+          saveTags.title = "Save tags privately without publishing this document";
+          saveTags.addEventListener("click", () => savePrivateDocumentTags(path, tagsInput.value, saveTags));
+          saveTags.hidden = !currentPermissions.has("vault.write");
           const publish = document.createElement("button");
           publish.type = "button";
           publish.className = "publish-button";
@@ -800,6 +815,32 @@ const firebaseConfig = {
     } finally {
       refreshButton.disabled = false;
     }
+  }
+
+  async function privateVaultTagsRequest(action, options = {}) {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Sign in is required to manage private document tags.");
+    const headers = new Headers(options.headers || {});
+    headers.set("Authorization", "Bearer " + await user.getIdToken());
+    const endpoint = new URL(SUPABASE_URL + "/functions/v1/google-drive-files");
+    endpoint.searchParams.set("action", action);
+    const response = await fetch(endpoint.toString(), { method: options.method || "GET", headers, body: options.body });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Private document tags could not be saved.");
+    return payload;
+  }
+
+  async function savePrivateDocumentTags(storagePath, tagsText, button) {
+    const tags = normalizeDocumentTags(tagsText);
+    if (!tags) { setVaultStatus("Use up to 10 tags, each 1–32 characters, separated by commas.", true); return; }
+    if (!currentPermissions.has("vault.write")) { setVaultStatus("Your account does not have permission to edit private document tags.", true); return; }
+    button.disabled = true;
+    try {
+      await privateVaultTagsRequest("private-tags-save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ storagePath, tags }) });
+      setVaultStatus(tags.length ? "Private tags saved. This document remains private." : "Private tags cleared. The document remains private.");
+      button.textContent = "Saved";
+    } catch (error) { setVaultStatus("Could not save private tags: " + (error.message || "Unknown error"), true); }
+    finally { button.disabled = false; }
   }
 
   async function publishFile(privatePath, fileName, category, tagsText, button) {
