@@ -500,45 +500,38 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
 })();
 
 
-// Public Contact form: opens the visitor's configured email app with a prefilled message.
+// Public Contact form: sends messages to the private admin inbox.
 (() => {
   const form = document.getElementById("public-contact-form");
   if (!form) return;
   const status = document.getElementById("contact-status");
   const submit = document.getElementById("contact-submit");
-  const emailLine = document.getElementById("contact-email-line");
-  let destination = "";
-  fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
-    headers: { Accept: "application/json" }, credentials: "omit"
-  }).then(response => {
-    if (!response.ok) throw new Error("Contact details unavailable");
-    return response.json();
-  }).then(payload => {
-    destination = typeof payload.site?.contactEmail === "string" ? payload.site.contactEmail.trim() : "";
-    if (destination) {
-      emailLine.textContent = "Email: " + destination;
-      emailLine.hidden = false;
-    } else {
-      status.textContent = "Contact email has not been configured by the website administrator yet.";
-      submit.disabled = true;
-    }
-  }).catch(() => {
-    status.textContent = "Contact details could not be loaded. Please try again later.";
-    submit.disabled = true;
-  });
-  form.addEventListener("submit", event => {
+  form.addEventListener("submit", async event => {
     event.preventDefault();
-    if (!destination) return;
+    if (!form.reportValidity()) return;
+    submit.disabled = true;
+    status.textContent = "Sending your message securely…";
     const data = new FormData(form);
-    const subject = String(data.get("subject") || "").trim();
-    const body = [
-      "Name: " + String(data.get("name") || "").trim(),
-      "Reply email: " + String(data.get("email") || "").trim(),
-      "",
-      String(data.get("message") || "").trim()
-    ].join("\\n");
-    window.location.href = "mailto:" + encodeURIComponent(destination) +
-      "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
-    status.textContent = "Your email app should open with the message ready to send.";
+    try {
+      const response = await fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=submit-contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "omit",
+        body: JSON.stringify({
+          name: String(data.get("name") || "").trim(),
+          email: String(data.get("email") || "").trim(),
+          subject: String(data.get("subject") || "").trim(),
+          message: String(data.get("message") || "").trim()
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not send your message. Please try again.");
+      form.reset();
+      status.textContent = payload.message || "Your message has been sent to the PixelForge team.";
+    } catch (error) {
+      status.textContent = error.message || "Could not send your message. Please try again.";
+    } finally {
+      submit.disabled = false;
+    }
   });
 })();
