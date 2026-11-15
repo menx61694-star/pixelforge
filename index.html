@@ -150,7 +150,17 @@
       <div><p class="eyebrow dark">A SPACE THAT KEEPS GROWING</p><h2>Built around<br><em>curiosity.</em></h2><p class="about-copy">PixelForge brings useful digital resources and ideas together in one simple place. The goal is straightforward: make it easier to discover, learn and create — one useful thing at a time.</p><a class="button button-dark" href="library.html">Start exploring <span>↗</span></a></div>
     </section>
 
-    <section class="contact-band contact-band-v2" id="contact"><div><p class="eyebrow">STAY CURIOUS</p><h2>Keep exploring.<br><em>Your next idea starts here.</em></h2><p>Discover something useful today and come back for something new tomorrow.</p></div><a class="button button-light" href="library.html">Visit the library <span>↗</span></a></section>
+    <section class="contact-band contact-band-v2 contact-section" id="contact">
+      <div class="contact-intro"><p class="eyebrow">GET IN TOUCH</p><h2>Let’s talk.<br><em>We’re listening.</em></h2><p>Have a question, suggestion or need help? Send a message to the PixelForge team.</p><p class="contact-email-line" id="contact-email-line" hidden></p></div>
+      <form class="contact-form" id="public-contact-form">
+        <label for="contact-name">Your name</label><input id="contact-name" name="name" type="text" maxlength="80" autocomplete="name" required>
+        <label for="contact-email">Email address</label><input id="contact-email" name="email" type="email" maxlength="254" autocomplete="email" required>
+        <label for="contact-subject">Subject</label><input id="contact-subject" name="subject" type="text" maxlength="120" required>
+        <label for="contact-message">Message</label><textarea id="contact-message" name="message" rows="5" minlength="10" maxlength="3000" required></textarea>
+        <button class="button button-light" id="contact-submit" type="submit">Send message ↗</button>
+        <p id="contact-status" role="status" aria-live="polite"></p>
+      </form>
+    </section>
   </main>
 
   <section class="local-ip-diagnostic" aria-labelledby="local-ip-diagnostic-title">
