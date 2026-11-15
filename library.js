@@ -160,6 +160,7 @@
         } catch (_) { /* Tracking is optional; never block opening a document. */ }
       });
       card.append(icon, h3, p);
+      if (tagList.childElementCount) card.append(tagList);
       if (previewButton) card.append(previewButton);
       card.append(a); grid.append(card);
     });
