@@ -104,7 +104,7 @@ async function hasDrivePermission(uid: string, permission: string): Promise<bool
   if (error) throw error;
   return data?.allowed === true;
 }
-function safeUploadUrl(value: string): URL {
+function normalizeTags(value: unknown): string[] | null {\n  if (!Array.isArray(value) || value.length > 10) return null;\n  const tags: string[] = [];\n  const seen = new Set<string>();\n  for (const item of value) {\n    if (typeof item !== "string") return null;\n    const tag = item.trim().replace(/\\s+/g, " ");\n    if (!tag || tag.length > 32 || !/^[\\p{L}\\p{N}][\\p{L}\\p{N} _-]*$/u.test(tag)) return null;\n    const key = tag.toLocaleLowerCase();\n    if (!seen.has(key)) { seen.add(key); tags.push(tag); }\n  }\n  return tags;\n}\nfunction safeUploadUrl(value: string): URL {
   const url = new URL(value);
   if (url.protocol !== "https:" || url.hostname !== "www.googleapis.com" ||
       url.pathname !== "/upload/drive/v3/files" || !url.searchParams.has("upload_id")) {
@@ -124,7 +124,7 @@ Deno.serve(async (request) => {
     // Public listing exposes metadata only; public-download verifies the published record.
     if (request.method === "GET" && action === "public-list") {
       const { data, error } = await supabaseAdmin().from("pixel_forge_published_documents")
-        .select("drive_file_id,category,title,mime_type,size_bytes,updated_at")
+        .select("drive_file_id,category,title,mime_type,size_bytes,tags,updated_at")
         .eq("source", "google_drive").eq("published", true)
         .order("updated_at", { ascending: false });
       if (error) throw error;
@@ -135,7 +135,7 @@ Deno.serve(async (request) => {
       if (!/^[a-zA-Z0-9_-]{10,200}$/.test(fileId)) return json({ error: "Invalid Drive file ID." }, 400, request);
       const db = supabaseAdmin();
       const { data: published, error: publishedError } = await db.from("pixel_forge_published_documents")
-        .select("drive_file_id,title,mime_type")
+        .select("drive_file_id,title,mime_type,tags")
         .eq("source", "google_drive").eq("drive_file_id", fileId).eq("published", true).maybeSingle();
       if (publishedError) throw publishedError;
       if (!published) return json({ error: "This document is not published." }, 404, request);
