@@ -434,6 +434,6 @@ test("Published documents support safe admin-managed tags and public tag search"
   assert.match(library, /tagButton\.addEventListener/);
   assert.match(drive, /normalizeTags/);
   assert.match(drive, /tags, published: true/);
-  assert.match(migration, /add column if not exists tags text\\[\\]/);
+  assert.ok(migration.includes("add column if not exists tags text[]"));
   assert.match(migration, /using gin \(tags\)/);
 });
