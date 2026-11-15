@@ -513,15 +513,24 @@ test("location sharing requires browser geolocation permission and explicit cons
   assert.match(migration, /location_longitude/);
 });
 
-test("public Contact form uses the admin-configured contact email", () => {
+test("public Contact form sends messages to the private admin inbox", () => {
   const homepage = read("index.html");
   const publicScript = read("script.js");
   const settings = read("supabase/functions/site-settings/index.ts");
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  const migration = read("supabase/phase-21-contact-inbox.sql");
   assert.match(homepage, /id="public-contact-form"/);
   assert.match(homepage, /id="contact-message"/);
-  assert.match(settings, /contactEmail: typeof values\["site\.contact_email"\]/);
-  assert.match(publicScript, /mailto:/);
-  assert.match(publicScript, /payload\.site\?\.contactEmail/);
+  assert.match(publicScript, /action=submit-contact/);
+  assert.doesNotMatch(publicScript, /window\.location\.href\s*=\s*"mailto:/);
+  assert.match(settings, /action === "submit-contact"/);
+  assert.match(settings, /action === "contact-list"/);
+  assert.match(settings, /action === "contact-status"/);
+  assert.match(adminHtml, /id="contact-inbox-list"/);
+  assert.match(adminJs, /loadContactInbox/);
+  assert.match(migration, /pixel_forge_contact_messages/);
+  assert.match(migration, /enable row level security/);
 });
 
 test("Google Drive file list supports multi-select and permission-gated bulk actions", () => {
