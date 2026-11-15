@@ -30,6 +30,15 @@ const firebaseConfig = {
   const uploadButton = document.getElementById("upload-button");
   const fileInput = document.getElementById("document-file");
   const vaultStatus = document.getElementById("vault-status");
+  const bulkToolbar = document.getElementById("bulk-actions-toolbar");
+  const selectAllVaultFiles = document.getElementById("select-all-vault-files");
+  const bulkSelectionCount = document.getElementById("bulk-selection-count");
+  const bulkPublishCategory = document.getElementById("bulk-publish-category");
+  const bulkTagsInput = document.getElementById("bulk-tags-input");
+  const bulkApplyTagsButton = document.getElementById("bulk-apply-tags");
+  const bulkPublishButton = document.getElementById("bulk-publish");
+  const bulkUnpublishButton = document.getElementById("bulk-unpublish");
+  const bulkDeleteButton = document.getElementById("bulk-delete");
   const fileList = document.getElementById("file-list");
   const refreshButton = document.getElementById("refresh-files");
   const fileSearch = document.getElementById("file-search");
@@ -712,10 +721,17 @@ const firebaseConfig = {
     try {
       const files = await listAllStorageFiles(BUCKET, currentUserUid);
       currentFiles = files;
+      let privateTags = new Map();
       let publishedFiles = new Map();
       let publishStatusWarning = "";
+      try {
+        const tagPayload = await privateVaultTagsRequest("private-tags-list");
+        (tagPayload.documents || []).forEach(item => {
+          if (typeof item.storage_path === "string" && Array.isArray(item.tags)) privateTags.set(item.storage_path, item.tags);
+        });
+      } catch (tagError) { publishStatusWarning += " Private tags could not be loaded: " + (tagError.message || "Access error"); }
       try { publishedFiles = await getPublishedFilesIndex(); }
-      catch (publishError) { publishStatusWarning = " Published status could not be checked: " + (publishError.message || "Storage access error"); }
+      catch (publishError) { publishStatusWarning += " Published status could not be checked: " + (publishError.message || "Storage access error"); }
       updateStats(files);
       if (publishedCountStat) publishedCountStat.textContent = String(publishedFiles.size);
       updateDashboardActivity();
@@ -738,8 +754,18 @@ const firebaseConfig = {
           meta.textContent = sizeBytes === null ? "Size unavailable" : formatBytes(sizeBytes);
           info.append(name, meta);
 
+          li.dataset.storagePath = path;
+          li.dataset.fileName = item.name;
+          li.dataset.publishedCategory = publishedCategory || "";
           const actions = document.createElement("div");
           actions.className = "file-actions";
+          const selectionLabel = document.createElement("label");
+          selectionLabel.className = "bulk-file-select";
+          const selection = document.createElement("input");
+          selection.type = "checkbox";
+          selection.className = "bulk-select-checkbox";
+          selection.setAttribute("aria-label", "Select " + item.name);
+          selectionLabel.append(selection);
           const download = document.createElement("button");
           download.type = "button";
           download.textContent = "Download";
@@ -765,7 +791,15 @@ const firebaseConfig = {
           tagsInput.className = "publish-tags";
           tagsInput.placeholder = "Tags: CTET, UP Police";
           tagsInput.maxLength = 320;
-          tagsInput.setAttribute("aria-label", "Public search tags for " + item.name);
+          tagsInput.setAttribute("aria-label", "Private document tags for " + item.name);
+          tagsInput.value = (privateTags.get(path) || (publishedInfo && publishedInfo.tags) || []).join(", ");
+          const saveTags = document.createElement("button");
+          saveTags.type = "button";
+          saveTags.className = "save-tags-button";
+          saveTags.textContent = "Save tags";
+          saveTags.title = "Save tags privately without publishing this document";
+          saveTags.addEventListener("click", () => savePrivateDocumentTags(path, tagsInput.value, saveTags));
+          saveTags.hidden = !currentPermissions.has("vault.write");
           const publish = document.createElement("button");
           publish.type = "button";
           publish.className = "publish-button";
@@ -787,12 +821,24 @@ const firebaseConfig = {
           publish.hidden = !currentPermissions.has("vault.publish");
           unpublish.hidden = !currentPermissions.has("vault.publish");
           remove.hidden = !currentPermissions.has("vault.delete");
-          actions.append(download, category, tagsInput, publish, unpublish, remove);
+          selectionLabel.hidden = !(
+            currentPermissions.has("vault.write") || currentPermissions.has("vault.publish") ||
+            currentPermissions.has("vault.delete")
+          );
+          actions.append(selectionLabel, download, category, tagsInput, saveTags, publish, unpublish, remove);
           li.append(info, actions);
           fileList.append(li);
         });
       }
+      const canBulkAct = currentPermissions.has("vault.write") || currentPermissions.has("vault.publish") || currentPermissions.has("vault.delete");
+      if (bulkToolbar) bulkToolbar.hidden = !canBulkAct;
+      if (bulkApplyTagsButton) bulkApplyTagsButton.hidden = !currentPermissions.has("vault.write");
+      if (bulkPublishButton) bulkPublishButton.hidden = !currentPermissions.has("vault.publish");
+      if (bulkUnpublishButton) bulkUnpublishButton.hidden = !currentPermissions.has("vault.publish");
+      if (bulkDeleteButton) bulkDeleteButton.hidden = !currentPermissions.has("vault.delete");
+      if (selectAllVaultFiles) selectAllVaultFiles.checked = false;
       applyVaultSearch();
+      updateBulkSelectionUi();
       setVaultStatus(files.length + " private document(s) listed." + publishStatusWarning, Boolean(publishStatusWarning));
     } catch (error) {
       showEmpty("Could not load documents. Check the Storage policies and Firebase token.");
@@ -800,6 +846,184 @@ const firebaseConfig = {
     } finally {
       refreshButton.disabled = false;
     }
+  }
+
+  function getSelectedVaultRows() {
+    return Array.from(fileList.querySelectorAll("li.file-item")).filter(row =>
+      row.querySelector(".bulk-select-checkbox")?.checked
+    );
+  }
+
+  function updateBulkSelectionUi() {
+    if (!bulkToolbar || !fileList) return;
+    const rows = Array.from(fileList.querySelectorAll("li.file-item"));
+    const selected = getSelectedVaultRows();
+    if (bulkSelectionCount) bulkSelectionCount.textContent = selected.length + " selected";
+    if (selectAllVaultFiles) {
+      selectAllVaultFiles.checked = rows.length > 0 && selected.length === rows.length;
+      selectAllVaultFiles.indeterminate = selected.length > 0 && selected.length < rows.length;
+      selectAllVaultFiles.disabled = rows.length === 0;
+    }
+    [bulkApplyTagsButton, bulkPublishButton, bulkUnpublishButton, bulkDeleteButton].forEach(button => {
+      if (button) button.disabled = selected.length === 0;
+    });
+  }
+
+  async function applyBulkPrivateTags() {
+    const rows = getSelectedVaultRows();
+    if (!rows.length) return;
+    if (!currentPermissions.has("vault.write")) { setVaultStatus("Your account cannot edit private document tags.", true); return; }
+    const tags = normalizeDocumentTags(bulkTagsInput?.value || "");
+    if (!tags) { setVaultStatus("Use up to 10 tags, each 1–32 characters, separated by commas.", true); return; }
+    if (!window.confirm("Apply these private tags to " + rows.length + " selected document(s)?")) return;
+    bulkApplyTagsButton.disabled = true;
+    let saved = 0;
+    const failures = [];
+    try {
+      for (const row of rows) {
+        try {
+          await privateVaultTagsRequest("private-tags-save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ storagePath: row.dataset.storagePath, tags })
+          });
+          saved++;
+          const rowTagsInput = row.querySelector(".publish-tags");
+          if (rowTagsInput) rowTagsInput.value = tags.join(", ");
+        } catch (error) { failures.push(row.dataset.fileName + ": " + (error.message || "Save failed")); }
+      }
+      setVaultStatus("Private tags applied to " + saved + "/" + rows.length + " document(s)." +
+        (failures.length ? " Failed: " + failures.slice(0, 3).join("; ") : ""));
+    } finally { bulkApplyTagsButton.disabled = false; }
+  }
+
+  async function publishSelectedVaultFiles() {
+    const rows = getSelectedVaultRows();
+    const category = bulkPublishCategory?.value || "";
+    if (!rows.length) return;
+    if (!currentPermissions.has("vault.publish")) { setVaultStatus("Your account cannot publish documents.", true); return; }
+    if (!PUBLIC_CATEGORIES.includes(category)) { setVaultStatus("Choose a category for bulk publishing.", true); return; }
+    const prepared = rows.map(row => ({ row, tags: normalizeDocumentTags(row.querySelector(".publish-tags")?.value || "") }));
+    const invalid = prepared.find(item => !item.tags);
+    if (invalid) { setVaultStatus("Invalid tags for " + invalid.row.dataset.fileName + ". Use up to 10 valid tags.", true); return; }
+    if (!window.confirm("Publish " + rows.length + " selected document(s) publicly in " + category.replace(/-/g, " ") + "? Their private originals will remain in the vault.")) return;
+    bulkPublishButton.disabled = true;
+    let published = 0;
+    const failures = [];
+    try {
+      for (const item of prepared) {
+        const fileName = item.row.dataset.fileName;
+        try {
+          const { data, error: downloadError } = await supabaseClient.storage.from(BUCKET).download(item.row.dataset.storagePath);
+          if (downloadError) throw downloadError;
+          const publicPath = category + "/" + currentUserUid + "-" + fileName;
+          const { error: uploadError } = await supabaseClient.storage.from(PUBLIC_BUCKET).upload(publicPath, data, {
+            cacheControl: "60",
+            contentType: data.type || "application/octet-stream",
+            metadata: { tags: item.tags },
+            upsert: true
+          });
+          if (uploadError) throw uploadError;
+          published++;
+        } catch (error) { failures.push(fileName + ": " + (error.message || "Publish failed")); }
+      }
+      setVaultStatus("Published " + published + "/" + rows.length + " document(s)." +
+        (failures.length ? " Failed: " + failures.slice(0, 3).join("; ") : " Private originals remain unchanged."));
+      await loadFiles();
+    } finally { bulkPublishButton.disabled = false; }
+  }
+
+  async function unpublishSelectedVaultFiles() {
+    const rows = getSelectedVaultRows();
+    const publishedRows = rows.filter(row => row.dataset.publishedCategory);
+    if (!publishedRows.length) { setVaultStatus("None of the selected documents are currently published.", true); return; }
+    if (!currentPermissions.has("vault.publish")) { setVaultStatus("Your account cannot unpublish documents.", true); return; }
+    if (!window.confirm("Unpublish " + publishedRows.length + " selected document(s)? Their private originals will remain in the vault.")) return;
+    bulkUnpublishButton.disabled = true;
+    let removed = 0;
+    const failures = [];
+    try {
+      const byCategory = new Map();
+      publishedRows.forEach(row => {
+        const category = row.dataset.publishedCategory;
+        if (!byCategory.has(category)) byCategory.set(category, []);
+        byCategory.get(category).push(row);
+      });
+      for (const [category, group] of byCategory) {
+        const paths = group.map(row => category + "/" + currentUserUid + "-" + row.dataset.fileName);
+        try {
+          const { error } = await supabaseClient.storage.from(PUBLIC_BUCKET).remove(paths);
+          if (error) throw error;
+          removed += group.length;
+        } catch (error) { failures.push(category + ": " + (error.message || "Unpublish failed")); }
+      }
+      setVaultStatus("Unpublished " + removed + "/" + publishedRows.length + " document(s)." +
+        (failures.length ? " Failed: " + failures.join("; ") : " Private originals remain unchanged."));
+      await loadFiles();
+    } finally { bulkUnpublishButton.disabled = false; }
+  }
+
+  async function deleteSelectedVaultFiles() {
+    const rows = getSelectedVaultRows();
+    if (!rows.length) return;
+    if (!currentPermissions.has("vault.delete")) { setVaultStatus("Your account cannot delete documents.", true); return; }
+    if (!window.confirm("Permanently delete " + rows.length + " selected private document(s)? This cannot be undone.")) return;
+    bulkDeleteButton.disabled = true;
+    let deleted = 0;
+    const failures = [];
+    try {
+      for (let index = 0; index < rows.length; index += 100) {
+        const batch = rows.slice(index, index + 100);
+        const paths = batch.map(row => row.dataset.storagePath);
+        const { error } = await supabaseClient.storage.from(BUCKET).remove(paths);
+        if (error) {
+          failures.push(...batch.map(row => row.dataset.fileName + ": " + error.message));
+          continue;
+        }
+        deleted += batch.length;
+        try {
+          await privateVaultTagsRequest("private-tags-delete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ storagePaths: paths })
+          });
+        } catch (error) {
+          failures.push("Private tag cleanup: " + (error.message || "Cleanup failed"));
+        }
+      }
+      setVaultStatus("Deleted " + deleted + "/" + rows.length + " private document(s)." +
+        (failures.length ? " Issues: " + failures.slice(0, 3).join("; ") : ""));
+      await loadFiles();
+    } catch (error) {
+      setVaultStatus("Bulk delete stopped: " + (error.message || "Unknown error"), true);
+      await loadFiles();
+    } finally { bulkDeleteButton.disabled = false; }
+  }
+
+  async function privateVaultTagsRequest(action, options = {}) {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Sign in is required to manage private document tags.");
+    const headers = new Headers(options.headers || {});
+    headers.set("Authorization", "Bearer " + await user.getIdToken());
+    const endpoint = new URL(SUPABASE_URL + "/functions/v1/google-drive-files");
+    endpoint.searchParams.set("action", action);
+    const response = await fetch(endpoint.toString(), { method: options.method || "GET", headers, body: options.body });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Private document tags could not be saved.");
+    return payload;
+  }
+
+  async function savePrivateDocumentTags(storagePath, tagsText, button) {
+    const tags = normalizeDocumentTags(tagsText);
+    if (!tags) { setVaultStatus("Use up to 10 tags, each 1–32 characters, separated by commas.", true); return; }
+    if (!currentPermissions.has("vault.write")) { setVaultStatus("Your account does not have permission to edit private document tags.", true); return; }
+    button.disabled = true;
+    try {
+      await privateVaultTagsRequest("private-tags-save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ storagePath, tags }) });
+      setVaultStatus(tags.length ? "Private tags saved. This document remains private." : "Private tags cleared. The document remains private.");
+      button.textContent = "Saved";
+    } catch (error) { setVaultStatus("Could not save private tags: " + (error.message || "Unknown error"), true); }
+    finally { button.disabled = false; }
   }
 
   async function publishFile(privatePath, fileName, category, tagsText, button) {
@@ -986,6 +1210,25 @@ const firebaseConfig = {
   });
   refreshButton.addEventListener("click", loadFiles);
   fileSearch.addEventListener("input", applyVaultSearch);
+  if (bulkPublishCategory && bulkPublishCategory.options.length === 1) {
+    PUBLIC_CATEGORIES.forEach(category => {
+      const option = document.createElement("option");
+      option.value = category;
+      option.textContent = category.replace(/-/g, " ");
+      bulkPublishCategory.append(option);
+    });
+  }
+  fileList.addEventListener("change", event => {
+    if (event.target.matches(".bulk-select-checkbox")) updateBulkSelectionUi();
+  });
+  selectAllVaultFiles?.addEventListener("change", () => {
+    fileList.querySelectorAll(".bulk-select-checkbox").forEach(input => { input.checked = selectAllVaultFiles.checked; });
+    updateBulkSelectionUi();
+  });
+  bulkApplyTagsButton?.addEventListener("click", applyBulkPrivateTags);
+  bulkPublishButton?.addEventListener("click", publishSelectedVaultFiles);
+  bulkUnpublishButton?.addEventListener("click", unpublishSelectedVaultFiles);
+  bulkDeleteButton?.addEventListener("click", deleteSelectedVaultFiles);
 
   fileInput.addEventListener("change", () => {
     const files = Array.from(fileInput.files || []);
