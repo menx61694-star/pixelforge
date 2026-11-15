@@ -945,24 +945,43 @@ const firebaseConfig = {
     if (invalid) { setVaultStatus("Every selected file must be a non-empty PDF, JPEG or PNG. Invalid: " + invalid.name, true); return; }
     if (!window.tus || typeof window.tus.Upload !== "function") { setVaultStatus("The resumable upload service could not load. Refresh and try again.", true); return; }
     uploadButton.disabled = true;
-    uploadButton.textContent = "Uploading…";
+    uploadButton.textContent = "Checking existing files…";
     let succeeded = 0;
     const failures = [];
+    const skipped = [];
     try {
-      for (let index = 0; index < files.length; index++) {
-        const file = files[index];
+      // Fail closed: refresh the private folder before uploading so a stale admin list
+      // cannot hide an existing same-name document.
+      const latestFiles = await listAllStorageFiles(BUCKET, currentUserUid);
+      currentFiles = latestFiles;
+      const existingNames = new Set(latestFiles.map(item =>
+        safeFileName(displayFileName(item.name)).toLocaleLowerCase()
+      ));
+      const batchNames = new Set();
+      const uploadable = [];
+      files.forEach(file => {
+        const key = safeFileName(file.name).toLocaleLowerCase();
+        if (existingNames.has(key) || batchNames.has(key)) skipped.push(file.name);
+        else { batchNames.add(key); uploadable.push(file); }
+      });
+      if (skipped.length) setVaultStatus("Overwrite protection: skipped existing/duplicate name(s): " + skipped.join(", "));
+      for (let index = 0; index < uploadable.length; index++) {
+        const file = uploadable[index];
         try {
+          // A fresh UUID path plus non-upsert storage upload prevents replacing any object.
           const objectName = Date.now() + "-" + crypto.randomUUID() + "-" + safeFileName(file.name);
-          await uploadLargeFile(BUCKET, currentUserUid + "/" + objectName, file, index + 1, files.length);
+          await uploadLargeFile(BUCKET, currentUserUid + "/" + objectName, file, index + 1, uploadable.length);
           succeeded++;
         } catch (error) { failures.push(file.name + ": " + (error.message || "Upload failed")); }
       }
       fileInput.value = "";
       selectedFile.textContent = "No files selected";
       await loadFiles();
-      if (failures.length) setVaultStatus("Uploaded " + succeeded + " of " + files.length + " files. Failed: " + failures.join(" · "), true);
-      else setVaultStatus("Successfully uploaded " + succeeded + " file" + (succeeded === 1 ? "" : "s") + " privately.");
-    } catch (error) { setVaultStatus("Upload batch failed: " + (error.message || "Unknown error"), true); }
+      const summary = "Uploaded " + succeeded + " of " + files.length + " selected file(s)." +
+        (skipped.length ? " Skipped duplicates: " + skipped.join(", ") + "." : "");
+      if (failures.length) setVaultStatus(summary + " Failed: " + failures.join(" · "), true);
+      else setVaultStatus(summary + " No existing documents were overwritten.");
+    } catch (error) { setVaultStatus("Upload batch stopped before completion: " + (error.message || "Could not verify existing files."), true); }
     finally { uploadButton.disabled = false; uploadButton.textContent = "Upload privately"; }
   });
   refreshButton.addEventListener("click", loadFiles);
