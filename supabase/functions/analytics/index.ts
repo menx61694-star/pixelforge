@@ -324,12 +324,12 @@ Deno.serve(async (request) => {
         return json({ deletedCount }, 200, request);
       }
       const { data, error } = await db.from("pixel_forge_security_logs")
-        .select("id,event_type,page_path,ip_ciphertext,ip_iv,ip_source,local_ip_ciphertext,local_ip_iv,local_ip_source,created_at")
+        .select("id,event_type,page_path,ip_ciphertext,ip_iv,ip_source,local_ip_ciphertext,local_ip_iv,local_ip_source,location_latitude,location_longitude,location_accuracy_m,created_at")
         .order("created_at", { ascending: false }).limit(200);
       if (error) throw error;
       const logs = await Promise.all((data ?? []).map(async (row) => ({
         id: row.id, eventType: row.event_type, pagePath: row.page_path,
-        ipAddress: row.ip_ciphertext && row.ip_iv ? await decryptIp(row.ip_ciphertext, row.ip_iv) : null, ipSource: row.ip_source ?? "unknown (legacy log)", localIpAddress: row.local_ip_ciphertext && row.local_ip_iv ? await decryptIp(row.local_ip_ciphertext, row.local_ip_iv) : null, localIpSource: row.local_ip_source ?? null, createdAt: row.created_at,
+        ipAddress: row.ip_ciphertext && row.ip_iv ? await decryptIp(row.ip_ciphertext, row.ip_iv) : null, ipSource: row.ip_source ?? "unknown (legacy log)", localIpAddress: row.local_ip_ciphertext && row.local_ip_iv ? await decryptIp(row.local_ip_ciphertext, row.local_ip_iv) : null, localIpSource: row.local_ip_source ?? null, latitude: row.location_latitude ?? null, longitude: row.location_longitude ?? null, locationAccuracyM: row.location_accuracy_m ?? null, createdAt: row.created_at,
       })));
       return json({ logs, retentionDays: 90 }, 200, request);
     }
