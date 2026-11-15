@@ -504,7 +504,19 @@ const firebaseConfig = {
     }
   }
 
-  function normalizeDocumentTags(value) {\n    const tags = String(value || "").split(",").map(tag => tag.trim().replace(/\\s+/g, " ")).filter(Boolean);\n    const normalized = [];\n    const seen = new Set();\n    for (const tag of tags) {\n      const key = tag.toLocaleLowerCase();\n      if (tag.length > 32 || !/^[\\p{L}\\p{N}][\\p{L}\\p{N} _-]*$/u.test(tag)) return null;\n      if (!seen.has(key)) { seen.add(key); normalized.push(tag); }\n    }\n    return normalized.length <= 10 ? normalized : null;\n  }\n\n  function safeFileName(name) {
+  function normalizeDocumentTags(value) {
+    const tags = String(value || "").split(",").map(tag => tag.trim().replace(/\s+/g, " ")).filter(Boolean);
+    const normalized = [];
+    const seen = new Set();
+    for (const tag of tags) {
+      const key = tag.toLocaleLowerCase();
+      if (tag.length > 32 || !/^[\p{L}\p{N}][\p{L}\p{N} _-]*$/u.test(tag)) return null;
+      if (!seen.has(key)) { seen.add(key); normalized.push(tag); }
+    }
+    return normalized.length <= 10 ? normalized : null;
+  }
+
+  function safeFileName(name) {
     const cleaned = name.normalize("NFKD")
       .replace(/[^a-zA-Z0-9._-]+/g, "-")
       .replace(/-+/g, "-")
