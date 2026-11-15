@@ -523,3 +523,20 @@ test("public Contact form uses the admin-configured contact email", () => {
   assert.match(publicScript, /mailto:/);
   assert.match(publicScript, /payload\.site\?\.contactEmail/);
 });
+
+test("Google Drive file list supports multi-select and permission-gated bulk actions", () => {
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  assert.match(adminHtml, /id="drive-bulk-toolbar"/);
+  assert.match(adminHtml, /id="drive-select-all"/);
+  assert.match(adminHtml, /id="drive-bulk-publish"/);
+  assert.match(adminHtml, /id="drive-bulk-unpublish"/);
+  assert.match(adminHtml, /id="drive-bulk-delete"/);
+  assert.match(adminJs, /className="drive-file-select"/);
+  assert.match(adminJs, /selectedDriveFileIds/);
+  assert.match(adminJs, /currentPermissions\.has\("vault\.publish"\)/);
+  assert.match(adminJs, /currentPermissions\.has\("drive\.delete"\)/);
+  assert.match(adminJs, /runDriveBulkAction\("publish"\)/);
+  assert.match(adminJs, /runDriveBulkAction\("unpublish"\)/);
+  assert.match(adminJs, /runDriveBulkAction\("delete"\)/);
+});
