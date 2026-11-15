@@ -888,11 +888,12 @@ const firebaseConfig = {
             body: JSON.stringify({ storagePath: row.dataset.storagePath, tags })
           });
           saved++;
+          const rowTagsInput = row.querySelector(".publish-tags");
+          if (rowTagsInput) rowTagsInput.value = tags.join(", ");
         } catch (error) { failures.push(row.dataset.fileName + ": " + (error.message || "Save failed")); }
       }
       setVaultStatus("Private tags applied to " + saved + "/" + rows.length + " document(s)." +
         (failures.length ? " Failed: " + failures.slice(0, 3).join("; ") : ""));
-      await loadFiles();
     } finally { bulkApplyTagsButton.disabled = false; }
   }
 
