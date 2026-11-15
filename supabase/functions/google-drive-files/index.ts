@@ -198,7 +198,7 @@ Deno.serve(async (request) => {
       const storagePath = typeof input.storagePath === "string" ? input.storagePath.trim() : "";
       const tags = normalizeTags(input.tags);
       if (!storagePath || storagePath.length > 512 || !storagePath.startsWith(uid + "/") ||
-          storagePath.split("/").some((part) => !part || part === "." || part === "..") || !tags) {
+          storagePath.split("/").some((part: string) => !part || part === "." || part === "..") || !tags) {
         return json({ error: "A valid private document path and up to 10 valid tags are required." }, 400, request);
       }
       const fileName = storagePath.slice(uid.length + 1);
