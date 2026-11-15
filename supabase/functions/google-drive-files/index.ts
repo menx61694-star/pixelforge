@@ -104,7 +104,20 @@ async function hasDrivePermission(uid: string, permission: string): Promise<bool
   if (error) throw error;
   return data?.allowed === true;
 }
-function normalizeTags(value: unknown): string[] | null {\n  if (!Array.isArray(value) || value.length > 10) return null;\n  const tags: string[] = [];\n  const seen = new Set<string>();\n  for (const item of value) {\n    if (typeof item !== "string") return null;\n    const tag = item.trim().replace(/\\s+/g, " ");\n    if (!tag || tag.length > 32 || !/^[\\p{L}\\p{N}][\\p{L}\\p{N} _-]*$/u.test(tag)) return null;\n    const key = tag.toLocaleLowerCase();\n    if (!seen.has(key)) { seen.add(key); tags.push(tag); }\n  }\n  return tags;\n}\nfunction safeUploadUrl(value: string): URL {
+function normalizeTags(value: unknown): string[] | null {
+  if (!Array.isArray(value) || value.length > 10) return null;
+  const tags: string[] = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    if (typeof item !== "string") return null;
+    const tag = item.trim().replace(/\s+/g, " ");
+    if (!tag || tag.length > 32 || !/^[\p{L}\p{N}][\p{L}\p{N} _-]*$/u.test(tag)) return null;
+    const key = tag.toLocaleLowerCase();
+    if (!seen.has(key)) { seen.add(key); tags.push(tag); }
+  }
+  return tags;
+}
+function safeUploadUrl(value: string): URL {
   const url = new URL(value);
   if (url.protocol !== "https:" || url.hostname !== "www.googleapis.com" ||
       url.pathname !== "/upload/drive/v3/files" || !url.searchParams.has("upload_id")) {
