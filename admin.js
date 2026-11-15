@@ -848,6 +848,54 @@ const firebaseConfig = {
     }
   }
 
+  function getSelectedVaultRows() {
+    return Array.from(fileList.querySelectorAll("li.file-item")).filter(row =>
+      row.querySelector(".bulk-select-checkbox")?.checked
+    );
+  }
+
+  function updateBulkSelectionUi() {
+    if (!bulkToolbar || !fileList) return;
+    const rows = Array.from(fileList.querySelectorAll("li.file-item"));
+    const selected = getSelectedVaultRows();
+    if (bulkSelectionCount) bulkSelectionCount.textContent = selected.length + " selected";
+    if (selectAllVaultFiles) {
+      selectAllVaultFiles.checked = rows.length > 0 && selected.length === rows.length;
+      selectAllVaultFiles.indeterminate = selected.length > 0 && selected.length < rows.length;
+      selectAllVaultFiles.disabled = rows.length === 0;
+    }
+    [bulkApplyTagsButton, bulkPublishButton, bulkUnpublishButton, bulkDeleteButton].forEach(button => {
+      if (button) button.disabled = selected.length === 0;
+    });
+  }
+
+  async function applyBulkPrivateTags() {
+    const rows = getSelectedVaultRows();
+    if (!rows.length) return;
+    if (!currentPermissions.has("vault.write")) { setVaultStatus("Your account cannot edit private document tags.", true); return; }
+    const tags = normalizeDocumentTags(bulkTagsInput?.value || "");
+    if (!tags) { setVaultStatus("Use up to 10 tags, each 1–32 characters, separated by commas.", true); return; }
+    if (!window.confirm("Apply these private tags to " + rows.length + " selected document(s)?")) return;
+    bulkApplyTagsButton.disabled = true;
+    let saved = 0;
+    const failures = [];
+    try {
+      for (const row of rows) {
+        try {
+          await privateVaultTagsRequest("private-tags-save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ storagePath: row.dataset.storagePath, tags })
+          });
+          saved++;
+        } catch (error) { failures.push(row.dataset.fileName + ": " + (error.message || "Save failed")); }
+      }
+      setVaultStatus("Private tags applied to " + saved + "/" + rows.length + " document(s)." +
+        (failures.length ? " Failed: " + failures.slice(0, 3).join("; ") : ""));
+      await loadFiles();
+    } finally { bulkApplyTagsButton.disabled = false; }
+  }
+
   async function privateVaultTagsRequest(action, options = {}) {
     const user = auth.currentUser;
     if (!user) throw new Error("Sign in is required to manage private document tags.");
