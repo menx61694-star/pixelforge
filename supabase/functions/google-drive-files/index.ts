@@ -104,6 +104,19 @@ async function hasDrivePermission(uid: string, permission: string): Promise<bool
   if (error) throw error;
   return data?.allowed === true;
 }
+function normalizeTags(value: unknown): string[] | null {
+  if (!Array.isArray(value) || value.length > 10) return null;
+  const tags: string[] = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    if (typeof item !== "string") return null;
+    const tag = item.trim().replace(/\s+/g, " ");
+    if (!tag || tag.length > 32 || !/^[\p{L}\p{N}][\p{L}\p{N} _-]*$/u.test(tag)) return null;
+    const key = tag.toLocaleLowerCase();
+    if (!seen.has(key)) { seen.add(key); tags.push(tag); }
+  }
+  return tags;
+}
 function safeUploadUrl(value: string): URL {
   const url = new URL(value);
   if (url.protocol !== "https:" || url.hostname !== "www.googleapis.com" ||
@@ -124,7 +137,7 @@ Deno.serve(async (request) => {
     // Public listing exposes metadata only; public-download verifies the published record.
     if (request.method === "GET" && action === "public-list") {
       const { data, error } = await supabaseAdmin().from("pixel_forge_published_documents")
-        .select("drive_file_id,category,title,mime_type,size_bytes,updated_at")
+        .select("drive_file_id,category,title,mime_type,size_bytes,tags,updated_at")
         .eq("source", "google_drive").eq("published", true)
         .order("updated_at", { ascending: false });
       if (error) throw error;
@@ -135,7 +148,7 @@ Deno.serve(async (request) => {
       if (!/^[a-zA-Z0-9_-]{10,200}$/.test(fileId)) return json({ error: "Invalid Drive file ID." }, 400, request);
       const db = supabaseAdmin();
       const { data: published, error: publishedError } = await db.from("pixel_forge_published_documents")
-        .select("drive_file_id,title,mime_type")
+        .select("drive_file_id,title,mime_type,tags")
         .eq("source", "google_drive").eq("drive_file_id", fileId).eq("published", true).maybeSingle();
       if (publishedError) throw publishedError;
       if (!published) return json({ error: "This document is not published." }, 404, request);
@@ -180,7 +193,7 @@ Deno.serve(async (request) => {
     }
     if (request.method === "GET" && action === "published-list") {
       const { data, error } = await supabaseAdmin().from("pixel_forge_published_documents")
-        .select("drive_file_id,category,title")
+        .select("drive_file_id,category,title,tags")
         .eq("source", "google_drive").eq("owner_uid", uid).eq("published", true);
       if (error) throw error;
       return json({ documents: data ?? [] }, 200, request);
@@ -201,11 +214,12 @@ Deno.serve(async (request) => {
       const title = typeof input.title === "string" ? input.title.trim().slice(0, 240) : "";
       const mimeType = typeof input.mimeType === "string" ? input.mimeType.slice(0, 160) : "application/octet-stream";
       const sizeBytes = Number(input.sizeBytes);
-      if (!allowedCategories.includes(category) || !title) return json({ error: "A valid public category and document title are required." }, 400, request);
+      const tags = normalizeTags(input.tags);
+      if (!allowedCategories.includes(category) || !title || !tags) return json({ error: "A valid category, title and up to 10 valid tags are required." }, 400, request);
       const { error } = await db.from("pixel_forge_published_documents").upsert({
         source: "google_drive", owner_uid: uid, drive_file_id: fileId, storage_path: null,
         category, title, mime_type: mimeType, size_bytes: Number.isSafeInteger(sizeBytes) && sizeBytes > 0 ? sizeBytes : null,
-        published: true, updated_at: new Date().toISOString()
+        tags, published: true, updated_at: new Date().toISOString()
       }, { onConflict: "source,drive_file_id" });
       if (error) throw error;
       return json({ published: true }, 200, request);

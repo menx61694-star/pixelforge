@@ -380,3 +380,60 @@ test("Popular Resources rank published documents using privacy-preserving unique
   assert.match(library, /action=track-resource/);
   assert.match(library, /resourceId: doc\.drive_file_id/);
 });
+
+
+test("PDF preview is a public-library-only feature controlled by an audited admin setting", () => {
+  const library = read("library.js");
+  const libraryHtml = read("library.html");
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  const edge = read("supabase/functions/site-settings/index.ts");
+  const migration = read("supabase/phase-17-library-pdf-preview.sql");
+  assert.ok(library.includes("pdfPreviewEnabled"));
+  assert.ok(library.includes('doc.ext.toLowerCase() === "pdf"'));
+  assert.ok(library.includes('previewFrame.src = "about:blank"'));
+  assert.ok(library.includes("Open document"));
+  assert.ok(libraryHtml.includes('id="pdf-preview-dialog"'));
+  assert.ok(libraryHtml.includes('id="pdf-preview-fullscreen"'));
+  assert.ok(adminHtml.includes("setting-library-pdf-preview-enabled"));
+  assert.ok(adminJs.includes('saveSetting("home.library.pdf_preview_enabled"'));
+  assert.ok(edge.includes("home.library.pdf_preview_enabled"));
+  assert.ok(edge.includes('pdfPreviewEnabled: values["home.library.pdf_preview_enabled"] !== false'));
+  assert.ok(migration.includes("home.library.pdf_preview_enabled"));
+  assert.ok(migration.includes("when 'home.library.pdf_preview_enabled' then jsonb_typeof(p_value) = 'boolean'"));
+  assert.ok(migration.includes("revoke all on function public.pixel_forge_update_site_setting(text, jsonb, text) from public, anon, authenticated"));
+  assert.ok(migration.includes("grant execute on function public.pixel_forge_update_site_setting(text, jsonb, text) to service_role"));
+});
+
+test("Google Drive and Private Vault support sequential multi-file uploads", () => {
+  const html = read("admin.html");
+  const js = read("admin.js");
+  assert.match(html, /id="document-file"[^>]*multiple/);
+  assert.match(html, /id="google-drive-file"[^>]*multiple/);
+  assert.ok(js.includes("Array.from(fileInput.files || [])"));
+  assert.ok(js.includes("Array.from(googleDriveFileInput ? googleDriveFileInput.files : [])"));
+  assert.ok(js.includes("uploadLargeFile(BUCKET, currentUserUid + \"/\" + objectName, file, index + 1, files.length)"));
+  assert.ok(js.includes("uploadGoogleDriveSingleFile(files[index], index + 1, files.length)"));
+  assert.ok(js.includes('currentPermissions.has("vault.write")'));
+  assert.ok(js.includes('currentPermissions.has("drive.write")'));
+  assert.ok(js.includes("Uploaded \" + succeeded + \" of \" + files.length"));
+});
+
+
+test("Published documents support safe admin-managed tags and public tag search", () => {
+  const admin = read("admin.js");
+  const library = read("library.js");
+  const drive = read("supabase/functions/google-drive-files/index.ts");
+  const migration = read("supabase/phase-18-document-tags.sql");
+  assert.match(admin, /normalizeDocumentTags/);
+  assert.match(admin, /metadata: \{ tags \}/);
+  assert.match(admin, /tagsInput\.value/);
+  assert.match(admin, /tags\s*$/m);
+  assert.match(library, /doc\.tags/);
+  assert.match(library, /file\.metadata\?\.tags/);
+  assert.match(library, /tagButton\.addEventListener/);
+  assert.match(drive, /normalizeTags/);
+  assert.match(drive, /tags, published: true/);
+  assert.ok(migration.includes("add column if not exists tags text[]"));
+  assert.match(migration, /using gin \(tags\)/);
+});

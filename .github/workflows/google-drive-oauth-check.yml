@@ -1,4 +1,5 @@
 name: PixelForge Admin and Edge Function Checks
+# PDF preview contract changes are covered by the same regression workflow.
 
 on:
   workflow_dispatch:
@@ -24,6 +25,8 @@ on:
       - "supabase/phase-14-seo-management.sql"
       - "supabase/phase-15-homepage-layout.sql"
       - "supabase/phase-16-popular-resources.sql"
+      - "supabase/phase-17-library-pdf-preview.sql"
+      - "supabase/phase-18-document-tags.sql"
       - "tools.html"
       - "tools.js"
       - "styles.css"
@@ -88,6 +91,8 @@ on:
       - "supabase/phase-14-seo-management.sql"
       - "supabase/phase-15-homepage-layout.sql"
       - "supabase/phase-16-popular-resources.sql"
+      - "supabase/phase-17-library-pdf-preview.sql"
+      - "supabase/phase-18-document-tags.sql"
       - "tools.html"
       - "tools.js"
       - "styles.css"

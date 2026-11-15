@@ -120,8 +120,8 @@
               <div class="panel-heading"><div><p class="eyebrow">ADD TO VAULT</p><h2>Upload a document</h2></div><span class="panel-symbol">＋</span></div>
               <p class="panel-copy">Keep your important files in your private space. PDF, JPG and PNG · large files supported.</p>
               <form id="upload-form" class="upload-form">
-                <label class="drop-zone" for="document-file"><span class="upload-symbol">↑</span><strong>Choose a file to upload</strong><small>PDF, JPG or PNG · resumable large-file uploads</small><span id="selected-file" class="selected-file">No file selected</span></label>
-                <input id="document-file" name="document-file" type="file" accept="application/pdf,image/jpeg,image/png" required>
+                <label class="drop-zone" for="document-file"><span class="upload-symbol">↑</span><strong>Choose files to upload</strong><small>Select multiple PDF, JPG or PNG files · resumable uploads</small><span id="selected-file" class="selected-file">No files selected</span></label>
+                <input id="document-file" name="document-file" type="file" accept="application/pdf,image/jpeg,image/png" multiple>
                 <button id="upload-button" type="submit">Upload privately <span>→</span></button>
               </form>
               <p class="privacy-hint"><span>●</span> Files are stored in a non-public bucket.</p>
@@ -147,7 +147,7 @@
             <p id="google-drive-status" class="vault-status" role="status" aria-live="polite"></p>
             <div class="drive-tools" style="display:grid;gap:.8rem;margin-top:1rem;">
               <div style="display:flex;gap:.7rem;flex-wrap:wrap;align-items:center;">
-                <input id="google-drive-file" type="file" accept="application/pdf,image/jpeg,image/png">
+                <input id="google-drive-file" type="file" accept="application/pdf,image/jpeg,image/png" multiple>
                 <button id="google-drive-upload" type="button" disabled>Upload to Google Drive</button>
                 <button id="google-drive-refresh" type="button" disabled>Refresh Drive files</button>
               </div>
@@ -262,6 +262,12 @@
                 <label class="settings-toggle"><input id="setting-popular-show-views" type="checkbox"><span>Display open counts beside resources</span></label>
                 <button type="button" data-setting-save="home.popular">Save Popular Resources Settings</button>
                 <p class="settings-help">Ranking uses real opens of published library documents. A browser session counts at most once per resource per day. Resources with no qualifying opens are not shown.</p>
+              </article>
+              <article class="settings-card">
+                <h3>Document Library</h3>
+                <label class="settings-toggle"><input id="setting-library-pdf-preview-enabled" type="checkbox" checked><span>Enable inline PDF previews in the public Document Library</span></label>
+                <p class="settings-help">Applies only to published public PDFs from PixelForge Storage and Google Drive. Private Vault files are excluded. The Open document link remains available as a fallback.</p>
+                <button type="button" data-setting-save="home.library">Save Document Library Settings</button>
               </article>
               <article class="settings-card">
                 <h3>Homepage Layout Manager</h3>

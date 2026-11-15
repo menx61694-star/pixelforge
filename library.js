@@ -29,10 +29,16 @@
   const searchFilters = document.getElementById("library-search-filters");
   const searchHint = document.getElementById("library-search-hint");
   const loadMoreButton = document.getElementById("library-load-more");
+  const previewDialog = document.getElementById("pdf-preview-dialog");
+  const previewFrame = document.getElementById("pdf-preview-frame");
+  const previewTitle = document.getElementById("pdf-preview-title");
+  const previewOpenLink = document.getElementById("pdf-preview-open");
+  const previewClose = document.getElementById("pdf-preview-close");
+  const previewFullscreen = document.getElementById("pdf-preview-fullscreen");
   const grid = document.getElementById("document-grid");
   const count = document.getElementById("library-count");
   const cards = document.getElementById("category-grid");
-  const state = { documents: [], loading: false, searchConfig: { enabled: true, smartEnabled: true, filtersEnabled: true, maxResults: 30, placeholder: "Search documents, notes and guides…" }, visibleLimit: 30 };
+  const state = { documents: [], loading: false, searchConfig: { enabled: true, smartEnabled: true, filtersEnabled: true, maxResults: 30, placeholder: "Search documents, notes and guides…", pdfPreviewEnabled: true }, visibleLimit: 30, pdfPreviewEnabled: true };
   const params = new URLSearchParams(window.location.search);
   search.value = params.get("q") || "";
   if (categoryFilter) categoryFilter.value = params.get("category") || categorySlug;
@@ -78,7 +84,8 @@
   function searchScore(doc, query) {
     if (!query) return 0;
     const title = doc.title.toLowerCase(), category = doc.category.toLowerCase(), ext = doc.ext.toLowerCase();
-    const full = title + " " + category + " " + ext;
+    const tags = (Array.isArray(doc.tags) ? doc.tags : []).join(" ").toLowerCase();
+    const full = title + " " + category + " " + ext + " " + tags;
     if (full.includes(query)) return title.includes(query) ? 100 : 70;
     if (!state.searchConfig.smartEnabled) return -1;
     const tokens = query.split(/\s+/).filter(Boolean);
@@ -86,6 +93,7 @@
     for (const token of tokens) {
       if (title.includes(token)) score += 20;
       else if (category.includes(token) || ext.includes(token)) score += 12;
+      else if (tags.split(/\s+/).some(tag => tag.includes(token))) score += 30;
       else {
         const candidates = title.split(/[^a-z0-9]+/).concat(category.split(/[^a-z0-9]+/));
         if (token.length >= 4 && candidates.some(word => word && editDistanceAtMostOne(word, token))) score += 7;
@@ -122,7 +130,24 @@
       const icon = document.createElement("span"); icon.className = "document-icon"; icon.textContent = doc.ext.toUpperCase();
       const h3 = document.createElement("h3"); h3.textContent = doc.title;
       const p = document.createElement("p"); p.textContent = doc.category + " · " + doc.size + (doc.source === "google_drive" ? " · Google Drive" : " · PixelForge Storage");
+      const tagList = document.createElement("div"); tagList.className = "document-tags";
+      (Array.isArray(doc.tags) ? doc.tags : []).forEach(tag => {
+        const tagButton = document.createElement("button");
+        tagButton.type = "button"; tagButton.className = "document-tag"; tagButton.textContent = tag;
+        tagButton.addEventListener("click", () => { search.value = tag; state.visibleLimit = state.searchConfig.maxResults; render(); search.focus(); });
+        tagList.append(tagButton);
+      });
       const a = document.createElement("a"); a.href = doc.url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = "Open document ↗";
+      let previewButton = null;
+      if (state.searchConfig.pdfPreviewEnabled && doc.ext.toLowerCase() === "pdf" && previewDialog && previewFrame) {
+        previewButton = document.createElement("button");
+        previewButton.type = "button"; previewButton.className = "document-preview-button"; previewButton.textContent = "Preview PDF";
+        previewButton.addEventListener("click", () => {
+          previewTitle.textContent = doc.title; previewOpenLink.href = doc.url;
+          previewFrame.src = doc.url + (doc.url.includes("#") ? "" : "#view=FitH");
+          if (typeof previewDialog.showModal === "function") previewDialog.showModal(); else window.open(doc.url, "_blank", "noopener");
+        });
+      }
       a.addEventListener("click", () => {
         if (!doc.resourceId || !["supabase","google_drive"].includes(doc.source)) return;
         try {
@@ -134,7 +159,10 @@
           }).catch(() => {});
         } catch (_) { /* Tracking is optional; never block opening a document. */ }
       });
-      card.append(icon, h3, p, a); grid.append(card);
+      card.append(icon, h3, p);
+      if (tagList.childElementCount) card.append(tagList);
+      if (previewButton) card.append(previewButton);
+      card.append(a); grid.append(card);
     });
     if (loadMoreButton) loadMoreButton.hidden = docs.length <= state.visibleLimit;
   }
@@ -147,7 +175,8 @@
         enabled: config.enabled === true, smartEnabled: config.smartEnabled !== false,
         filtersEnabled: config.filtersEnabled !== false,
         maxResults: Number.isInteger(config.maxResults) ? Math.min(100, Math.max(6, config.maxResults)) : 30,
-        placeholder: typeof config.placeholder === "string" ? config.placeholder : "Search documents, notes and guides…"
+        placeholder: typeof config.placeholder === "string" ? config.placeholder : "Search documents, notes and guides…",
+        pdfPreviewEnabled: payload.library?.pdfPreviewEnabled !== false
       };
     } catch (_) { /* Keep local fallback settings if the public settings service is unavailable. */ }
     state.visibleLimit = state.searchConfig.maxResults;
@@ -189,7 +218,7 @@
           const bytes = Number(file.metadata && file.metadata.size || 0);
           const size = bytes >= 1048576 ? (bytes / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(bytes / 1024)) + " KB";
           const ext = (file.name.split(".").pop() || "FILE").slice(0, 4);
-          return { title: niceName(file.name), category: category.name, categorySlug: category.slug, url: publicData.publicUrl, size, ext, source: "supabase", resourceId: path };
+          return { title: niceName(file.name), category: category.name, categorySlug: category.slug, url: publicData.publicUrl, size, ext, source: "supabase", resourceId: path, tags: Array.isArray(file.metadata?.tags) ? file.metadata.tags : [] };
         });
       }));
 
@@ -208,7 +237,8 @@
               size: doc.size_bytes ? (doc.size_bytes >= 1048576 ? (doc.size_bytes / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(doc.size_bytes / 1024)) + " KB") : "Size unavailable",
               ext: (doc.title || "").split(".").pop()?.slice(0, 4) || "FILE",
               source: "google_drive",
-              resourceId: doc.drive_file_id
+              resourceId: doc.drive_file_id,
+              tags: Array.isArray(doc.tags) ? doc.tags : []
             }));
         } catch (driveError) {
           console.warn("Published Google Drive documents could not be loaded:", driveError);
@@ -225,6 +255,10 @@
       showState("The public library is not connected yet. Admin-only files remain private. (" + (error.message || "Storage unavailable") + ")", true);
     }
   }
+  previewClose?.addEventListener("click", () => { previewDialog?.close(); if (previewFrame) previewFrame.src = "about:blank"; });
+  previewDialog?.addEventListener("close", () => { if (previewFrame) previewFrame.src = "about:blank"; });
+  previewDialog?.addEventListener("click", event => { if (event.target === previewDialog) previewDialog.close(); });
+  previewFullscreen?.addEventListener("click", async () => { try { if (previewFrame?.requestFullscreen) await previewFrame.requestFullscreen(); } catch (_) { previewTitle.textContent += " (Fullscreen unavailable)"; } });
   search.addEventListener("input", () => { state.visibleLimit = state.searchConfig.maxResults; render(); });
   categoryFilter?.addEventListener("change", () => { state.visibleLimit = state.searchConfig.maxResults; render(); });
   typeFilter?.addEventListener("change", () => { state.visibleLimit = state.searchConfig.maxResults; render(); });
