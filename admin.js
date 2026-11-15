@@ -777,7 +777,6 @@ const firebaseConfig = {
 
           li.dataset.storagePath = path;
           li.dataset.fileName = item.name;
-          li.dataset.publishedCategory = publishedCategory || "";
           const actions = document.createElement("div");
           actions.className = "file-actions";
           const selectionLabel = document.createElement("label");
@@ -806,6 +805,7 @@ const firebaseConfig = {
           });
           const publishedInfo = publishedFiles.get(item.name);
           const publishedCategory = publishedInfo && publishedInfo.category;
+          li.dataset.publishedCategory = publishedCategory || "";
           if (publishedCategory) category.value = publishedCategory;
           const tagsInput = document.createElement("input");
           tagsInput.type = "text";
