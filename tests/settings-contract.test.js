@@ -418,4 +418,22 @@ test("Google Drive and Private Vault support sequential multi-file uploads", () 
   assert.ok(js.includes('currentPermissions.has("drive.write")'));
   assert.ok(js.includes("Uploaded \" + succeeded + \" of \" + files.length"));
 });
-\n\ntest("Published documents support safe admin-managed tags and public tag search", () => {\n  const admin = read("admin.js");\n  const library = read("library.js");\n  const drive = read("supabase/functions/google-drive-files/index.ts");\n  const migration = read("supabase/phase-18-document-tags.sql");\n  assert.match(admin, /normalizeDocumentTags/);\n  assert.match(admin, /metadata: \{ tags \}/);\n  assert.match(admin, /tagsInput\.value/);\n  assert.match(admin, /tags\s*$/m);\n  assert.match(library, /doc\.tags/);\n  assert.match(library, /file\.metadata\?\.tags/);\n  assert.match(library, /tagButton\.addEventListener/);\n  assert.match(drive, /normalizeTags/);\n  assert.match(drive, /tags, published: true/);\n  assert.match(migration, /add column if not exists tags text\\[\\]/);\n  assert.match(migration, /using gin \(tags\)/);\n});\n
+
+
+test("Published documents support safe admin-managed tags and public tag search", () => {
+  const admin = read("admin.js");
+  const library = read("library.js");
+  const drive = read("supabase/functions/google-drive-files/index.ts");
+  const migration = read("supabase/phase-18-document-tags.sql");
+  assert.match(admin, /normalizeDocumentTags/);
+  assert.match(admin, /metadata: \{ tags \}/);
+  assert.match(admin, /tagsInput\.value/);
+  assert.match(admin, /tags\s*$/m);
+  assert.match(library, /doc\.tags/);
+  assert.match(library, /file\.metadata\?\.tags/);
+  assert.match(library, /tagButton\.addEventListener/);
+  assert.match(drive, /normalizeTags/);
+  assert.match(drive, /tags, published: true/);
+  assert.match(migration, /add column if not exists tags text\\[\\]/);
+  assert.match(migration, /using gin \(tags\)/);
+});
