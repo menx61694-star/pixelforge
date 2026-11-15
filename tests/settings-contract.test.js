@@ -450,3 +450,22 @@ test("Document uploads protect existing names in Private Vault and Google Drive"
   assert.ok(drive.includes("Could not check existing Google Drive filenames. Upload was stopped"));
   assert.ok(drive.includes("duplicatePayload.files.length"));
 });
+
+
+test("Private Vault documents support independently saved private tags", () => {
+  const admin = read("admin.js");
+  const drive = read("supabase/functions/google-drive-files/index.ts");
+  const migration = read("supabase/phase-19-private-document-tags.sql");
+  assert.ok(admin.includes('privateVaultTagsRequest("private-tags-list")'));
+  assert.ok(admin.includes('privateVaultTagsRequest("private-tags-save"'));
+  assert.ok(admin.includes("savePrivateDocumentTags(path, tagsInput.value, saveTags)"));
+  assert.ok(admin.includes('saveTags.textContent = "Save tags"'));
+  assert.ok(admin.includes("tagsInput.value = (privateTags.get(path)"));
+  assert.ok(drive.includes('action === "private-tags-list"'));
+  assert.ok(drive.includes('action === "private-tags-save"'));
+  assert.ok(drive.includes('eq("owner_uid", uid).eq("storage_path", storagePath)'));
+  assert.ok(drive.includes('action === "private-tags-save" ? "vault.write"'));
+  assert.ok(migration.includes("pixel_forge_private_document_tags"));
+  assert.ok(migration.includes("enable row level security"));
+  assert.ok(migration.includes("revoke all"));
+});
