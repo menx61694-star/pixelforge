@@ -91,7 +91,7 @@
     let score = 0;
     for (const token of tokens) {
       if (title.includes(token)) score += 20;
-      else if (category.includes(token) || ext.includes(token)) score += 12;
+      else if (category.includes(token) || ext.includes(token)) score += 12;\n      else if (tags.split(/\\s+/).some(tag => tag.includes(token))) score += 30;
       else {
         const candidates = title.split(/[^a-z0-9]+/).concat(category.split(/[^a-z0-9]+/));
         if (token.length >= 4 && candidates.some(word => word && editDistanceAtMostOne(word, token))) score += 7;
@@ -127,7 +127,7 @@
       const card = document.createElement("article"); card.className = "document-card";
       const icon = document.createElement("span"); icon.className = "document-icon"; icon.textContent = doc.ext.toUpperCase();
       const h3 = document.createElement("h3"); h3.textContent = doc.title;
-      const p = document.createElement("p"); p.textContent = doc.category + " · " + doc.size + (doc.source === "google_drive" ? " · Google Drive" : " · PixelForge Storage");
+      const p = document.createElement("p"); p.textContent = doc.category + " · " + doc.size + (doc.source === "google_drive" ? " · Google Drive" : " · PixelForge Storage");\n      const tagList = document.createElement("div"); tagList.className = "document-tags";\n      (Array.isArray(doc.tags) ? doc.tags : []).forEach(tag => {\n        const tagButton = document.createElement("button"); tagButton.type = "button"; tagButton.className = "document-tag"; tagButton.textContent = tag;\n        tagButton.addEventListener("click", () => { search.value = tag; state.visibleLimit = state.searchConfig.maxResults; render(); search.focus(); });\n        tagList.append(tagButton);\n      });
       const a = document.createElement("a"); a.href = doc.url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = "Open document ↗";
       let previewButton = null;
       if (state.searchConfig.pdfPreviewEnabled && doc.ext.toLowerCase() === "pdf" && previewDialog && previewFrame) {
@@ -208,7 +208,7 @@
           const bytes = Number(file.metadata && file.metadata.size || 0);
           const size = bytes >= 1048576 ? (bytes / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(bytes / 1024)) + " KB";
           const ext = (file.name.split(".").pop() || "FILE").slice(0, 4);
-          return { title: niceName(file.name), category: category.name, categorySlug: category.slug, url: publicData.publicUrl, size, ext, source: "supabase", resourceId: path };
+          return { title: niceName(file.name), category: category.name, categorySlug: category.slug, url: publicData.publicUrl, size, ext, source: "supabase", resourceId: path, tags: Array.isArray(file.metadata?.tags) ? file.metadata.tags : [] };
         });
       }));
 
