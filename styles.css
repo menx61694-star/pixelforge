@@ -231,3 +231,7 @@
 .contact-form button{justify-self:start;margin-top:.5rem}
 .contact-form [role=status],.contact-email-line{color:#fff;font-size:.85rem}
 @media(max-width:800px){.contact-section{grid-template-columns:1fr}.contact-form{padding:1.1rem}}
+
+/* Google Drive bulk selection controls */
+.drive-file-select-wrap{display:flex;align-items:center;justify-content:center;flex:0 0 24px}
+.drive-file-select{width:17px;height:17px;accent-color:#5968d9;cursor:pointer}
