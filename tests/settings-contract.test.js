@@ -498,3 +498,28 @@ test("Private Vault supports bulk publish, unpublish, delete and shared private 
   assert.ok(drive.includes('action === "private-tags-delete"'));
   assert.ok(css.includes(".bulk-actions-toolbar"));
 });
+
+
+test("location sharing requires browser geolocation permission and explicit consent", () => {
+  const publicScript = read("script.js");
+  const analytics = read("supabase/functions/analytics/index.ts");
+  const migration = read("supabase/phase-20-location-sharing.sql");
+  assert.match(publicScript, /navigator\.geolocation\.getCurrentPosition/);
+  assert.match(publicScript, /Share your approximate location[\s\S]*?confirm/);
+  assert.match(publicScript, /location, consent: true/);
+  assert.match(analytics, /browser-geolocation-explicit-consent/);
+  assert.match(analytics, /location_latitude: location\.latitude/);
+  assert.match(migration, /location_latitude/);
+  assert.match(migration, /location_longitude/);
+});
+
+test("public Contact form uses the admin-configured contact email", () => {
+  const homepage = read("index.html");
+  const publicScript = read("script.js");
+  const settings = read("supabase/functions/site-settings/index.ts");
+  assert.match(homepage, /id="public-contact-form"/);
+  assert.match(homepage, /id="contact-message"/);
+  assert.match(settings, /contactEmail: typeof values\["site\.contact_email"\]/);
+  assert.match(publicScript, /mailto:/);
+  assert.match(publicScript, /payload\.site\?\.contactEmail/);
+});
