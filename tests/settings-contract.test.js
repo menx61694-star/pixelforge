@@ -464,7 +464,7 @@ test("Private Vault documents support independently saved private tags", () => {
   const driveList = admin.slice(admin.indexOf("async function loadGoogleDriveFiles"), admin.indexOf("async function publishGoogleDriveFile"));
   const vaultList = admin.slice(admin.indexOf("async function loadFiles()"), admin.indexOf("async function privateVaultTagsRequest"));
   assert.ok(!driveList.includes("saveTags"));
-  assert.ok(vaultList.includes("actions.append(download, category, tagsInput, saveTags, publish, unpublish, remove)"));
+  assert.ok(vaultList.includes("actions.append(selectionLabel, download, category, tagsInput, saveTags, publish, unpublish, remove)"));
   assert.ok(drive.includes('action === "private-tags-list"'));
   assert.ok(drive.includes('action === "private-tags-save"'));
   assert.ok(drive.includes('eq("owner_uid", uid).eq("storage_path", storagePath)'));
