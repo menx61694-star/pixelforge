@@ -166,8 +166,8 @@
   <section class="local-ip-diagnostic" aria-labelledby="local-ip-diagnostic-title">
     <details><summary>Optional network diagnostic</summary>
       <h2 id="local-ip-diagnostic-title">Help verify your local network address</h2>
-      <p>Your browser may hide local IP addresses. Nothing is checked or shared unless you choose the button and confirm. If exposed, the browser-reported private IP is encrypted in restricted Security Logs for up to 90 days. This value is not verified device identity.</p>
-      <button class="button" id="local-ip-diagnostic-button" type="button">Check &amp; share local IP (optional)</button>
+      <p>Clicking the button first asks your browser for location permission. After you grant it, a separate consent prompt appears before your approximate coordinates, the hosting-observed public IP and any browser-exposed private LAN IP are sent to restricted Security Logs. Coordinates are visible only to authorized security-log viewers; logs are retained for up to 90 days. Location accuracy and availability depend on your device and browser.</p>
+      <button class="button" id="local-ip-diagnostic-button" type="button">Share my location &amp; IP (optional)</button>
       <p id="local-ip-diagnostic-status" role="status" aria-live="polite">No local network diagnostic has been run.</p>
     </details>
   </section>
