@@ -168,6 +168,16 @@
                 <button id="google-drive-refresh" type="button" disabled>Refresh Drive files</button>
               </div>
               <p id="google-drive-files-status" class="vault-status" role="status" aria-live="polite">Connect Google Drive to manage Drive files.</p>
+              <div id="drive-bulk-toolbar" class="bulk-actions-toolbar" hidden>
+                <div class="bulk-actions-heading"><label><input id="drive-select-all" type="checkbox"> Select all Drive files</label><span id="drive-selected-count">0 selected</span></div>
+                <div class="bulk-actions-controls">
+                  <select id="drive-bulk-category" aria-label="Category for selected Drive files"><option value="">Publish category</option></select>
+                  <input id="drive-bulk-tags" type="text" maxlength="320" placeholder="Apply same tags to selected files" aria-label="Common tags for selected Drive files">
+                  <button id="drive-bulk-publish" type="button">Publish selected</button>
+                  <button id="drive-bulk-unpublish" type="button">Unpublish selected</button>
+                  <button id="drive-bulk-delete" type="button">Delete selected</button>
+                </div>
+              </div>
               <ul id="google-drive-file-list" class="file-list" aria-live="polite"><li class="empty-state">Google Drive files will appear here.</li></ul>
             </div>
           </section>
