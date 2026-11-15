@@ -131,6 +131,22 @@
               <div class="panel-heading"><div><p class="eyebrow">YOUR FILES</p><h2>Private documents</h2></div><button id="refresh-files" class="refresh-button" type="button">↻ Refresh</button></div>
               <div class="file-toolbar"><label class="search-box" for="file-search"><span>⌕</span><input id="file-search" type="search" placeholder="Search documents…" autocomplete="off"></label><span id="file-count-label" class="file-count-label">0 files</span></div>
               <p id="vault-status" class="vault-status" role="status" aria-live="polite">Waiting for your private files…</p>
+              <div id="bulk-actions-toolbar" class="bulk-actions-toolbar" hidden>
+                <div class="bulk-actions-heading">
+                  <label><input id="select-all-vault-files" type="checkbox"> Select all</label>
+                  <span id="bulk-selection-count">0 selected</span>
+                </div>
+                <div class="bulk-actions-controls">
+                  <select id="bulk-publish-category" aria-label="Category for bulk publish">
+                    <option value="">Publish category</option>
+                  </select>
+                  <input id="bulk-tags-input" type="text" maxlength="320" placeholder="Same private tags for selected documents" aria-label="Tags to apply to selected documents">
+                  <button id="bulk-apply-tags" type="button">Apply same tags</button>
+                  <button id="bulk-publish" type="button">Publish selected</button>
+                  <button id="bulk-unpublish" type="button">Unpublish selected</button>
+                  <button id="bulk-delete" type="button">Delete selected</button>
+                </div>
+              </div>
               <ul id="file-list" class="file-list" aria-live="polite"><li class="empty-state">Loading your documents…</li></ul>
             </article>
           </section>
