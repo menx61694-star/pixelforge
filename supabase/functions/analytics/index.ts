@@ -230,11 +230,16 @@ Deno.serve(async (request) => {
     if (request.method === "POST" && action === "local-ip-diagnostic") {
       const input = await request.json().catch(() => null);
       const pagePath = input && typeof input.pagePath === "string" ? input.pagePath : "";
-      const localIp = input && typeof input.localIp === "string" ? input.localIp.trim() : "";
+      const localIp = input && typeof input.localIp === "string" ? input.localIp.trim() : null;
+      const location = input?.location;
+      const validLocation = location && typeof location === "object" &&
+        Number.isFinite(location.latitude) && location.latitude >= -90 && location.latitude <= 90 &&
+        Number.isFinite(location.longitude) && location.longitude >= -180 && location.longitude <= 180 &&
+        Number.isFinite(location.accuracy) && location.accuracy >= 0 && location.accuracy <= 100000;
       if (!allowedPaths.has(pagePath) || input?.consent !== true ||
-          Object.keys(input ?? {}).some((key) => !["pagePath", "localIp", "consent"].includes(key)) ||
-          !isPrivateLocalIp(localIp)) {
-        return json({ error: "A valid private local IP and explicit consent are required." }, 400, request);
+          Object.keys(input ?? {}).some((key) => !["pagePath", "localIp", "location", "consent"].includes(key)) ||
+          !validLocation || (localIp !== null && !isPrivateLocalIp(localIp))) {
+        return json({ error: "Valid location coordinates and explicit consent are required." }, 400, request);
       }
       const observedIp = getClientIp(request);
       if (!observedIp) return json({ error: "Observed public IP is unavailable from the trusted hosting edge." }, 422, request);
@@ -249,12 +254,18 @@ Deno.serve(async (request) => {
       if (rateError) throw rateError;
       if (permitted !== true) return json({ error: "Rate limit exceeded." }, 429, request);
       const publicEncrypted = await encryptIp(observedIp.address);
-      const localEncrypted = await encryptIp(localIp);
+      const localEncrypted = localIp ? await encryptIp(localIp) : null;
       const { error } = await db.from("pixel_forge_security_logs").insert({
         ...publicEncrypted,
-        local_ip_ciphertext: localEncrypted.ip_ciphertext,
-        local_ip_iv: localEncrypted.ip_iv,
-        local_ip_source: "browser-webrtc-explicit-consent",
+        ...(localEncrypted ? {
+          local_ip_ciphertext: localEncrypted.ip_ciphertext,
+          local_ip_iv: localEncrypted.ip_iv,
+          local_ip_source: "browser-webrtc-explicit-consent",
+        } : {}),
+        location_latitude: location.latitude,
+        location_longitude: location.longitude,
+        location_accuracy_m: location.accuracy,
+        location_source: "browser-geolocation-explicit-consent",
         ip_source: observedIp.source,
         event_type: "local_ip_diagnostic",
         page_path: pagePath,
