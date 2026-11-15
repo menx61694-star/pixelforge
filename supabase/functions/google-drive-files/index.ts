@@ -249,6 +249,27 @@ Deno.serve(async (request) => {
           !Number.isSafeInteger(size) || size <= 0 || size > MAX_FILE_SIZE) {
         return json({ error: "Choose a non-empty PDF, JPEG or PNG file up to 2 GB." }, 400, request);
       }
+      // Refuse same-name uploads instead of creating a confusing duplicate or replacing a document.
+      const escapedName = name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+      const duplicateQuery = new URLSearchParams({
+        q: "trashed = false and name = '" + escapedName + "'",
+        pageSize: "1",
+        fields: "files(id,name)",
+        spaces: "drive"
+      });
+      const duplicateResponse = await fetch("https://www.googleapis.com/drive/v3/files?" + duplicateQuery, {
+        headers: googleHeaders
+      });
+      const duplicatePayload = await duplicateResponse.json().catch(() => ({}));
+      if (!duplicateResponse.ok) {
+        return json({ error: "Could not check existing Google Drive filenames. Upload was stopped to protect existing documents." }, 502, request);
+      }
+      if (Array.isArray(duplicatePayload.files) && duplicatePayload.files.length) {
+        return json({
+          error: "A Google Drive document with this exact name already exists. Rename the new file or manage the existing document first.",
+          code: "DUPLICATE_FILE_NAME"
+        }, 409, request);
+      }
       const metadata = { name, mimeType };
       const response = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name,mimeType,size,modifiedTime,webViewLink", {
         method: "POST",
