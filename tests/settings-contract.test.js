@@ -114,7 +114,7 @@ test("public homepage knowledge is admin-managed, allow-listed, and safely expos
 });
 
 test("public settings expose admin-managed branding without leaking private settings", () => {
-  assert.match(edge, /"site\.name", "site\.description", "home\.knowledge\.enabled"/);
+  assert.ok(edge.includes('"site.name", "site.description", "site.contact_email"'));
   assert.match(edge, /name: typeof values\["site\.name"\]/);
   assert.match(edge, /description: typeof values\["site\.description"\]/);
   const publicScript = read("script.js");
@@ -497,4 +497,87 @@ test("Private Vault supports bulk publish, unpublish, delete and shared private 
   assert.ok(drive.includes('action === "private-tags-delete" ? "vault.delete"'));
   assert.ok(drive.includes('action === "private-tags-delete"'));
   assert.ok(css.includes(".bulk-actions-toolbar"));
+});
+
+
+test("location sharing requires browser geolocation permission and explicit consent", () => {
+  const publicScript = read("script.js");
+  const analytics = read("supabase/functions/analytics/index.ts");
+  const migration = read("supabase/phase-20-location-sharing.sql");
+  assert.match(publicScript, /navigator\.geolocation\.getCurrentPosition/);
+  assert.match(publicScript, /window\.confirm\(/);
+  assert.match(publicScript, /Share your approximate location/);
+  assert.match(publicScript, /location, consent: true/);
+  assert.match(analytics, /browser-geolocation-explicit-consent/);
+  assert.match(analytics, /location_latitude: location\.latitude/);
+  assert.match(migration, /location_latitude/);
+  assert.match(migration, /location_longitude/);
+});
+
+test("public Contact form sends messages to the private admin inbox", () => {
+  const homepage = read("index.html");
+  const publicScript = read("script.js");
+  const settings = read("supabase/functions/site-settings/index.ts");
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  const migration = read("supabase/phase-21-contact-inbox.sql");
+  assert.match(homepage, /id="public-contact-form"/);
+  assert.match(homepage, /id="contact-message"/);
+  assert.match(publicScript, /action=submit-contact/);
+  assert.doesNotMatch(publicScript, /window\.location\.href\s*=\s*"mailto:/);
+  assert.match(settings, /action === "submit-contact"/);
+  assert.match(settings, /action === "contact-list"/);
+  assert.match(settings, /action === "contact-status"/);
+  assert.match(adminHtml, /id="contact-inbox-list"/);
+  assert.match(adminJs, /loadContactInbox/);
+  assert.match(migration, /pixel_forge_contact_messages/);
+  assert.match(migration, /enable row level security/);
+});
+
+test("Google Drive file list supports multi-select and permission-gated bulk actions", () => {
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  assert.match(adminHtml, /id="drive-bulk-toolbar"/);
+  assert.match(adminHtml, /id="drive-select-all"/);
+  assert.match(adminHtml, /id="drive-bulk-publish"/);
+  assert.match(adminHtml, /id="drive-bulk-unpublish"/);
+  assert.match(adminHtml, /id="drive-bulk-delete"/);
+  assert.match(adminJs, /className="drive-file-select"/);
+  assert.match(adminJs, /selectedDriveFileIds/);
+  assert.match(adminJs, /currentPermissions\.has\("vault\.publish"\)/);
+  assert.match(adminJs, /currentPermissions\.has\("drive\.delete"\)/);
+  assert.match(adminJs, /runDriveBulkAction\("publish"\)/);
+  assert.match(adminJs, /runDriveBulkAction\("unpublish"\)/);
+  assert.match(adminJs, /runDriveBulkAction\("delete"\)/);
+});
+
+test("Private Vault assigns publishedCategory only after it is initialized", () => {
+  const adminJs = read("admin.js");
+  const declaration = adminJs.indexOf("const publishedCategory = publishedInfo && publishedInfo.category;");
+  const datasetAssignment = adminJs.indexOf('li.dataset.publishedCategory = publishedCategory || "";');
+  assert.notEqual(declaration, -1);
+  assert.notEqual(datasetAssignment, -1);
+  assert.ok(datasetAssignment > declaration, "dataset assignment must follow the publishedCategory declaration");
+});
+
+
+test("Public Contact form delivers messages to a private admin inbox", () => {
+  const homepage = read("index.html");
+  const publicScript = read("script.js");
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  const edge = read("supabase/functions/site-settings/index.ts");
+  const migration = read("supabase/phase-21-contact-inbox.sql");
+  assert.match(homepage, /id="public-contact-form"/);
+  assert.match(publicScript, /action=submit-contact/);
+  assert.doesNotMatch(publicScript, /window\.location\.href\s*=\s*"mailto:/);
+  assert.match(edge, /action === "submit-contact"/);
+  assert.match(edge, /pixel_forge_contact_messages/);
+  assert.match(edge, /action === "contact-list"/);
+  assert.match(edge, /action === "contact-status"/);
+  assert.match(adminHtml, /id="contact-inbox-list"/);
+  assert.match(adminJs, /loadContactInbox/);
+  assert.match(adminJs, /Reply by email/);
+  assert.match(migration, /enable row level security/);
+  assert.match(migration, /revoke all on public\.pixel_forge_contact_messages from anon, authenticated/);
 });

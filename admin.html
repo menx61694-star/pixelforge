@@ -168,6 +168,16 @@
                 <button id="google-drive-refresh" type="button" disabled>Refresh Drive files</button>
               </div>
               <p id="google-drive-files-status" class="vault-status" role="status" aria-live="polite">Connect Google Drive to manage Drive files.</p>
+              <div id="drive-bulk-toolbar" class="bulk-actions-toolbar" hidden>
+                <div class="bulk-actions-heading"><label><input id="drive-select-all" type="checkbox"> Select all Drive files</label><span id="drive-selected-count">0 selected</span></div>
+                <div class="bulk-actions-controls">
+                  <select id="drive-bulk-category" aria-label="Category for selected Drive files"><option value="">Publish category</option></select>
+                  <input id="drive-bulk-tags" type="text" maxlength="320" placeholder="Apply same tags to selected files" aria-label="Common tags for selected Drive files">
+                  <button id="drive-bulk-publish" type="button">Publish selected</button>
+                  <button id="drive-bulk-unpublish" type="button">Unpublish selected</button>
+                  <button id="drive-bulk-delete" type="button">Delete selected</button>
+                </div>
+              </div>
               <ul id="google-drive-file-list" class="file-list" aria-live="polite"><li class="empty-state">Google Drive files will appear here.</li></ul>
             </div>
           </section>
@@ -220,12 +230,12 @@
                 <button type="button" class="danger-button" id="delete-security-logs" data-permission="security.logs.delete" hidden>Delete all logs</button>
               </div>
             </div>
-            <p class="panel-copy">Observed public IP from the hosting edge; it is not guaranteed to identify a device. Local/private LAN IPs are not available to this server and are not collected. Logs are automatically deleted after 90 days.</p>
+            <p class="panel-copy">Observed public IP and any location explicitly shared by a visitor after browser permission and consent. Coordinates are restricted to authorized security-log viewers. Logs are automatically deleted after 90 days.</p>
             <p id="security-logs-status" class="panel-copy" role="status" aria-live="polite">Loading security logs…</p>
             <div class="table-wrap">
               <table class="data-table security-log-table">
-                <thead><tr><th>Observed public IP</th><th>IP family</th><th>Source</th><th>Local IP (consented)</th><th>Event</th><th>Page</th><th>Time (IST)</th></tr></thead>
-                <tbody id="security-logs-body"><tr><td colspan="7" class="empty-state">Loading logs…</td></tr></tbody>
+                <thead><tr><th>Observed public IP</th><th>IP family</th><th>Source</th><th>Local IP (consented)</th><th>Shared location (lat, long · accuracy)</th><th>Event</th><th>Page</th><th>Time (IST)</th></tr></thead>
+                <tbody id="security-logs-body"><tr><td colspan="8" class="empty-state">Loading logs…</td></tr></tbody>
               </table>
             </div>
             <p class="analytics-privacy-note">Observed public IPs are encrypted with AES-256-GCM before storage and decrypted only for authorized admins. Only the hosting edge cf-connecting-ip header is trusted. Local/private LAN IP is shown only when a visitor explicitly consents and their browser exposes it via WebRTC. It is browser-reported and unverified; many browsers mask it. VPNs, carrier NAT and proxies may affect the observed public IP. Manual deletion removes all current security logs; automatic retention removes logs older than 90 days.</p>
@@ -384,6 +394,11 @@ unit-converter</textarea>
             <div class="panel-heading"><div><p class="eyebrow">COMMUNITY MODERATION</p><h2>Feedback inbox</h2></div><button id="refresh-feedback" class="refresh-button" type="button">↻ Refresh</button></div>
             <p id="feedback-inbox-status" class="panel-copy" role="status" aria-live="polite">Loading feedback submissions…</p>
             <div id="feedback-inbox-list" class="feedback-inbox-list"><p class="empty-state">Loading feedback…</p></div>
+          </section>
+          <section class="panel settings-panel">
+            <div class="panel-heading"><div><p class="eyebrow">VISITOR MESSAGES</p><h2>Contact messages</h2></div><button id="refresh-contact-messages" class="refresh-button" type="button">↻ Refresh</button></div>
+            <p id="contact-inbox-status" class="panel-copy" role="status" aria-live="polite">Loading contact messages…</p>
+            <div id="contact-inbox-list" class="feedback-inbox-list"><p class="empty-state">Loading messages…</p></div>
           </section>
           <section class="panel settings-panel">
             <div class="panel-heading"><div><p class="eyebrow">CHANGE HISTORY</p><h2>Settings audit log</h2></div></div>
