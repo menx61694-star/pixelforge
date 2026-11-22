@@ -1792,7 +1792,7 @@ const firebaseConfig = {
       method: options.method || "GET", headers, body: options.body ? JSON.stringify(options.body) : undefined
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {\n      const diagnostic = payload.diagnostic ? " (" + String(payload.diagnostic).slice(0, 240) + ")" : "";\n      throw new Error((payload.error || "Security logs request failed.") + diagnostic;\n    }
+    if (!response.ok) {\n      const diagnostic = payload.diagnostic ? " (" + String(payload.diagnostic).slice(0, 240) + ")" : "";\n      throw new Error((payload.error || "Security logs request failed.") + diagnostic);\n    }
     return payload;
   }
 
