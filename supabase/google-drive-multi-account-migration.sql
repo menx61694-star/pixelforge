@@ -8,3 +8,7 @@ alter table public.google_drive_oauth_tokens
 update public.google_drive_oauth_tokens
 set display_name = coalesce(display_name, 'Owner Google Drive')
 where id = 'pixelForge-owner';
+
+-- Preserve existing published Drive references as owner-account documents.
+alter table public.pixel_forge_published_documents
+  add column if not exists account_id text not null default 'pixelForge-owner';
