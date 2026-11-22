@@ -272,3 +272,13 @@
 .community-feedback-section .approved-feedback-panel{max-width:none}
 .footer-contact-cta{display:inline-flex;align-items:center;gap:.45rem;padding:.65rem 1rem;border:1px solid #ff861c;border-radius:999px;color:#ff861c!important;font-weight:800;text-decoration:none!important;transition:background .18s,color .18s}
 .footer-contact-cta:hover{background:#ff861c;color:#fff!important}
+
+/* Fix Contact dialog form sizing: prevent textarea/grid stretching and overflow. */
+.pf-contact-view .contact-section{display:block;align-items:initial;grid-template-columns:1fr;gap:1rem;}
+.pf-contact-view .contact-intro{margin-bottom:1.25rem;}
+.pf-contact-view .contact-form{display:grid;grid-template-columns:minmax(0,1fr);gap:.65rem;width:100%;max-width:100%;box-sizing:border-box;padding:1.25rem;background:#f8faff;border:1px solid #dce4f1;border-radius:16px;}
+.pf-contact-view .contact-form input,.pf-contact-view .contact-form textarea{display:block;width:100%;min-width:0;max-width:100%;height:auto;min-height:44px;box-sizing:border-box;padding:.8rem .9rem;border:1px solid #d6deed;border-radius:10px;background:#fff;color:#1b2948;font:inherit;}
+.pf-contact-view .contact-form textarea{height:160px;min-height:160px;max-height:320px;resize:vertical;}
+.pf-contact-view .contact-form label{color:#33415e;}
+.pf-contact-view .contact-form button{justify-self:start;}
+.pf-contact-view .contact-form [role=status]{color:#52617b;min-height:1.2em;}
