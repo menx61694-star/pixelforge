@@ -149,11 +149,11 @@ Deno.serve(async (request) => {
       if (!/^[a-zA-Z0-9_-]{10,200}$/.test(fileId)) return json({ error: "Invalid Drive file ID." }, 400, request);
       const db = supabaseAdmin();
       const { data: published, error: publishedError } = await db.from("pixel_forge_published_documents")
-        .select("drive_file_id,title,mime_type,tags")
+        .select("drive_file_id,title,mime_type,tags,account_id")
         .eq("source", "google_drive").eq("drive_file_id", fileId).eq("published", true).maybeSingle();
       if (publishedError) throw publishedError;
       if (!published) return json({ error: "This document is not published." }, 404, request);
-      const accessToken = await getAccessToken();
+      const accessToken = await getAccessToken(published.account_id || "pixelForge-owner");
       const range = request.headers.get("Range");
       const response = await fetch("https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(fileId) + "?alt=media", {
         headers: { Authorization: "Bearer " + accessToken, ...(range ? { Range: range } : {}) }
@@ -161,7 +161,7 @@ Deno.serve(async (request) => {
       if (!response.ok && response.status !== 206) {
         if (response.status === 404) {
           await supabaseAdmin().from("pixel_forge_published_documents")
-            .delete().eq("source", "google_drive").eq("drive_file_id", fileId);
+            .delete().eq("source", "google_drive").eq("drive_file_id", fileId).eq("account_id", published.account_id || "pixelForge-owner");
           return json({ error: "The original Drive file is no longer available; its public listing was removed." }, 404, request);
         }
         return json({ error: "Published document could not be retrieved." }, 502, request);
@@ -273,7 +273,7 @@ Deno.serve(async (request) => {
       const db = supabaseAdmin();
       if (action === "unpublish") {
         const { error } = await db.from("pixel_forge_published_documents").delete()
-          .eq("source", "google_drive").eq("drive_file_id", fileId).eq("owner_uid", uid);
+          .eq("source", "google_drive").eq("drive_file_id", fileId).eq("owner_uid", uid).eq("account_id", selectedAccountId);
         if (error) throw error;
         return json({ unpublished: true }, 200, request);
       }
@@ -285,7 +285,7 @@ Deno.serve(async (request) => {
       const tags = normalizeTags(input.tags);
       if (!allowedCategories.includes(category) || !title || !tags) return json({ error: "A valid category, title and up to 10 valid tags are required." }, 400, request);
       const { error } = await db.from("pixel_forge_published_documents").upsert({
-        source: "google_drive", owner_uid: uid, drive_file_id: fileId, storage_path: null,
+        source: "google_drive", owner_uid: uid, drive_file_id: fileId, storage_path: null, account_id: selectedAccountId,
         category, title, mime_type: mimeType, size_bytes: Number.isSafeInteger(sizeBytes) && sizeBytes > 0 ? sizeBytes : null,
         tags, published: true, updated_at: new Date().toISOString()
       }, { onConflict: "source,drive_file_id" });
