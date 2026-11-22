@@ -534,6 +534,22 @@ test("public Contact form sends messages to the private admin inbox", () => {
   assert.match(migration, /enable row level security/);
 });
 
+test("Google Drive combined account view scopes file actions and upload targets", () => {
+  const html = read("admin.html");
+  const js = read("admin.js");
+  assert.match(html, /All connected Drives/);
+  assert.match(js, /let selectedDriveAccountId = "__all__"/);
+  assert.match(js, /selectedDriveAccountId === "__all__"[\s\S]*?googleDriveAccounts\.filter\(account => account\.connected\)/);
+  assert.match(js, /driveAccountId: account\.id/);
+  assert.match(js, /selectionKey: account\.id \+ "::" \+ file\.id/);
+  assert.match(js, /options\.accountId \|\| selectedDriveAccountId/);
+  assert.match(js, /accountId: file\.driveAccountId/);
+  assert.match(js, /targetAccountId = selectedDriveAccountId/);
+  assert.match(js, /targetFolderId = selectedDriveFolderId/);
+  assert.match(js, /uploadGoogleDriveSingleFile\(files\[index\], index \+ 1, files\.length, targetAccountId, targetFolderId\)/);
+  assert.match(js, /accountErrors = results\.filter\(result => result\.error\)/);
+});
+
 test("Google Drive file list supports multi-select and permission-gated bulk actions", () => {
   const adminHtml = read("admin.html");
   const adminJs = read("admin.js");
