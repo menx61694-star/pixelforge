@@ -150,7 +150,16 @@ let googleDriveAccounts = [];
       await saveSettingStrict("home.announcements.enabled", enabled);
       const listed = await settingsRequest("list");
       const saved = Object.fromEntries((listed.settings || []).map(item => [item.setting_key, item.setting_value]));
-      if (JSON.stringify(saved["home.announcements.items"]) !== JSON.stringify(items) || saved["home.announcements.enabled"] !== enabled) throw new Error("Saved values do not match database values.");
+      const canonical = (value) => {
+        if (Array.isArray(value)) return value.map(canonical);
+        if (value && typeof value === "object") return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])]));
+        return value;
+      };
+      const savedItems = saved["home.announcements.items"];
+      const itemsMatch = JSON.stringify(canonical(savedItems)) === JSON.stringify(canonical(items));
+      const enabledMatch = saved["home.announcements.enabled"] === enabled ||
+        saved["home.announcements.enabled"] === String(enabled);
+      if (!itemsMatch || !enabledMatch) throw new Error("Database read-back verification failed (itemsMatch=" + itemsMatch + ", enabledMatch=" + enabledMatch + ").");
       const audit = await settingsRequest("audit");
       renderSettingsAudit(audit.audit || []);
       if (announcementsSaveStatus) { announcementsSaveStatus.textContent = "Announcements saved and verified."; announcementsSaveStatus.style.color = "#16834b"; }
