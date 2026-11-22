@@ -1592,43 +1592,6 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
         .then(() => saveSetting("home.seo.og_image", ogImage, button))
         .then(() => saveSetting("home.seo.page_overrides", overrides, button))
         .then(() => saveSetting("home.seo.enabled", document.getElementById("setting-seo-enabled").checked, button));
-    } else if (group === "home.feedback") {
-      const categories = document.getElementById("setting-feedback-categories").value.split(/\\r?\\n/).map(value => value.trim()).filter(Boolean);
-      const maxDisplay = Number(document.getElementById("setting-feedback-max-display").value);
-      if (!categories.length || categories.length > 8 || categories.some(value => value.length < 2 || value.length > 32) ||
-          new Set(categories.map(value => value.toLowerCase())).size !== categories.length ||
-          !Number.isInteger(maxDisplay) || maxDisplay < 1 || maxDisplay > 12) {
-        setSettingsStatus("Add 1–8 unique categories (2–32 characters) and choose 1–12 approved comments to display.", true); return;
-      }
-      (async () => {
-        const valuesToSave = [
-          ["home.feedback.categories", categories],
-          ["home.feedback.allow_anonymous", document.getElementById("setting-feedback-anonymous").checked],
-          ["home.feedback.display_approved", document.getElementById("setting-feedback-display").checked],
-          ["home.feedback.max_display", maxDisplay],
-          ["home.feedback.enabled", document.getElementById("setting-feedback-enabled").checked],
-        ];
-        button.disabled = true;
-        try {
-          setSettingsStatus("Saving User Feedback settings…");
-          for (const [key, value] of valuesToSave) await saveSettingStrict(key, value);
-          const verifyPayload = await settingsRequest("list");
-          const saved = Object.fromEntries((verifyPayload.settings || []).map(item => [item.setting_key, item.setting_value]));
-          const verified = JSON.stringify(saved["home.feedback.categories"]) === JSON.stringify(categories) &&
-            saved["home.feedback.allow_anonymous"] === valuesToSave[1][1] &&
-            saved["home.feedback.display_approved"] === valuesToSave[2][1] &&
-            saved["home.feedback.max_display"] === maxDisplay &&
-            saved["home.feedback.enabled"] === valuesToSave[4][1];
-          if (!verified) throw new Error("Database values did not match the submitted settings.");
-          const audit = await settingsRequest("audit");
-          renderSettingsAudit(audit.audit || []);
-          setSettingsStatus("User Feedback settings saved and verified.");
-        } catch (error) {
-          setSettingsStatus("User Feedback settings save failed: " + (error.message || "Unknown error"), true);
-        } finally {
-          button.disabled = false;
-        }
-      })();
     } else if (group === "home.learning") {
       let items;
       try { items = JSON.parse(document.getElementById("setting-learning-items").value || "[]"); }
@@ -1751,6 +1714,45 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
         .then(() => saveSetting("home.quiz.enabled", document.getElementById("setting-quiz-enabled").checked, button));
     }
   }));
+  const feedbackSaveButton = document.getElementById("save-feedback-settings");
+  const feedbackSaveStatus = document.getElementById("feedback-settings-save-status");
+  if (feedbackSaveButton) feedbackSaveButton.addEventListener("click", async () => {
+    const categories = document.getElementById("setting-feedback-categories").value.split(/\\r?\\n/).map(value => value.trim()).filter(Boolean);
+    const maxDisplay = Number(document.getElementById("setting-feedback-max-display").value);
+    const values = [
+      ["home.feedback.categories", categories],
+      ["home.feedback.allow_anonymous", document.getElementById("setting-feedback-anonymous").checked],
+      ["home.feedback.display_approved", document.getElementById("setting-feedback-display").checked],
+      ["home.feedback.max_display", maxDisplay],
+      ["home.feedback.enabled", document.getElementById("setting-feedback-enabled").checked],
+    ];
+    if (!categories.length || categories.length > 8 || categories.some(value => value.length < 2 || value.length > 32) ||
+        new Set(categories.map(value => value.toLowerCase())).size !== categories.length ||
+        !Number.isInteger(maxDisplay) || maxDisplay < 1 || maxDisplay > 12) {
+      if (feedbackSaveStatus) { feedbackSaveStatus.textContent = "Validation failed: use 1–8 unique categories and display count 1–12."; feedbackSaveStatus.style.color = "#a23c32"; }
+      return;
+    }
+    feedbackSaveButton.disabled = true;
+    if (feedbackSaveStatus) { feedbackSaveStatus.textContent = "Saving…"; feedbackSaveStatus.style.color = "#53617b"; }
+    try {
+      for (const [key, value] of values) await saveSettingStrict(key, value);
+      const list = await settingsRequest("list");
+      const saved = Object.fromEntries((list.settings || []).map(item => [item.setting_key, item.setting_value]));
+      const ok = JSON.stringify(saved["home.feedback.categories"]) === JSON.stringify(categories) &&
+        saved["home.feedback.allow_anonymous"] === values[1][1] &&
+        saved["home.feedback.display_approved"] === values[2][1] &&
+        saved["home.feedback.max_display"] === maxDisplay &&
+        saved["home.feedback.enabled"] === values[4][1];
+      if (!ok) throw new Error("Saved values do not match the values read back from the database.");
+      const audit = await settingsRequest("audit");
+      renderSettingsAudit(audit.audit || []);
+      if (feedbackSaveStatus) { feedbackSaveStatus.textContent = "Saved and verified successfully."; feedbackSaveStatus.style.color = "#16834b"; }
+    } catch (err) {
+      console.error("Feedback settings save error", err);
+      if (feedbackSaveStatus) { feedbackSaveStatus.textContent = "Save failed: " + (err?.message || "Unknown error"); feedbackSaveStatus.style.color = "#a23c32"; }
+    } finally { feedbackSaveButton.disabled = false; }
+  });
+
   if (refreshSettingsButton) refreshSettingsButton.addEventListener("click", loadSettings);
 
   async function loadOverviewAnalytics() {
