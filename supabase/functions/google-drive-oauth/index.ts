@@ -92,6 +92,9 @@ Deno.serve(async (request) => {
         return json({ error: "Administrator authentication required" }, 401, request);
       }
 
+      const input = await request.json().catch(() => ({}));
+      const accountId = typeof input.accountId === "string" && /^[a-zA-Z0-9_-]{3,80}$/.test(input.accountId)
+        ? input.accountId : "pixelForge-owner";
       // Keep the state table bounded; expired states can no longer be consumed.
       const { error: cleanupError } = await db
         .from("google_drive_oauth_states")
@@ -102,10 +105,12 @@ Deno.serve(async (request) => {
       const stateBytes = crypto.getRandomValues(new Uint8Array(32));
       const state = base64Url(stateBytes);
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+      const destination = new URL(origin + "/admin.html");
+      destination.searchParams.set("drive_account", accountId);
       const { error } = await db.from("google_drive_oauth_states").insert({
         state_hash: await crypto.subtle.digest("SHA-256", new TextEncoder().encode(state)).then((v) => base64Url(new Uint8Array(v))),
         expires_at: expiresAt,
-        return_to: origin + "/admin.html",
+        return_to: destination.toString(),
       });
       if (error) throw error;
 
@@ -176,12 +181,18 @@ Deno.serve(async (request) => {
     if (!tokenResponse.ok) return json({ error: "Google token exchange failed", details: tokens.error_description ?? tokens.error }, 400, request);
     if (!tokens.refresh_token) return json({ error: "Google did not return a refresh token. Revoke the app's access in Google Account permissions and reconnect." }, 400, request);
 
+    const accountId = destination.searchParams.get("drive_account") || "pixelForge-owner";
+    if (!/^[a-zA-Z0-9_-]{3,80}$/.test(accountId)) throw new Error("Drive account identifier is invalid");
+    const userResponse = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", { headers: { Authorization: "Bearer " + tokens.access_token } });
+    const accountProfile = userResponse.ok ? await userResponse.json().catch(() => ({})) : {};
     const encrypted = await encryptToken(tokens.refresh_token, required("GOOGLE_TOKEN_ENCRYPTION_KEY"));
     const { error: saveError } = await db.from("google_drive_oauth_tokens").upsert({
-      id: "pixelForge-owner",
+      id: accountId,
       refresh_token_encrypted: encrypted,
       scope: tokens.scope ?? "https://www.googleapis.com/auth/drive.file",
       connected_at: new Date().toISOString(),
+      account_email: accountProfile.email ?? null,
+      display_name: accountProfile.name ?? accountProfile.email ?? "Google Drive account",
     });
     if (saveError) throw saveError;
 
