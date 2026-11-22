@@ -1717,7 +1717,7 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
   const feedbackSaveButton = document.getElementById("save-feedback-settings");
   const feedbackSaveStatus = document.getElementById("feedback-settings-save-status");
   if (feedbackSaveButton) feedbackSaveButton.addEventListener("click", async () => {
-    const categories = document.getElementById("setting-feedback-categories").value.split(/\\r?\\n/).map(value => value.trim()).filter(Boolean);
+    const categories = document.getElementById("setting-feedback-categories").value.split(/\r?\n/).map(value => value.trim()).filter(Boolean);
     const maxDisplay = Number(document.getElementById("setting-feedback-max-display").value);
     const values = [
       ["home.feedback.categories", categories],
