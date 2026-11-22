@@ -695,6 +695,36 @@ Deno.serve(async (request) => {
       return json({ audit: data ?? [] }, 200, request);
     }
 
+    if (request.method === "POST" && action === "feedback-save") {
+      const raw = await request.text();
+      if (raw.length > 5000) return json({ error: "Feedback settings request is too large." }, 413, request);
+      const input = (() => { try { return JSON.parse(raw); } catch (_) { return null; } })();
+      const expected = ["categories", "allow_anonymous", "display_approved", "max_display", "enabled"];
+      if (!input || typeof input !== "object" || Array.isArray(input) ||
+          Object.keys(input).length !== expected.length || !expected.every(key => Object.hasOwn(input, key)) ||
+          !Array.isArray(input.categories) || input.categories.length < 1 || input.categories.length > 8 ||
+          input.categories.some((item: unknown) => typeof item !== "string" || item.trim().length < 2 || item.length > 32) ||
+          new Set(input.categories.map((item: string) => item.trim().toLowerCase())).size !== input.categories.length ||
+          typeof input.allow_anonymous !== "boolean" || typeof input.display_approved !== "boolean" ||
+          typeof input.enabled !== "boolean" || !Number.isInteger(input.max_display) || input.max_display < 1 || input.max_display > 12) {
+        return json({ error: "Invalid feedback settings payload." }, 400, request);
+      }
+      const values = [
+        ["home.feedback.categories", input.categories.map((item: string) => item.trim())],
+        ["home.feedback.allow_anonymous", input.allow_anonymous],
+        ["home.feedback.display_approved", input.display_approved],
+        ["home.feedback.max_display", input.max_display],
+        ["home.feedback.enabled", input.enabled],
+      ];
+      for (const [key, value] of values) {
+        const { error } = await actor.db.rpc("pixel_forge_update_site_setting", {
+          p_key: key, p_value: value, p_actor_uid: actor.uid,
+        });
+        if (error) throw new Error("Failed to save " + key + ": " + error.message);
+      }
+      return json({ saved: true, count: values.length }, 200, request);
+    }
+
     if (request.method === "POST" && action === "update") {
       const contentLength = Number(request.headers.get("Content-Length") ?? "0");
       if (contentLength > 20000) return json({ error: "Settings request is too large." }, 413, request);

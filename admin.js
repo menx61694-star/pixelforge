@@ -1619,12 +1619,12 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
             saved["home.feedback.display_approved"] === valuesToSave[2][1] &&
             saved["home.feedback.max_display"] === maxDisplay &&
             saved["home.feedback.enabled"] === valuesToSave[4][1];
-          if (!verified) throw new Error("Saved values did not match. Reload and retry.");
+          if (!verified) throw new Error("Database values did not match the submitted settings.");
           const audit = await settingsRequest("audit");
           renderSettingsAudit(audit.audit || []);
           setSettingsStatus("User Feedback settings saved and verified.");
         } catch (error) {
-          setSettingsStatus("User Feedback settings could not be saved: " + (error.message || "Unknown error"), true);
+          setSettingsStatus("User Feedback settings save failed: " + (error.message || "Unknown error"), true);
         } finally {
           button.disabled = false;
         }
