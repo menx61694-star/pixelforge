@@ -39,6 +39,6 @@ test("public JSON POST requests retain Content-Type and have no duplicate header
     const start = source.indexOf(action);
     assert.notEqual(start, -1, action + " request exists");
     const block = source.slice(Math.max(0, start - 150), start + 500);
-    assert.match(block, /Content-Type[^\n]*application\/json/, action + " retains JSON content type");
+    assert.ok(block.includes('"Content-Type": "application/json"'), action + " retains JSON content type");
   }
 });
