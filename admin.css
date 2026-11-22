@@ -248,3 +248,10 @@ button:disabled{opacity:.6;cursor:wait}
 .file-name{min-width:0;white-space:normal;overflow-wrap:anywhere;word-break:normal;line-height:1.45}
 @media(max-width:1050px){.file-item{grid-template-columns:auto minmax(0,1fr)}.file-actions{grid-column:2;justify-content:flex-start}}
 @media(max-width:650px){.file-item{grid-template-columns:auto minmax(0,1fr);align-items:start}.file-actions{grid-column:1/-1}}
+
+/* Consistent controls for the Google Drive module and site settings. */
+#google-drive-connect,.drive-tools button{min-height:38px;padding:0 14px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--navy);font:inherit;font-size:12px;font-weight:750;cursor:pointer}
+#google-drive-connect{background:var(--orange);border-color:var(--orange);color:#172342}
+.drive-tools input[type=file]{max-width:100%;min-width:0;padding:10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font-size:12px}
+.drive-tools button:disabled{opacity:.55;cursor:not-allowed}
+.settings-card select{width:100%;min-height:38px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-size:12px}
