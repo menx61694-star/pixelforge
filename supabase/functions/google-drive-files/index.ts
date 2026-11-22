@@ -60,10 +60,10 @@ function supabaseAdmin() {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
-async function getAccessToken() {
+async function getAccessToken(accountId = "pixelForge-owner") {
   const db = supabaseAdmin();
   const { data, error } = await db.from("google_drive_oauth_tokens")
-    .select("refresh_token_encrypted").eq("id", "pixelForge-owner").maybeSingle();
+    .select("refresh_token_encrypted").eq("id", accountId).maybeSingle();
   if (error) throw error;
   if (!data?.refresh_token_encrypted) throw new Error("Google Drive is not connected. Connect the owner account first.");
   const [ivPart, cipherPart] = data.refresh_token_encrypted.split(".");
@@ -239,10 +239,25 @@ Deno.serve(async (request) => {
       return json({ saved: true, tags }, 200, request);
     }
     if (request.method === "GET" && action === "status") {
-      const { data, error } = await supabaseAdmin().from("google_drive_oauth_tokens")
-        .select("connected_at").eq("id", "pixelForge-owner").maybeSingle();
+      const db = supabaseAdmin();
+      const { data: accounts, error } = await db.from("google_drive_oauth_tokens")
+        .select("id,account_email,display_name,connected_at").order("connected_at", { ascending: false });
       if (error) throw error;
-      return json({ connected: Boolean(data?.connected_at), connectedAt: data?.connected_at ?? null }, 200, request);
+      const accountDetails = await Promise.all((accounts ?? []).map(async (account) => {
+        try {
+          const token = await getAccessToken(account.id);
+          const aboutResponse = await fetch("https://www.googleapis.com/drive/v3/about?fields=user,storageQuota", { headers: { Authorization: "Bearer " + token } });
+          const about = aboutResponse.ok ? await aboutResponse.json().catch(() => ({})) : {};
+          const quota = about.storageQuota ?? {};
+          return { id: account.id, email: account.account_email, name: account.display_name, connected: Boolean(account.connected_at && aboutResponse.ok), connectedAt: account.connected_at,
+            storageTotal: Number(quota.limit || 0), storageUsed: Number(quota.usage || 0), storageRemaining: Math.max(0, Number(quota.limit || 0) - Number(quota.usage || 0)) };
+        } catch (_) {
+          return { id: account.id, email: account.account_email, name: account.display_name, connected: false, connectedAt: account.connected_at, storageTotal: 0, storageUsed: 0, storageRemaining: 0 };
+        }
+      }));
+      const selectedId = url.searchParams.get("accountId") || "pixelForge-owner";
+      const selected = accountDetails.find((account) => account.id === selectedId);
+      return json({ accounts: accountDetails, accountCount: accountDetails.length, accountId: selectedId, connected: selected?.connected === true, connectedAt: selected?.connectedAt ?? null }, 200, request);
     }
     if (request.method === "GET" && action === "published-list") {
       const { data, error } = await supabaseAdmin().from("pixel_forge_published_documents")
@@ -277,7 +292,9 @@ Deno.serve(async (request) => {
       if (error) throw error;
       return json({ published: true }, 200, request);
     }
-    const accessToken = await getAccessToken();
+    const selectedAccountId = url.searchParams.get("accountId") || "pixelForge-owner";
+    if (!/^[a-zA-Z0-9_-]{3,80}$/.test(selectedAccountId)) return json({ error: "Invalid Drive account selection." }, 400, request);
+    const accessToken = await getAccessToken(selectedAccountId);
     const googleHeaders = { Authorization: "Bearer " + accessToken };
 
     if (request.method === "GET" && action === "list") {
