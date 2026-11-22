@@ -9,9 +9,9 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23101d49'/%3E%3Cpath d='M17 46V17h17c10 0 15 5 15 13S44 43 34 43H27v3z' fill='%23ff861c'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=contact-modal-1">
   <script src="maintenance-mode.js" defer></script>
-  <script src="script.js" defer></script>
+  <script src="script.js?v=contact-modal-1" defer></script>
   <script src="seo.js" defer></script>
   <script src="layout.js" defer></script>
 </head>
@@ -20,7 +20,7 @@
     <a class="brand" href="#home" aria-label="PixelForge home"><span class="brand-mark">P</span><span>PIXELFORGE</span></a>
     <button class="menu-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
     <nav class="nav" aria-label="Main navigation">
-      <a class="active" href="#home">Home</a><a href="#discover">Discover</a><a href="pyq.html">PYQ</a><a href="tools.html" data-quick-tools-nav hidden>Quick Tools</a><a href="library.html">Document Library</a><a href="#about">About</a><a href="#contact">Contact</a>
+      <a class="active" href="#home">Home</a><a href="#discover">Discover</a><a href="pyq.html">PYQ</a><a href="tools.html" data-quick-tools-nav hidden>Quick Tools</a><a href="library.html">Document Library</a><a href="#about">About</a><a href="#contact" data-open-contact>Contact</a>
     </nav>
   </header>
   <main>
@@ -74,26 +74,7 @@
       </div>
     </section>
 
-    <section class="user-feedback-section section" id="user-feedback" hidden aria-labelledby="user-feedback-title">
-      <div class="section-heading section-heading-v2"><div><p class="eyebrow dark">HELP US IMPROVE</p><h2 id="user-feedback-title">Your feedback<br><em>matters.</em></h2></div><p class="section-lead">Share an idea, report an issue or tell us what would make PixelForge better.</p></div>
-      <div class="feedback-layout">
-        <form id="public-feedback-form" class="public-feedback-form">
-          <label for="feedback-name">Name <span id="feedback-name-note">(optional)</span></label><input id="feedback-name" type="text" maxlength="60" autocomplete="name">
-          <label for="feedback-category">Feedback category</label><select id="feedback-category" required></select>
-          <label for="feedback-rating">Your rating</label><select id="feedback-rating" required><option value="5">★★★★★ — Excellent</option><option value="4">★★★★☆ — Good</option><option value="3">★★★☆☆ — Average</option><option value="2">★★☆☆☆ — Needs improvement</option><option value="1">★☆☆☆☆ — Poor</option></select>
-          <label for="feedback-message">Your feedback</label><textarea id="feedback-message" rows="5" minlength="20" maxlength="1000" required placeholder="Tell us what you think (20–1000 characters)…"></textarea>
-          <label class="feedback-honeypot" aria-hidden="true" for="feedback-website">Leave this field empty</label><input class="feedback-honeypot" id="feedback-website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
-          <label class="feedback-consent"><input id="feedback-consent" type="checkbox" required> I agree that my feedback may be displayed publicly after moderation.</label>
-          <button class="button button-dark" id="feedback-submit" type="submit">Submit feedback</button>
-          <p id="feedback-status" class="feedback-status" role="status" aria-live="polite"></p>
-          <p class="feedback-privacy-note">Your feedback is reviewed before publication. If you include a name, it may appear with an approved comment.</p>
-        </form>
-        <div class="approved-feedback-panel" id="approved-feedback-panel" hidden>
-          <p class="eyebrow dark">COMMUNITY VOICES</p><h3>What visitors say</h3>
-          <div id="approved-feedback-list" class="approved-feedback-list"></div>
-        </div>
-      </div>
-    </section>
+
 
     <section class="learning-corner-section section" id="learning-corner" hidden aria-labelledby="learning-corner-title">
       <div class="section-heading section-heading-v2"><div><p class="eyebrow dark">LEARN WITH A PLAN</p><h2 id="learning-corner-title">Learning<br><em>corner.</em></h2></div><p class="section-lead">Follow a guided path, one useful step at a time.</p></div>
@@ -150,7 +131,50 @@
       <div><p class="eyebrow dark">A SPACE THAT KEEPS GROWING</p><h2>Built around<br><em>curiosity.</em></h2><p class="about-copy">PixelForge brings useful digital resources and ideas together in one simple place. The goal is straightforward: make it easier to discover, learn and create — one useful thing at a time.</p><a class="button button-dark" href="library.html">Start exploring <span>↗</span></a></div>
     </section>
 
-    <section class="contact-band contact-band-v2 contact-section" id="contact">
+
+  </main>
+
+  <dialog class="pf-contact-dialog" id="contact-dialog" aria-labelledby="contact-dialog-title">
+    <div class="pf-contact-dialog-head">
+      <div><p class="eyebrow dark">PIXELFORGE · CONTACT</p><h2 id="contact-dialog-title">How can we help?</h2></div>
+      <button class="pf-contact-close" type="button" data-contact-close aria-label="Close dialog">×</button>
+    </div>
+    <div class="pf-contact-choices" data-contact-choices>
+      <button class="pf-contact-choice" type="button" data-contact-open-feedback>
+        <span class="pf-contact-choice-icon">✦</span><span><strong>Share feedback</strong><small>Rate your experience, suggest an idea or report an issue.</small></span><span class="pf-contact-choice-arrow">↗</span>
+      </button>
+      <button class="pf-contact-choice" type="button" data-contact-open-message>
+        <span class="pf-contact-choice-icon pf-contact-choice-icon-blue">✉</span><span><strong>Get in touch</strong><small>Ask a question or send a message directly to our team.</small></span><span class="pf-contact-choice-arrow">↗</span>
+      </button>
+      <p class="pf-contact-unavailable" data-feedback-unavailable hidden>Feedback form is currently unavailable. Please try again later.</p>
+      <p class="pf-contact-unavailable" data-message-unavailable hidden>Get in touch is currently unavailable. Please try again later.</p>
+    </div>
+    <div class="pf-contact-view" data-contact-feedback-view hidden>
+      <button class="pf-contact-back" type="button" data-contact-back>← Back to options</button>
+      <section class="user-feedback-section section" id="user-feedback" hidden aria-labelledby="user-feedback-title">
+      <div class="section-heading section-heading-v2"><div><p class="eyebrow dark">HELP US IMPROVE</p><h2 id="user-feedback-title">Your feedback<br><em>matters.</em></h2></div><p class="section-lead">Share an idea, report an issue or tell us what would make PixelForge better.</p></div>
+      <div class="feedback-layout">
+        <form id="public-feedback-form" class="public-feedback-form">
+          <label for="feedback-name">Name <span id="feedback-name-note">(optional)</span></label><input id="feedback-name" type="text" maxlength="60" autocomplete="name">
+          <label for="feedback-category">Feedback category</label><select id="feedback-category" required></select>
+          <label for="feedback-rating">Your rating</label><select id="feedback-rating" required><option value="5">★★★★★ — Excellent</option><option value="4">★★★★☆ — Good</option><option value="3">★★★☆☆ — Average</option><option value="2">★★☆☆☆ — Needs improvement</option><option value="1">★☆☆☆☆ — Poor</option></select>
+          <label for="feedback-message">Your feedback</label><textarea id="feedback-message" rows="5" minlength="20" maxlength="1000" required placeholder="Tell us what you think (20–1000 characters)…"></textarea>
+          <label class="feedback-honeypot" aria-hidden="true" for="feedback-website">Leave this field empty</label><input class="feedback-honeypot" id="feedback-website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <label class="feedback-consent"><input id="feedback-consent" type="checkbox" required> I agree that my feedback may be displayed publicly after moderation.</label>
+          <button class="button button-dark" id="feedback-submit" type="submit">Submit feedback</button>
+          <p id="feedback-status" class="feedback-status" role="status" aria-live="polite"></p>
+          <p class="feedback-privacy-note">Your feedback is reviewed before publication. If you include a name, it may appear with an approved comment.</p>
+        </form>
+        <div class="approved-feedback-panel" id="approved-feedback-panel" hidden>
+          <p class="eyebrow dark">COMMUNITY VOICES</p><h3>What visitors say</h3>
+          <div id="approved-feedback-list" class="approved-feedback-list"></div>
+        </div>
+      </div>
+    </section>
+    </div>
+    <div class="pf-contact-view" data-contact-message-view hidden>
+      <button class="pf-contact-back" type="button" data-contact-back>← Back to options</button>
+      <section class="contact-band contact-band-v2 contact-section" id="contact">
       <div class="contact-intro"><p class="eyebrow">GET IN TOUCH</p><h2>Let’s talk.<br><em>We’re listening.</em></h2><p>Have a question, suggestion or need help? Send a message to the PixelForge team.</p><p class="contact-email-line" id="contact-email-line" hidden></p></div>
       <form class="contact-form" id="public-contact-form">
         <label for="contact-name">Your name</label><input id="contact-name" name="name" type="text" maxlength="80" autocomplete="name" required>
@@ -161,7 +185,8 @@
         <p id="contact-status" role="status" aria-live="polite"></p>
       </form>
     </section>
-  </main>
+    </div>
+  </dialog>
 
   <section class="local-ip-diagnostic" aria-labelledby="local-ip-diagnostic-title">
     <details><summary>Optional network diagnostic</summary>

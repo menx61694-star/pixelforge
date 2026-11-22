@@ -536,3 +536,64 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
     }
   });
 })();
+
+
+/* Contact dialog: choose Feedback or Get in Touch; neither form occupies the homepage. */
+(() => {
+  const dialog = document.getElementById("contact-dialog");
+  if (!dialog) return;
+  const choices = dialog.querySelector("[data-contact-choices]");
+  const feedbackView = dialog.querySelector("[data-contact-feedback-view]");
+  const messageView = dialog.querySelector("[data-contact-message-view]");
+  const feedbackSection = dialog.querySelector("#user-feedback");
+  const feedbackForm = dialog.querySelector("#public-feedback-form");
+  const contactSection = dialog.querySelector("#contact");
+  const unavailable = dialog.querySelector("[data-feedback-unavailable]");
+  const messageUnavailable = dialog.querySelector("[data-message-unavailable]");
+  const openFeedback = dialog.querySelector("[data-contact-open-feedback]");
+  const openMessage = dialog.querySelector("[data-contact-open-message]");
+  const closeButton = dialog.querySelector("[data-contact-close]");
+  const backButtons = dialog.querySelectorAll("[data-contact-back]");
+  const contactLinks = document.querySelectorAll('a[href="#contact"], [data-open-contact]');
+
+  function resetView() {
+    choices.hidden = false;
+    feedbackView.hidden = true;
+    messageView.hidden = true;
+    unavailable.hidden = true;
+    messageUnavailable.hidden = true;
+    dialog.querySelector("#contact-dialog-title").textContent = "How can we help?";
+  }
+  function showView(view) {
+    choices.hidden = true;
+    feedbackView.hidden = view !== "feedback";
+    messageView.hidden = view !== "message";
+    dialog.querySelector("#contact-dialog-title").textContent = view === "feedback" ? "Share your feedback" : "Get in touch";
+  }
+  function openDialog(event) {
+    if (event) event.preventDefault();
+    resetView();
+    if (!dialog.open) dialog.showModal();
+  }
+  contactLinks.forEach(link => link.addEventListener("click", openDialog));
+  openFeedback?.addEventListener("click", () => {
+    if (feedbackSection?.hidden || feedbackSection?.classList.contains("layout-hidden") || feedbackForm?.hidden) {
+      unavailable.hidden = false;
+      return;
+    }
+    showView("feedback");
+  });
+  openMessage?.addEventListener("click", () => {
+    if (contactSection?.classList.contains("layout-hidden")) {
+      messageUnavailable.hidden = false;
+      return;
+    }
+    showView("message");
+  });
+  closeButton?.addEventListener("click", () => dialog.close());
+  backButtons.forEach(button => button.addEventListener("click", resetView));
+  dialog.addEventListener("click", event => {
+    if (event.target === dialog) dialog.close();
+  });
+  dialog.addEventListener("close", resetView);
+})();
