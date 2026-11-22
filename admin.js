@@ -668,7 +668,7 @@ function setDriveFilesStatus(message, isError = false) {
     while (uploaded < file.size) {
       const endExclusive = Math.min(uploaded + chunkSize, file.size);
       const response = await googleDriveRequest("upload-chunk", {
-        accountId, method: "POST,
+        accountId, method: "POST",
         headers: { "X-Drive-Upload-Url": session.uploadUrl, "Content-Range": "bytes " + uploaded + "-" + (endExclusive - 1) + "/" + file.size },
         body: file.slice(uploaded, endExclusive)
       });
