@@ -119,7 +119,7 @@ Deno.serve(async (request) => {
         client_id: required("GOOGLE_CLIENT_ID"),
         redirect_uri: `${required("SUPABASE_URL")}/functions/v1/google-drive-oauth`,
         response_type: "code",
-        scope: "https://www.googleapis.com/auth/drive.file",
+        scope: "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.metadata.readonly",
         access_type: "offline",
         prompt: "consent",
         state,
@@ -189,7 +189,7 @@ Deno.serve(async (request) => {
     const { error: saveError } = await db.from("google_drive_oauth_tokens").upsert({
       id: accountId,
       refresh_token_encrypted: encrypted,
-      scope: tokens.scope ?? "https://www.googleapis.com/auth/drive.file",
+      scope: tokens.scope ?? "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.metadata.readonly",
       connected_at: new Date().toISOString(),
       account_email: accountProfile.email ?? null,
       display_name: accountProfile.name ?? accountProfile.email ?? "Google Drive account",
