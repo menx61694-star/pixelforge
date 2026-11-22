@@ -282,3 +282,14 @@
 .pf-contact-view .contact-form label{color:#33415e;}
 .pf-contact-view .contact-form button{justify-self:start;}
 .pf-contact-view .contact-form [role=status]{color:#52617b;min-height:1.2em;}
+
+/* Announcement Manager UI */
+.announcement-editor-fields{display:grid;gap:10px;margin:12px 0;padding:14px;border:1px solid var(--border-color,#dbe3f2);border-radius:12px}
+.announcement-editor-fields input,.announcement-editor-fields textarea,.announcement-editor-fields select{width:100%;box-sizing:border-box}
+.announcement-editor-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.announcement-editor-row>div{display:grid;gap:6px}
+.announcement-manager-list{display:grid;gap:10px;margin:12px 0}
+.announcement-manager-card{border:1px solid var(--border-color,#dbe3f2);border-radius:12px;padding:12px}
+.announcement-manager-card p{margin:8px 0;white-space:pre-wrap}
+.announcement-manager-actions{display:flex;gap:8px;margin-top:10px}
+@media(max-width:650px){.announcement-editor-row{grid-template-columns:1fr}}
