@@ -263,3 +263,12 @@
 .pf-contact-view .contact-form{max-width:none}
 .pf-contact-unavailable{grid-column:1/-1;color:#9b4d14;background:#fff6ed;border:1px solid #f4d6ba;border-radius:10px;padding:.8rem;margin:0;font-size:.85rem}
 @media(max-width:650px){.pf-contact-choices{grid-template-columns:1fr}.pf-contact-dialog{padding:18px}.pf-contact-choice{padding:1rem}}
+
+/* Public approved feedback section and bottom Contact CTA. */
+.community-feedback-section{padding:clamp(2.8rem,6vw,5rem) 0;background:#fff}
+.community-feedback-section[hidden]{display:none}
+.community-feedback-heading{margin-bottom:1.2rem}
+.community-feedback-heading h2{margin:.2rem 0 0;color:#1b2948;font-size:clamp(1.5rem,3vw,2.2rem)}
+.community-feedback-section .approved-feedback-panel{max-width:none}
+.footer-contact-cta{display:inline-flex;align-items:center;gap:.45rem;padding:.65rem 1rem;border:1px solid #ff861c;border-radius:999px;color:#ff861c!important;font-weight:800;text-decoration:none!important;transition:background .18s,color .18s}
+.footer-contact-cta:hover{background:#ff861c;color:#fff!important}

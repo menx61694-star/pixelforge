@@ -2186,13 +2186,18 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
           const message = document.createElement("p"); message.textContent = item.message;
           const date = document.createElement("small"); date.textContent = item.created_at ? new Date(item.created_at).toLocaleString() : "";
           card.append(heading, message, date);
-          if (item.status === "pending" && currentPermissions.has("settings.manage")) {
+          if (currentPermissions.has("settings.manage")) {
             const actions = document.createElement("div"); actions.className = "feedback-inbox-actions";
-            ["approved","rejected"].forEach(nextStatus => {
-              const button = document.createElement("button"); button.type = "button"; button.textContent = nextStatus === "approved" ? "Approve" : "Reject";
-              button.dataset.feedbackAction = nextStatus; button.dataset.feedbackId = item.id;
-              actions.append(button);
-            });
+            if (item.status === "pending") {
+              ["approved","rejected"].forEach(nextStatus => {
+                const button = document.createElement("button"); button.type = "button"; button.textContent = nextStatus === "approved" ? "Approve" : "Reject";
+                button.dataset.feedbackAction = nextStatus; button.dataset.feedbackId = item.id;
+                actions.append(button);
+              });
+            }
+            const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Delete";
+            remove.className = "feedback-delete-button"; remove.dataset.feedbackDelete = item.id;
+            actions.append(remove);
             card.append(actions);
           }
           container.append(card);
@@ -2231,6 +2236,17 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
   });
   document.getElementById("refresh-feedback")?.addEventListener("click", loadFeedbackInbox);
   document.getElementById("feedback-inbox-list")?.addEventListener("click", async event => {
+    const deleteButton = event.target.closest("[data-feedback-delete]");
+    if (deleteButton) {
+      const id = deleteButton.dataset.feedbackDelete;
+      if (!id || !window.confirm("Delete this feedback permanently? This cannot be undone.")) return;
+      deleteButton.disabled = true;
+      try {
+        await settingsRequest("feedback-delete", { method: "POST", body: { id } });
+        await loadFeedbackInbox();
+      } catch (error) { setSettingsStatus(error.message || "Could not delete feedback.", true); deleteButton.disabled = false; }
+      return;
+    }
     const button = event.target.closest("[data-feedback-action]");
     if (!button) return;
     button.disabled = true;

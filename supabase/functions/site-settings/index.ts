@@ -651,6 +651,19 @@ Deno.serve(async (request) => {
       return json({ feedback: data ?? [] }, 200, request);
     }
 
+    if (request.method === "POST" && action === "feedback-delete") {
+      const raw = await request.text();
+      if (raw.length > 1000) return json({ error: "Feedback delete request is too large." }, 413, request);
+      const input = (() => { try { return JSON.parse(raw); } catch (_) { return null; } })();
+      if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).length !== 1 ||
+          typeof input.id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9]{3}-[89ab][0-9]{3}-[0-9a-f]{12}$/i.test(input.id)) {
+        return json({ error: "Invalid feedback delete request." }, 400, request);
+      }
+      const { error } = await actor.db.from("pixel_forge_public_feedback").delete().eq("id", input.id);
+      if (error) throw error;
+      return json({ ok: true }, 200, request);
+    }
+
     if (request.method === "POST" && action === "feedback-moderate") {
       const raw = await request.text();
       if (raw.length > 1000) return json({ error: "Moderation request is too large." }, 413, request);

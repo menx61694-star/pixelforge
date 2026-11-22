@@ -9,9 +9,9 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23101d49'/%3E%3Cpath d='M17 46V17h17c10 0 15 5 15 13S44 43 34 43H27v3z' fill='%23ff861c'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=contact-modal-1">
+  <link rel="stylesheet" href="styles.css?v=contact-modal-feedback-2">
   <script src="maintenance-mode.js" defer></script>
-  <script src="script.js?v=contact-modal-1" defer></script>
+  <script src="script.js?v=contact-modal-feedback-2" defer></script>
   <script src="seo.js" defer></script>
   <script src="layout.js" defer></script>
 </head>
@@ -165,10 +165,7 @@
           <p id="feedback-status" class="feedback-status" role="status" aria-live="polite"></p>
           <p class="feedback-privacy-note">Your feedback is reviewed before publication. If you include a name, it may appear with an approved comment.</p>
         </form>
-        <div class="approved-feedback-panel" id="approved-feedback-panel" hidden>
-          <p class="eyebrow dark">COMMUNITY VOICES</p><h3>What visitors say</h3>
-          <div id="approved-feedback-list" class="approved-feedback-list"></div>
-        </div>
+
       </div>
     </section>
     </div>
@@ -188,6 +185,14 @@
     </div>
   </dialog>
 
+  <section class="community-feedback-section section" id="community-feedback" hidden aria-labelledby="community-feedback-title">
+    <div class="community-feedback-heading"><p class="eyebrow dark">COMMUNITY VOICES</p><h2 id="community-feedback-title">What visitors say</h2></div>
+<div class="approved-feedback-panel" id="approved-feedback-panel" hidden>
+          <p class="eyebrow dark">COMMUNITY VOICES</p><h3>What visitors say</h3>
+          <div id="approved-feedback-list" class="approved-feedback-list"></div>
+        </div>
+  </section>
+
   <section class="local-ip-diagnostic" aria-labelledby="local-ip-diagnostic-title">
     <details><summary>Optional network diagnostic</summary>
       <h2 id="local-ip-diagnostic-title">Help verify your local network address</h2>
@@ -196,6 +201,6 @@
       <p id="local-ip-diagnostic-status" role="status" aria-live="polite">No local network diagnostic has been run.</p>
     </details>
   </section>
-  <footer class="footer footer-v2"><a class="brand footer-brand" href="#home"><span class="brand-mark">P</span><span>PIXELFORGE</span></a><span>© <span id="year"></span> PixelForge. Built for curious minds.</span><span class="dns-credit">DNS Powered by <a href="https://www.dnsexit.com">DNS EXIT.COM</a></span><a href="#home">Back to top ↑</a></footer>
+  <footer class="footer footer-v2"><a class="brand footer-brand" href="#home"><span class="brand-mark">P</span><span>PIXELFORGE</span></a><span>© <span id="year"></span> PixelForge. Built for curious minds.</span><span class="dns-credit">DNS Powered by <a href="https://www.dnsexit.com">DNS EXIT.COM</a></span><a class="footer-contact-cta" href="#contact" data-open-contact>Contact us <span aria-hidden="true">↗</span></a><a href="#home">Back to top ↑</a></footer>
 </body>
 </html>

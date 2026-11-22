@@ -420,6 +420,7 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
   const status = document.getElementById("feedback-status");
   const submit = document.getElementById("feedback-submit");
   const category = document.getElementById("feedback-category");
+  const communitySection = document.getElementById("community-feedback");
   const approvedPanel = document.getElementById("approved-feedback-panel");
   const approvedList = document.getElementById("approved-feedback-list");
   fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
@@ -448,7 +449,7 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
           const author = document.createElement("small"); author.textContent = (item.name || "Community member") + " · " + item.category;
           card.append(rating, message, author); approvedList.append(card);
         });
-        approvedPanel.hidden = false; section.hidden = false;
+        approvedPanel.hidden = false; communitySection.hidden = false;
       }
     }).catch(() => { section.hidden = true; });
   form.addEventListener("submit", async event => {
