@@ -326,3 +326,7 @@ button:disabled{opacity:.6;cursor:wait}
 .drive-connection-status.disconnected{border-color:#f1ddd8;background:#fff7f5}
 .drive-connection-status.disconnected #google-drive-status{color:#a44b40}
 .drive-status-indicator.disconnected{background:#c75a4e;box-shadow:0 0 0 4px #c75a4e18}
+
+.drive-connection-status.pending{border-color:#e4e9f2;background:#f7f9fd}
+.drive-connection-status.pending #google-drive-status{color:#71809b}
+.drive-status-indicator.pending{background:#aab5c6;box-shadow:0 0 0 4px #aab5c618}
