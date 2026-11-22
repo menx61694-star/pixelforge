@@ -6,6 +6,7 @@ alter table public.pixel_forge_site_settings
   add constraint pixel_forge_site_settings_setting_key_check check (setting_key in (
     'site.name','site.description','site.contact_email','maintenance.enabled',
     'maintenance.message','sync.drive.auto_enabled','sync.vault.auto_enabled',
+  'home.library.pdf_preview_enabled',
     'home.knowledge.enabled','home.knowledge.items',
     'home.quiz.enabled','home.quiz.items',
     'home.tools.enabled','home.tools.items',
