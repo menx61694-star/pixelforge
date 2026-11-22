@@ -85,12 +85,12 @@ button:disabled{opacity:.6;cursor:wait}
 .file-count-label{white-space:nowrap;color:#8b96aa;font-size:10px}
 .vault-status{min-height:16px;margin:11px 0;color:#71809b;font-size:10px;line-height:1.5}
 .file-list{display:grid;gap:8px;margin:0;padding:0;list-style:none}
-.file-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.file-item{display:grid;grid-template-columns:auto minmax(180px,1fr) minmax(0,2fr);align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#fff}
 .file-info{min-width:0;display:flex;align-items:center;gap:10px}
 .file-type-icon{width:34px;height:38px;flex-shrink:0;display:grid;place-items:center;border-radius:8px;background:#fff0ed;color:#d35c4c;font-size:10px;font-weight:850}
 .file-name{overflow-wrap:anywhere;font-size:11px;font-weight:750}
 .file-meta{margin-top:5px;color:#98a2b4;font-size:9px}
-.file-actions{display:flex;flex-shrink:0;gap:6px}
+.file-actions{display:flex;min-width:0;flex-shrink:0;flex-wrap:wrap;align-items:center;gap:6px}
 .file-actions button{min-height:32px;margin:0;padding:0 10px;border:0;border-radius:7px;background:#edf1fa;color:#30416e;font-size:10px;font-weight:750}
 .file-actions .delete-button{background:#fff0ef;color:#b34d47}
 .empty-state{padding:22px 12px;border:1px dashed var(--line);border-radius:9px;color:var(--muted);font-size:11px;text-align:center}
@@ -243,3 +243,8 @@ button:disabled{opacity:.6;cursor:wait}
 @media(max-width:650px){.bulk-actions-controls{align-items:stretch}.bulk-actions-controls select,.bulk-actions-controls input{max-width:none;flex:1 1 100%;width:100%}.bulk-actions-controls button{flex:1 1 calc(50% - 7px)}}
 
 .bulk-actions-toolbar[hidden],.bulk-file-select[hidden]{display:none}
+
+/* Prevent document names from collapsing into narrow vertical columns. */
+.file-name{min-width:0;white-space:normal;overflow-wrap:anywhere;word-break:normal;line-height:1.45}
+@media(max-width:1050px){.file-item{grid-template-columns:auto minmax(0,1fr)}.file-actions{grid-column:2;justify-content:flex-start}}
+@media(max-width:650px){.file-item{grid-template-columns:auto minmax(0,1fr);align-items:start}.file-actions{grid-column:1/-1}}
