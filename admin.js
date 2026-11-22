@@ -66,6 +66,8 @@ const googleDriveFolderSelect = document.getElementById("google-drive-folder-sel
 const googleDriveFolderNote = document.getElementById("google-drive-folder-note");
 const googleDriveStorageFill = document.getElementById("google-drive-storage-fill");
 const googleDriveStoragePercent = document.getElementById("google-drive-storage-percent");
+const googleDriveStatusIndicator = document.querySelector(".drive-status-indicator");
+const googleDriveStatusContainer = document.querySelector(".drive-connection-status");
 let selectedDriveFolderId = "";
 let selectedDriveAccountId = "pixelForge-owner";
 let googleDriveAccounts = [];
@@ -265,6 +267,8 @@ function setDriveFilesStatus(message, isError = false) {
       if (googleDriveStorageFill) googleDriveStorageFill.style.width = storagePercent + "%";
       if (googleDriveStoragePercent) googleDriveStoragePercent.textContent = storageTotal ? storagePercent.toFixed(1) + "% used" : "";
       googleDriveConnected = payload.connected === true;
+      if (googleDriveStatusContainer) googleDriveStatusContainer.classList.toggle("disconnected", !googleDriveConnected);
+      if (googleDriveStatusIndicator) googleDriveStatusIndicator.classList.toggle("disconnected", !googleDriveConnected);
       updateDriveOverview();
       if (googleDriveUploadButton) googleDriveUploadButton.disabled = !googleDriveConnected;
       if (googleDriveRefreshButton) googleDriveRefreshButton.disabled = !googleDriveConnected;
@@ -562,7 +566,7 @@ function setDriveFilesStatus(message, isError = false) {
   if (googleDriveButton) googleDriveButton.addEventListener("click", () => connectGoogleDrive("pixelForge-owner"));
 if (googleDriveAddAccountButton) googleDriveAddAccountButton.addEventListener("click", () => connectGoogleDrive("drive-" + (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36))));
 if (googleDriveAccountSelect) googleDriveAccountSelect.addEventListener("change", () => { selectedDriveAccountId = googleDriveAccountSelect.value || "pixelForge-owner"; selectedDriveFolderId = ""; if (googleDriveFolderSelect) googleDriveFolderSelect.value = ""; refreshGoogleDriveStatus(); });
-  if (googleDriveFolderSelect) googleDriveFolderSelect.addEventListener("change", () => { selectedDriveFolderId = googleDriveFolderSelect.value || ""; });
+  if (googleDriveFolderSelect) googleDriveFolderSelect.addEventListener("change", () => { selectedDriveFolderId = googleDriveFolderSelect.value || ""; if (googleDriveFolderNote) googleDriveFolderNote.textContent = selectedDriveFolderId ? "Selected folder: " + (googleDriveFolderSelect.selectedOptions[0]?.textContent || "Drive folder") + ". New uploads will be placed here." : "Uploads go to this account’s My Drive root by default. Choose a folder to change the destination."; });
   if (googleDriveRefreshButton) googleDriveRefreshButton.addEventListener("click", loadGoogleDriveFiles);
   if (googleDriveUploadButton) googleDriveUploadButton.addEventListener("click", uploadGoogleDriveFile);
 
