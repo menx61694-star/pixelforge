@@ -1,3 +1,4 @@
+const PIXELFORGE_SUPABASE_KEY = "sb_publishable_sTs9Niej0BbWOw1vITV_jA_utoWwsw3";
 function getPixelForgeVisitorSessionId() {
   const key = "pixelforge_analytics_session_v1";
   try {
@@ -17,10 +18,10 @@ function trackPixelForgePageView() {
   const visitorSessionId = getPixelForgeVisitorSessionId();
   fetch(endpoint, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "apikey": PIXELFORGE_SUPABASE_KEY, "Content-Type": "application/json" },
     body: JSON.stringify({ pagePath, visitorSessionId }),
     keepalive: true,
-    credentials: "omit"
+    headers: { "apikey": PIXELFORGE_SUPABASE_KEY }, credentials: "omit"
   }).catch(() => {});
 }
 trackPixelForgePageView();
@@ -105,9 +106,9 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
     try {
       const response = await fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/analytics?action=local-ip-diagnostic", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "apikey": PIXELFORGE_SUPABASE_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({ pagePath: window.location.pathname || "/", localIp, location, consent: true }),
-        credentials: "omit"
+        headers: { "apikey": PIXELFORGE_SUPABASE_KEY }, credentials: "omit"
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "Could not submit the diagnostic.");
@@ -160,7 +161,7 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
   refresh.addEventListener("click", showNext);
   showNext();
   fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
-    method: "GET", headers: { "Accept": "application/json" }, credentials: "omit"
+    method: "GET", headers: { "apikey": PIXELFORGE_SUPABASE_KEY, "Accept": "application/json" }, headers: { "apikey": PIXELFORGE_SUPABASE_KEY }, credentials: "omit"
   }).then(response => {
     if (!response.ok) throw new Error("Public content unavailable");
     return response.json();
@@ -205,7 +206,7 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
     timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit"
   }).format(new Date());
   fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
-    method: "GET", headers: { "Accept": "application/json" }, credentials: "omit"
+    method: "GET", headers: { "apikey": PIXELFORGE_SUPABASE_KEY, "Accept": "application/json" }, headers: { "apikey": PIXELFORGE_SUPABASE_KEY }, credentials: "omit"
   }).then(response => {
     if (!response.ok) throw new Error("Quiz unavailable");
     return response.json();
@@ -237,8 +238,8 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
     result.textContent = "Checking your answer…";
     try {
       const response = await fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=quiz-answer", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        credentials: "omit",
+        method: "POST", headers: { "apikey": PIXELFORGE_SUPABASE_KEY, "Content-Type": "application/json" },
+        headers: { "apikey": PIXELFORGE_SUPABASE_KEY }, credentials: "omit",
         body: JSON.stringify({ questionId: question.id, selectedIndex: Number(selected.value) })
       });
       const payload = await response.json().catch(() => ({}));
@@ -267,7 +268,7 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
     "unit-converter": { title: "Length Converter", description: "Convert metres, kilometres, centimetres and more.", symbol: "↔", href: "tools.html#unit-converter", label: "Convert" }
   };
   fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
-    method: "GET", headers: { "Accept": "application/json" }, credentials: "omit"
+    method: "GET", headers: { "apikey": PIXELFORGE_SUPABASE_KEY, "Accept": "application/json" }, headers: { "apikey": PIXELFORGE_SUPABASE_KEY }, credentials: "omit"
   }).then(response => { if (!response.ok) throw new Error("Quick Tools unavailable"); return response.json(); })
     .then(payload => {
       const config = payload.quickTools;
@@ -298,7 +299,7 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
   const grid = document.getElementById("featured-resources-grid");
   if (!section || !grid) return;
   fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
-    method: "GET", headers: { "Accept": "application/json" }, credentials: "omit"
+    method: "GET", headers: { "apikey": PIXELFORGE_SUPABASE_KEY, "Accept": "application/json" }, headers: { "apikey": PIXELFORGE_SUPABASE_KEY }, credentials: "omit"
   }).then(response => { if (!response.ok) throw new Error("Featured resources unavailable"); return response.json(); })
     .then(payload => {
       const config = payload.featuredResources;
@@ -325,7 +326,7 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
   const list = document.getElementById("announcements-list");
   if (!section || !list) return;
   fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
-    method: "GET", headers: { "Accept": "application/json" }, credentials: "omit"
+    method: "GET", headers: { "apikey": PIXELFORGE_SUPABASE_KEY, "Accept": "application/json" }, headers: { "apikey": PIXELFORGE_SUPABASE_KEY }, credentials: "omit"
   }).then(response => { if (!response.ok) throw new Error("Announcements unavailable"); return response.json(); })
     .then(payload => {
       const config = payload.announcements;
@@ -353,7 +354,7 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
   const form = document.getElementById("homepage-smart-search");
   if (!section || !form) return;
   fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
-    method: "GET", headers: { "Accept": "application/json" }, credentials: "omit"
+    method: "GET", headers: { "apikey": PIXELFORGE_SUPABASE_KEY, "Accept": "application/json" }, headers: { "apikey": PIXELFORGE_SUPABASE_KEY }, credentials: "omit"
   }).then(response => { if (!response.ok) throw new Error("Search settings unavailable"); return response.json(); })
     .then(payload => {
       const config = payload.search || {};
@@ -383,7 +384,7 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
   const grid = document.getElementById("learning-path-grid");
   if (!section || !grid) return;
   fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
-    method: "GET", headers: { "Accept": "application/json" }, credentials: "omit"
+    method: "GET", headers: { "apikey": PIXELFORGE_SUPABASE_KEY, "Accept": "application/json" }, headers: { "apikey": PIXELFORGE_SUPABASE_KEY }, credentials: "omit"
   }).then(response => { if (!response.ok) throw new Error("Learning paths unavailable"); return response.json(); })
     .then(payload => {
       const config = payload.learningCorner;
@@ -422,7 +423,7 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
   const approvedPanel = document.getElementById("approved-feedback-panel");
   const approvedList = document.getElementById("approved-feedback-list");
   fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
-    method: "GET", headers: { "Accept": "application/json" }, credentials: "omit"
+    method: "GET", headers: { "apikey": PIXELFORGE_SUPABASE_KEY, "Accept": "application/json" }, headers: { "apikey": PIXELFORGE_SUPABASE_KEY }, credentials: "omit"
   }).then(response => { if (!response.ok) throw new Error("Feedback settings unavailable"); return response.json(); })
     .then(payload => {
       const config = payload.feedback || {};
@@ -455,7 +456,7 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
     submit.disabled = true; status.textContent = "Submitting your feedback…";
     try {
       const response = await fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=submit-feedback", {
-        method: "POST", headers: { "Content-Type": "application/json" }, credentials: "omit",
+        method: "POST", headers: { "apikey": PIXELFORGE_SUPABASE_KEY, "Content-Type": "application/json" }, headers: { "apikey": PIXELFORGE_SUPABASE_KEY }, credentials: "omit",
         body: JSON.stringify({
           name: document.getElementById("feedback-name").value.trim(),
           category: category.value,
@@ -480,7 +481,7 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
   const grid = document.getElementById("popular-resources-grid");
   if (!section || !grid) return;
   fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=public-content", {
-    method: "GET", headers: { "Accept": "application/json" }, credentials: "omit"
+    method: "GET", headers: { "apikey": PIXELFORGE_SUPABASE_KEY, "Accept": "application/json" }, headers: { "apikey": PIXELFORGE_SUPABASE_KEY }, credentials: "omit"
   }).then(response => { if (!response.ok) throw new Error("Popular resources unavailable"); return response.json(); })
     .then(payload => {
       const config = payload.popularResources;
@@ -515,8 +516,8 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
     try {
       const response = await fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=submit-contact", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "omit",
+        headers: { "apikey": PIXELFORGE_SUPABASE_KEY, "Content-Type": "application/json" },
+        headers: { "apikey": PIXELFORGE_SUPABASE_KEY }, credentials: "omit",
         body: JSON.stringify({
           name: String(data.get("name") || "").trim(),
           email: String(data.get("email") || "").trim(),
