@@ -134,6 +134,7 @@ Deno.serve(async (request) => {
     if (origin && !allowedOrigins.has(origin)) return json({ error: "Origin is not allowed." }, 403, request);
     const url = new URL(request.url);
     const action = url.searchParams.get("action");
+    const selectedAccountId = url.searchParams.get("accountId") || "pixelForge-owner";
 
     // Public listing exposes metadata only; public-download verifies the published record.
     if (request.method === "GET" && action === "public-list") {
@@ -292,7 +293,6 @@ Deno.serve(async (request) => {
       if (error) throw error;
       return json({ published: true }, 200, request);
     }
-    const selectedAccountId = url.searchParams.get("accountId") || "pixelForge-owner";
     if (!/^[a-zA-Z0-9_-]{3,80}$/.test(selectedAccountId)) return json({ error: "Invalid Drive account selection." }, 400, request);
     const accessToken = await getAccessToken(selectedAccountId);
     const googleHeaders = { Authorization: "Bearer " + accessToken };
