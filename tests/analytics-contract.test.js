@@ -143,7 +143,7 @@ test("security logs encrypt raw IP addresses with AES-GCM before persistence", (
   assert.match(edge, /ip_iv/);
   assert.match(edge, /await storeSecurityLog\(pagePath, db, observedIp\)/);
   assert.match(edge, /safeDecrypt\(row\.ip_ciphertext, row\.ip_iv\)/);
-  assert.match(edge, /async function safeDecrypt/);
+  assert.match(edge, /safeDecrypt = async/);
   assert.match(edge, /localIpAddress: await safeDecrypt/);
 });
 
