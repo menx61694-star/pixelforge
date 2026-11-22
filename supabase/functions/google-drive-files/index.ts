@@ -304,6 +304,8 @@ Deno.serve(async (request) => {
         orderBy: "name",
         fields: "files(id,name,mimeType,parents),nextPageToken",
         spaces: "drive",
+        ...(url.searchParams.get("pageToken") ? { pageToken: url.searchParams.get("pageToken")! } : {}),
+        
       });
       const response = await fetch("https://www.googleapis.com/drive/v3/files?" + query, { headers: googleHeaders });
       const payload = await response.json().catch(() => ({}));
@@ -346,8 +348,9 @@ Deno.serve(async (request) => {
       }
       // Refuse same-name uploads instead of creating a confusing duplicate or replacing a document.
       const escapedName = name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+      const duplicateParentQuery = parentFolderId ? "'" + parentFolderId + "' in parents" : "'root' in parents";
       const duplicateQuery = new URLSearchParams({
-        q: "trashed = false and name = '" + escapedName + "'",
+        q: "trashed = false and " + duplicateParentQuery + " and name = '" + escapedName + "'",
         pageSize: "1",
         fields: "files(id,name)",
         spaces: "drive"
