@@ -62,6 +62,11 @@ const firebaseConfig = {
 const googleDriveAddAccountButton = document.getElementById("google-drive-add-account");
 const googleDriveAccountSelect = document.getElementById("google-drive-account-select");
 const googleDriveAccountStorage = document.getElementById("google-drive-account-storage");
+const googleDriveFolderSelect = document.getElementById("google-drive-folder-select");
+const googleDriveFolderNote = document.getElementById("google-drive-folder-note");
+const googleDriveStorageFill = document.getElementById("google-drive-storage-fill");
+const googleDriveStoragePercent = document.getElementById("google-drive-storage-percent");
+let selectedDriveFolderId = "";
 let selectedDriveAccountId = "pixelForge-owner";
 let googleDriveAccounts = [];
   const googleDriveStatus = document.getElementById("google-drive-status");
@@ -205,6 +210,44 @@ function setDriveFilesStatus(message, isError = false) {
     googleDriveFilesStatus.style.color = isError ? "#a23c32" : "#53617b";
   }
 
+  async function loadGoogleDriveFolders() {
+    if (!googleDriveFolderSelect) return;
+    googleDriveFolderSelect.replaceChildren();
+    const rootOption = document.createElement("option");
+    rootOption.value = "";
+    rootOption.textContent = "My Drive · Root (default)";
+    googleDriveFolderSelect.append(rootOption);
+    if (!googleDriveConnected) {
+      googleDriveFolderSelect.disabled = true;
+      if (googleDriveFolderNote) googleDriveFolderNote.textContent = "Connect a Drive account to choose a folder.";
+      return;
+    }
+    googleDriveFolderSelect.disabled = true;
+    if (googleDriveFolderNote) googleDriveFolderNote.textContent = "Loading folders from the selected account…";
+    try {
+      const response = await googleDriveRequest("folders");
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Folder list could not be loaded.");
+      const folders = Array.isArray(payload.folders) ? payload.folders : [];
+      folders.forEach(folder => {
+        const option = document.createElement("option");
+        option.value = folder.id;
+        option.textContent = folder.name || "Untitled folder";
+        googleDriveFolderSelect.append(option);
+      });
+      googleDriveFolderSelect.value = "";
+      selectedDriveFolderId = "";
+      googleDriveFolderSelect.disabled = false;
+      if (googleDriveFolderNote) googleDriveFolderNote.textContent = folders.length
+        ? "Uploads go to My Drive root by default. Choose a folder to change the destination."
+        : "This account has no folders listed. Uploads will go to My Drive root.";
+    } catch (error) {
+      googleDriveFolderSelect.disabled = false;
+      if (googleDriveFolderNote) googleDriveFolderNote.textContent = "Folder list unavailable; uploads will use My Drive root. " + (error.message || "");
+      setDriveFilesStatus("Drive folders could not be loaded. Root uploads are still available.", true);
+    }
+  }
+
   async function refreshGoogleDriveStatus() {
     try {
       const response = await googleDriveRequest("status");
@@ -213,13 +256,21 @@ function setDriveFilesStatus(message, isError = false) {
       googleDriveAccounts = Array.isArray(payload.accounts) ? payload.accounts : [];
       if (googleDriveAccountSelect) { const current = selectedDriveAccountId; googleDriveAccountSelect.replaceChildren(); googleDriveAccounts.forEach(account => { const option = document.createElement("option"); option.value = account.id; option.textContent = (account.name || account.email || account.id) + (account.email && account.name ? " · " + account.email : ""); googleDriveAccountSelect.append(option); }); if (googleDriveAccounts.some(account => account.id === current)) googleDriveAccountSelect.value = current; else if (googleDriveAccounts.length) { selectedDriveAccountId = googleDriveAccounts[0].id; googleDriveAccountSelect.value = selectedDriveAccountId; } }
       const selectedAccount = googleDriveAccounts.find(account => account.id === selectedDriveAccountId);
-      if (googleDriveAccountStorage) googleDriveAccountStorage.textContent = selectedAccount ? "Accounts: " + googleDriveAccounts.length + " · " + (selectedAccount.storageAvailable ? "Used " + formatDriveBytes(selectedAccount.storageUsed) + " / " + formatDriveBytes(selectedAccount.storageTotal) + " · Free " + formatDriveBytes(selectedAccount.storageRemaining) : "Storage quota unavailable (reconnect with storage access)") : "No accounts connected";
+      if (googleDriveAccountStorage) googleDriveAccountStorage.textContent = selectedAccount
+        ? "Account " + (selectedAccount.email || selectedAccount.name || selectedAccount.id) + " · " + (selectedAccount.storageAvailable ? formatDriveBytes(selectedAccount.storageUsed) + " used of " + formatDriveBytes(selectedAccount.storageTotal) + " · " + formatDriveBytes(selectedAccount.storageRemaining) + " free" : "Storage quota unavailable")
+        : "No accounts connected";
+      const storageTotal = selectedAccount && Number(selectedAccount.storageTotal) > 0 ? Number(selectedAccount.storageTotal) : 0;
+      const storageUsed = selectedAccount && Number(selectedAccount.storageUsed) >= 0 ? Number(selectedAccount.storageUsed) : 0;
+      const storagePercent = storageTotal ? Math.min(100, Math.max(0, storageUsed / storageTotal * 100)) : 0;
+      if (googleDriveStorageFill) googleDriveStorageFill.style.width = storagePercent + "%";
+      if (googleDriveStoragePercent) googleDriveStoragePercent.textContent = storageTotal ? storagePercent.toFixed(1) + "% used" : "";
       googleDriveConnected = payload.connected === true;
       updateDriveOverview();
       if (googleDriveUploadButton) googleDriveUploadButton.disabled = !googleDriveConnected;
       if (googleDriveRefreshButton) googleDriveRefreshButton.disabled = !googleDriveConnected;
       if (googleDriveConnected) {
         setGoogleDriveStatus("Google Drive is connected.");
+        await loadGoogleDriveFolders();
         await loadGoogleDriveFiles();
       } else {
         currentDriveFiles = [];
@@ -227,6 +278,7 @@ function setDriveFilesStatus(message, isError = false) {
         updateDriveOverview();
         updateDashboardActivity();
         setGoogleDriveStatus("Google Drive is not connected.");
+        await loadGoogleDriveFolders();
         setDriveFilesStatus("Connect Google Drive to list or upload files.");
       }
     } catch (error) {
@@ -464,7 +516,7 @@ function setDriveFilesStatus(message, isError = false) {
     setDriveFilesStatus("Preparing Google Drive upload (" + fileIndex + "/" + fileCount + "): " + file.name);
     const sessionResponse = await googleDriveRequest("create-upload-session", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: file.name, mimeType: file.type, size: file.size })
+      body: JSON.stringify({ name: file.name, mimeType: file.type, size: file.size, parentFolderId: selectedDriveFolderId || null })
     });
     const session = await sessionResponse.json();
     if (!sessionResponse.ok || !session.uploadUrl) throw new Error(session.error || "Could not start upload.");
@@ -509,7 +561,8 @@ function setDriveFilesStatus(message, isError = false) {
   }
   if (googleDriveButton) googleDriveButton.addEventListener("click", () => connectGoogleDrive("pixelForge-owner"));
 if (googleDriveAddAccountButton) googleDriveAddAccountButton.addEventListener("click", () => connectGoogleDrive("drive-" + (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36))));
-if (googleDriveAccountSelect) googleDriveAccountSelect.addEventListener("change", () => { selectedDriveAccountId = googleDriveAccountSelect.value || "pixelForge-owner"; refreshGoogleDriveStatus(); });
+if (googleDriveAccountSelect) googleDriveAccountSelect.addEventListener("change", () => { selectedDriveAccountId = googleDriveAccountSelect.value || "pixelForge-owner"; selectedDriveFolderId = ""; if (googleDriveFolderSelect) googleDriveFolderSelect.value = ""; refreshGoogleDriveStatus(); });
+  if (googleDriveFolderSelect) googleDriveFolderSelect.addEventListener("change", () => { selectedDriveFolderId = googleDriveFolderSelect.value || ""; });
   if (googleDriveRefreshButton) googleDriveRefreshButton.addEventListener("click", loadGoogleDriveFiles);
   if (googleDriveUploadButton) googleDriveUploadButton.addEventListener("click", uploadGoogleDriveFile);
 
