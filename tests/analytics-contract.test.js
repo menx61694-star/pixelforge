@@ -142,7 +142,7 @@ test("security logs encrypt raw IP addresses with AES-GCM before persistence", (
   assert.match(edge, /ip_ciphertext/);
   assert.match(edge, /ip_iv/);
   assert.match(edge, /await storeSecurityLog\(pagePath, db, observedIp\)/);
-  assert.match(edge, /decryptIp\(row\.ip_ciphertext, row\.ip_iv\)/);
+  assert.match(edge, /safeDecrypt\(row\.ip_ciphertext, row\.ip_iv\)/);\n  assert.match(edge, /async function safeDecrypt/);\n  assert.match(edge, /localIpAddress: await safeDecrypt/);
 });
 
 test("security logs table denies public and authenticated direct access and has 90-day scheduled retention", () => {
