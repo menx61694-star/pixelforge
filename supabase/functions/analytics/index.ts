@@ -16,7 +16,7 @@ function cors(request: Request) {
   const origin = request.headers.get("Origin") ?? "";
   return {
     ...(allowedOrigins.has(origin) ? { "Access-Control-Allow-Origin": origin } : {}),
-    "Access-Control-Allow-Headers": "authorization, content-type",
+    "Access-Control-Allow-Headers": "authorization, apikey, content-type",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Vary": "Origin",
   };
