@@ -92,83 +92,76 @@ let googleDriveAccounts = [];
   const settingsStatus = document.getElementById("settings-status");
   const settingsAuditStatus = document.getElementById("settings-audit-status");
   const settingsAuditBody = document.getElementById("settings-audit-body");
-  const announcementsSaveButton = document.getElementById("save-announcements-settings");
-  const announcementsSaveStatus = document.getElementById("announcements-save-status");
-  if (announcementsSaveButton) announcementsSaveButton.addEventListener("click", async () => {
-    const input = document.getElementById("setting-announcements-items").value.trim();
-    const enabled = document.getElementById("setting-announcements-enabled").checked;
-    let items;
-    try {
-      items = JSON.parse(input);
-    } catch (_) {
-      // Allow quick single-line announcements instead of forcing JSON for simple notices.
-      const lines = input.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-      if (!lines.length) items = [];
-      else {
-        const now = new Date();
-        const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-        items = lines.map((message, index) => ({
-          id: "notice-" + Date.now() + "-" + (index + 1),
-          title: "Announcement",
-          message,
-          type: "info",
-          startDate: today,
-          endDate: "2099-12-31",
-          published: true,
-          url: "",
-          label: ""
-        }));
-      }
-    }
-    const valid = Array.isArray(items) && items.length <= 20 && items.every(item => {
-      if (!item || typeof item !== "object" || Array.isArray(item) ||
-          !Object.keys(item).every(key => ["id","title","message","type","startDate","endDate","published","url","label"].includes(key)) ||
-          typeof item.id !== "string" || !item.id.trim() || item.id.length > 64 ||
-          typeof item.title !== "string" || !item.title.trim() || item.title.length > 120 ||
-          typeof item.message !== "string" || !item.message.trim() || item.message.length > 500 ||
-          !["info","update","important"].includes(item.type) ||
-          typeof item.startDate !== "string" || typeof item.endDate !== "string" ||
-          !/^\d{4}-\d{2}-\d{2}$/.test(item.startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(item.endDate) ||
-          Number.isNaN(Date.parse(item.startDate + "T00:00:00.000Z")) || Number.isNaN(Date.parse(item.endDate + "T00:00:00.000Z")) ||
-          new Date(item.startDate + "T00:00:00.000Z").toISOString().slice(0, 10) !== item.startDate ||
-          new Date(item.endDate + "T00:00:00.000Z").toISOString().slice(0, 10) !== item.endDate ||
-          item.startDate > item.endDate || typeof item.published !== "boolean" ||
-          typeof item.url !== "string" || item.url.length > 1200 ||
-          typeof item.label !== "string" || item.label.length > 32) return false;
-      if (!item.url) return item.label === "";
-      try { const url = new URL(item.url); return url.protocol === "https:" && !url.username && !url.password && item.label.trim().length > 0; }
-      catch (_) { return false; }
+  let announcementItems = [];
+  let announcementEditId = null;
+  const announcementList = document.getElementById("announcement-manager-list");
+  const announcementAddButton = document.getElementById("announcement-add");
+  const announcementCancelButton = document.getElementById("announcement-cancel-edit");
+  const announcementSaveButton = document.getElementById("save-announcements-settings");
+  const announcementSaveStatus = document.getElementById("announcements-save-status");
+  const announcementField = id => document.getElementById(id);
+  function announcementToday() {
+    const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,10);
+  }
+  function resetAnnouncementForm() {
+    announcementEditId = null;
+    announcementField("announcement-title").value = "";
+    announcementField("announcement-message").value = "";
+    announcementField("announcement-type").value = "info";
+    announcementField("announcement-start").value = announcementToday();
+    announcementField("announcement-end").value = "2099-12-31";
+    announcementField("announcement-url").value = "";
+    announcementField("announcement-link-label").value = "";
+    announcementField("announcement-published").checked = true;
+    announcementAddButton.textContent = "Add Announcement";
+    announcementCancelButton.hidden = true;
+  }
+  function renderAnnouncementManager() {
+    if (!announcementList) return;
+    announcementList.innerHTML = "";
+    if (!announcementItems.length) { announcementList.textContent = "No announcements added yet."; return; }
+    announcementItems.forEach(item => {
+      const card = document.createElement("div"); card.className = "announcement-manager-card";
+      const title = document.createElement("strong"); title.textContent = item.title; card.append(title);
+      const message = document.createElement("p"); message.textContent = item.message; card.append(message);
+      const meta = document.createElement("small"); meta.textContent = item.type + " · " + item.startDate + " → " + item.endDate + " · " + (item.published ? "Published" : "Draft"); card.append(meta);
+      const actions = document.createElement("div"); actions.className = "announcement-manager-actions";
+      const edit = document.createElement("button"); edit.type = "button"; edit.textContent = "Edit";
+      edit.addEventListener("click", () => { announcementEditId = item.id; announcementField("announcement-title").value=item.title; announcementField("announcement-message").value=item.message; announcementField("announcement-type").value=item.type; announcementField("announcement-start").value=item.startDate; announcementField("announcement-end").value=item.endDate; announcementField("announcement-url").value=item.url||""; announcementField("announcement-link-label").value=item.label||""; announcementField("announcement-published").checked=!!item.published; announcementAddButton.textContent="Update Announcement"; announcementCancelButton.hidden=false; });
+      const del = document.createElement("button"); del.type="button"; del.textContent="Delete"; del.addEventListener("click",()=>{announcementItems=announcementItems.filter(x=>x.id!==item.id);renderAnnouncementManager();if(announcementEditId===item.id)resetAnnouncementForm();});
+      actions.append(edit,del); card.append(actions); announcementList.append(card);
     });
-    if (!valid || new Set(items.map(item => item.id)).size !== items.length) {
-      if (announcementsSaveStatus) { announcementsSaveStatus.textContent = "Invalid announcement data. Enter plain text or valid JSON (maximum 20 notices)."; announcementsSaveStatus.style.color = "#a23c32"; }
-      return;
-    }
-    announcementsSaveButton.disabled = true;
-    if (announcementsSaveStatus) { announcementsSaveStatus.textContent = "Saving…"; announcementsSaveStatus.style.color = "#52617b"; }
-    try {
-      await saveSettingStrict("home.announcements.items", items);
-      await saveSettingStrict("home.announcements.enabled", enabled);
-      const listed = await settingsRequest("list");
-      const saved = Object.fromEntries((listed.settings || []).map(item => [item.setting_key, item.setting_value]));
-      const canonical = (value) => {
-        if (Array.isArray(value)) return value.map(canonical);
-        if (value && typeof value === "object") return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])]));
-        return value;
-      };
-      const savedItems = saved["home.announcements.items"];
-      const itemsMatch = JSON.stringify(canonical(savedItems)) === JSON.stringify(canonical(items));
-      const enabledMatch = saved["home.announcements.enabled"] === enabled ||
-        saved["home.announcements.enabled"] === String(enabled);
-      if (!itemsMatch || !enabledMatch) throw new Error("Database read-back verification failed (itemsMatch=" + itemsMatch + ", enabledMatch=" + enabledMatch + ").");
-      const audit = await settingsRequest("audit");
-      renderSettingsAudit(audit.audit || []);
-      if (announcementsSaveStatus) { announcementsSaveStatus.textContent = "Announcements saved and verified."; announcementsSaveStatus.style.color = "#16834b"; }
-    } catch (error) {
-      console.error("Announcements save error", error);
-      if (announcementsSaveStatus) { announcementsSaveStatus.textContent = "Save failed: " + (error?.message || "Unknown error"); announcementsSaveStatus.style.color = "#a23c32"; }
-    } finally { announcementsSaveButton.disabled = false; }
+  }
+  if (announcementAddButton) announcementAddButton.addEventListener("click", () => {
+    const title=announcementField("announcement-title").value.trim(), message=announcementField("announcement-message").value.trim();
+    const type=announcementField("announcement-type").value,startDate=announcementField("announcement-start").value,endDate=announcementField("announcement-end").value,url=announcementField("announcement-url").value.trim(),label=announcementField("announcement-link-label").value.trim(),published=announcementField("announcement-published").checked;
+    if(!title||!message||!startDate||!endDate||startDate>endDate){alert("Please fill title, message and valid start/end dates.");return;}
+    if(url){try{const parsed=new URL(url);if(parsed.protocol!=="https:"||parsed.username||parsed.password||!label){alert("Link must be HTTPS and have a link label.");return;}}catch(_){alert("Enter a valid HTTPS link.");return;}}else if(label){alert("Link label requires a link.");return;}
+    if(announcementItems.length>=20&&!announcementEditId){alert("Maximum 20 announcements allowed.");return;}
+    const item={id:announcementEditId||("notice-"+Date.now()),title,message,type,startDate,endDate,published,url,label};
+    if(announcementEditId)announcementItems=announcementItems.map(x=>x.id===announcementEditId?item:x);else announcementItems.push(item);
+    renderAnnouncementManager();resetAnnouncementForm();
   });
-
+  if(announcementCancelButton)announcementCancelButton.addEventListener("click",resetAnnouncementForm);
+  resetAnnouncementForm(); renderAnnouncementManager();
+  if (announcementSaveButton) announcementSaveButton.addEventListener("click", async () => {
+    const enabled=document.getElementById("setting-announcements-enabled").checked;
+    announcementSaveButton.disabled=true;
+    if(announcementSaveStatus){announcementSaveStatus.textContent="Saving…";announcementSaveStatus.style.color="#52617b";}
+    try{
+      await saveSettingStrict("home.announcements.items",announcementItems);
+      await saveSettingStrict("home.announcements.enabled",enabled);
+      const listed=await settingsRequest("list");
+      const saved=Object.fromEntries((listed.settings||[]).map(item=>[item.setting_key,item.setting_value]));
+      const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==="object"?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value;
+      const itemsMatch=JSON.stringify(canonical(saved["home.announcements.items"]))===JSON.stringify(canonical(announcementItems));
+      const enabledMatch=saved["home.announcements.enabled"]===enabled||saved["home.announcements.enabled"]===String(enabled);
+      if(!itemsMatch||!enabledMatch)throw new Error("Saved data did not match database read-back.");
+      const audit=await settingsRequest("audit");renderSettingsAudit(audit.audit||[]);
+      if(announcementSaveStatus){announcementSaveStatus.textContent="Announcements saved and verified.";announcementSaveStatus.style.color="#16834b";}
+    }catch(error){console.error("Announcements save error",error);if(announcementSaveStatus){announcementSaveStatus.textContent="Save failed: "+(error?.message||"Unknown error");announcementSaveStatus.style.color="#a23c32";}}
+    finally{announcementSaveButton.disabled=false;}
+  });
   const refreshSettingsButton = document.getElementById("refresh-settings");
   const analyticsNavLink = document.getElementById("analytics-nav-link");
   const securityLogsNavLink = document.getElementById("security-logs-nav-link");
@@ -1508,7 +1501,8 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
       setValue("setting-search-max-results", values["home.search.max_results"] ?? 30);
       setValue("setting-search-placeholder", values["home.search.placeholder"] ?? "Search documents, notes and guides…");
       const announcementsTextarea = document.getElementById("setting-announcements-items");
-      if (announcementsTextarea) announcementsTextarea.value = JSON.stringify(Array.isArray(values["home.announcements.items"]) ? values["home.announcements.items"] : [], null, 2);
+      announcementItems = Array.isArray(values["home.announcements.items"]) ? values["home.announcements.items"].map(item => ({...item})) : [];
+      renderAnnouncementManager(); resetAnnouncementForm();
       const featuredTextarea = document.getElementById("setting-featured-items");
       if (featuredTextarea) featuredTextarea.value = JSON.stringify(Array.isArray(values["home.featured.items"]) ? values["home.featured.items"] : [], null, 2);
       const toolsTextarea = document.getElementById("setting-tools-items");
