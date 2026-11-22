@@ -322,3 +322,7 @@ button:disabled{opacity:.6;cursor:wait}
 .drive-files-card .file-item{background:#fbfcff}
 @media(max-width:850px){.drive-manager-hero{align-items:flex-start;flex-direction:column}.drive-connection-actions{justify-content:flex-start}}
 @media(max-width:600px){.drive-manager-panel{gap:12px}.drive-manager-hero,.drive-account-card,.drive-upload-card,.drive-files-card{padding:16px}.drive-identity{align-items:flex-start;gap:11px}.google-drive-logo{width:46px;height:46px;flex-basis:46px;border-radius:13px}.google-drive-logo svg{width:31px;height:31px}.drive-identity h2{font-size:19px}.drive-subtitle{font-size:11px}.drive-connection-actions{width:100%}.drive-connection-actions button{flex:1}.drive-account-topline{align-items:flex-start;flex-direction:column}.drive-account-select-wrap{width:100%;align-items:stretch;flex-direction:column}.drive-account-select-wrap select{width:100%}.drive-storage-heading{flex-direction:column;gap:3px}.drive-destination-row{grid-template-columns:1fr;gap:8px}.drive-folder-note{grid-column:1}.drive-file-picker{align-items:flex-start;flex-direction:column}.drive-upload-actions button{flex:1}.drive-upload-heading,.drive-files-heading{align-items:flex-start;flex-direction:column}.drive-files-tip{display:none}}
+
+.drive-connection-status.disconnected{border-color:#f1ddd8;background:#fff7f5}
+.drive-connection-status.disconnected #google-drive-status{color:#a44b40}
+.drive-status-indicator.disconnected{background:#c75a4e;box-shadow:0 0 0 4px #c75a4e18}
