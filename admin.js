@@ -166,7 +166,8 @@ let googleDriveAccounts = [];
       const idToken = await auth.currentUser.getIdToken();
       const response = await fetch(SUPABASE_URL + "/functions/v1/google-drive-oauth?action=start", {
         method: "POST",
-        headers: { "apikey": SUPABASE_PUBLISHABLE_KEY, "Authorization": "Bearer " + idToken, "Content-Type": "application/json" }
+        headers: { "apikey": SUPABASE_PUBLISHABLE_KEY, "Authorization": "Bearer " + idToken, "Content-Type": "application/json" },
+        body: JSON.stringify({ accountId })
       });
       const payload = await response.json();
       if (!response.ok || !payload.authorization_url) throw new Error(payload.error || "Could not start Google authorization.");
