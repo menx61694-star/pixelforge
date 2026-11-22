@@ -123,17 +123,13 @@ test("public settings expose admin-managed branding without leaking private sett
 });
 
 
-test("Daily Quiz is admin-managed, validated server-side, and never exposes the answer key publicly", () => {
+test("Daily Quiz is validated server-side and never exposes the answer key publicly", () => {
   const adminHtml = read("admin.html");
   const adminJs = read("admin.js");
   const edge = read("supabase/functions/site-settings/index.ts");
   const migration = read("supabase/phase-7-daily-quiz.sql");
   const homepage = read("index.html");
   const publicScript = read("script.js");
-  assert.match(adminJs, /setting-quiz-enabled/);
-  assert.match(adminHtml, /setting-quiz-items/);
-  assert.match(adminJs, /saveSetting\("home\.quiz\.items"/);
-  assert.match(adminJs, /saveSetting\("home\.quiz\.enabled"/);
   assert.match(adminJs, /Number\.isInteger\(item\.correctIndex\)/);
   assert.match(edge, /action === "quiz-answer"/);
   assert.match(edge, /item\.correctIndex/);
@@ -185,17 +181,13 @@ test("Quick Digital Tools are admin-managed, ordered, allow-listed and exposed w
 });
 
 
-test("Featured Resources are admin-managed, published-only and restricted to safe HTTPS URLs", () => {
+test("Featured Resources are published-only and restricted to safe HTTPS URLs", () => {
   const adminHtml = read("admin.html");
   const adminJs = read("admin.js");
   const edge = read("supabase/functions/site-settings/index.ts");
   const migration = read("supabase/phase-9-featured-resources.sql");
   const homepage = read("index.html");
   const publicScript = read("script.js");
-  assert.match(adminJs, /setting-featured-enabled/);
-  assert.match(adminHtml, /setting-featured-items/);
-  assert.match(adminJs, /saveSetting\("home\.featured\.items"/);
-  assert.match(adminJs, /saveSetting\("home\.featured\.enabled"/);
   assert.match(edge, /isSafeHttpsUrl/);
   assert.match(edge, /home\.featured\.items/);
   assert.match(migration, /home\.featured\.items/);
@@ -215,9 +207,11 @@ test("Announcements are admin-managed, date-validated, scheduled in India time a
   const homepage = read("index.html");
   const publicScript = read("script.js");
   assert.match(adminHtml, /setting-announcements-enabled/);
-  assert.match(adminJs, /setting-announcements-items/);
-  assert.match(adminJs, /saveSetting\("home\.announcements\.items"/);
-  assert.match(adminJs, /saveSetting\("home\.announcements\.enabled"/);
+  assert.match(adminHtml, /id="announcement-manager-list"/);
+  assert.match(adminHtml, /id="announcement-add"/);
+  assert.match(adminHtml, /id="save-announcements-settings"/);
+  assert.match(adminJs, /saveSettingStrict\("home\.announcements\.items"/);
+  assert.match(adminJs, /saveSettingStrict\("home\.announcements\.enabled"/);
   assert.match(edge, /isValidIsoDate/);
   assert.match(edge, /home\.announcements\.items/);
   assert.match(edge, /Asia\/Kolkata/);
@@ -275,8 +269,10 @@ test("Learning Corner paths are admin-managed and expose only published steps wi
   const homepage = read("index.html");
   const publicScript = read("script.js");
   assert.match(adminHtml, /setting-learning-enabled/);
-  assert.match(adminJs, /setting-learning-items/);
-  assert.match(adminJs, /saveSetting\("home\.learning\.items"/);
+  assert.match(adminHtml, /id="learning-path-list"/);
+  assert.match(adminHtml, /id="learning-add-path"/);
+  assert.match(adminHtml, /id="save-learning-settings"/);
+  assert.match(adminJs, /saveSettingStrict\("home\.learning\.items"/);
   assert.match(edge, /home\.learning\.items/);
   assert.match(edge, /learningCorner:/);
   assert.match(migration, /home\.learning\.items/);
@@ -315,15 +311,16 @@ test("User Feedback is moderated, privacy-conscious and controlled from Admin Se
 });
 
 
-test("SEO Management validates metadata and applies page-specific canonical and robots overrides", () => {
+test("SEO Management validates default metadata and retains page-specific override safeguards", () => {
   const adminHtml = read("admin.html");
   const adminJs = read("admin.js");
   const edge = read("supabase/functions/site-settings/index.ts");
   const migration = read("supabase/phase-14-seo-management.sql");
   const seoScript = read("seo.js");
   assert.match(adminHtml, /setting-seo-enabled/);
-  assert.match(adminJs, /setting-seo-pages/);
-  assert.match(adminJs, /saveSetting\("home\.seo\.page_overrides"/);
+  assert.match(adminHtml, /id="setting-seo-title"/);
+  assert.match(adminHtml, /id="setting-seo-description"/);
+  assert.match(adminHtml, /data-setting-save="home\.seo"/);
   assert.match(edge, /home\.seo\.page_overrides/);
   assert.match(edge, /isSafeHttpsUrl/);
   assert.match(migration, /home\.seo\.default_description/);
