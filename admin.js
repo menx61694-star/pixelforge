@@ -230,10 +230,15 @@ function setDriveFilesStatus(message, isError = false) {
     googleDriveFolderSelect.disabled = true;
     if (googleDriveFolderNote) googleDriveFolderNote.textContent = "Loading folders from the selected account…";
     try {
-      const response = await googleDriveRequest("folders");
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Folder list could not be loaded.");
-      const folders = Array.isArray(payload.folders) ? payload.folders : [];
+      const folders = [];
+      let nextPageToken = null;
+      do {
+        const response = await googleDriveRequest("folders", { query: nextPageToken ? { pageToken: nextPageToken } : undefined });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Folder list could not be loaded.");
+        folders.push(...(Array.isArray(payload.folders) ? payload.folders : []));
+        nextPageToken = payload.nextPageToken || null;
+      } while (nextPageToken);
       folders.forEach(folder => {
         const option = document.createElement("option");
         option.value = folder.id;
