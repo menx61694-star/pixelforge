@@ -1601,25 +1601,25 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
         setSettingsStatus("Add 1–8 unique categories (2–32 characters) and choose 1–12 approved comments to display.", true); return;
       }
       (async () => {
-        const valuesToSave = [
-          ["home.feedback.categories", categories],
-          ["home.feedback.allow_anonymous", document.getElementById("setting-feedback-anonymous").checked],
-          ["home.feedback.display_approved", document.getElementById("setting-feedback-display").checked],
-          ["home.feedback.max_display", maxDisplay],
-          ["home.feedback.enabled", document.getElementById("setting-feedback-enabled").checked],
-        ];
+        const payload = {
+          categories,
+          allow_anonymous: document.getElementById("setting-feedback-anonymous").checked,
+          display_approved: document.getElementById("setting-feedback-display").checked,
+          max_display: maxDisplay,
+          enabled: document.getElementById("setting-feedback-enabled").checked,
+        };
         button.disabled = true;
         try {
           setSettingsStatus("Saving User Feedback settings…");
-          for (const [key, value] of valuesToSave) await saveSettingStrict(key, value);
+          await settingsRequest("feedback-save", { method: "POST", body: payload });
           const verifyPayload = await settingsRequest("list");
           const saved = Object.fromEntries((verifyPayload.settings || []).map(item => [item.setting_key, item.setting_value]));
           const verified = JSON.stringify(saved["home.feedback.categories"]) === JSON.stringify(categories) &&
-            saved["home.feedback.allow_anonymous"] === valuesToSave[1][1] &&
-            saved["home.feedback.display_approved"] === valuesToSave[2][1] &&
+            saved["home.feedback.allow_anonymous"] === payload.allow_anonymous &&
+            saved["home.feedback.display_approved"] === payload.display_approved &&
             saved["home.feedback.max_display"] === maxDisplay &&
-            saved["home.feedback.enabled"] === valuesToSave[4][1];
-          if (!verified) throw new Error("Saved values did not match. Reload and retry.");
+            saved["home.feedback.enabled"] === payload.enabled;
+          if (!verified) throw new Error("Saved values did not match the database values. Reload and retry.");
           const audit = await settingsRequest("audit");
           renderSettingsAudit(audit.audit || []);
           setSettingsStatus("User Feedback settings saved and verified.");
