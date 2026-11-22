@@ -59,6 +59,11 @@ const firebaseConfig = {
   const activityStatus = document.getElementById("activity-status");
   const countLabel = document.getElementById("file-count-label");
   const googleDriveButton = document.getElementById("google-drive-connect");
+const googleDriveAddAccountButton = document.getElementById("google-drive-add-account");
+const googleDriveAccountSelect = document.getElementById("google-drive-account-select");
+const googleDriveAccountStorage = document.getElementById("google-drive-account-storage");
+let selectedDriveAccountId = "pixelForge-owner";
+let googleDriveAccounts = [];
   const googleDriveStatus = document.getElementById("google-drive-status");
   const googleDriveFileInput = document.getElementById("google-drive-file");
   const googleDriveUploadButton = document.getElementById("google-drive-upload");
@@ -149,7 +154,7 @@ const firebaseConfig = {
     googleDriveStatus.style.color = isError ? "#a23c32" : "#53617b";
   }
 
-  async function connectGoogleDrive() {
+  async function connectGoogleDrive(accountId = "pixelForge-owner") {
     if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID || currentUserRole !== "admin") {
       setGoogleDriveStatus("Owner administrator access is required to connect Google Drive.", true);
       return;
@@ -180,6 +185,7 @@ const firebaseConfig = {
     headers.set("Authorization", "Bearer " + await user.getIdToken());
     const endpoint = new URL(SUPABASE_URL + "/functions/v1/google-drive-files");
     endpoint.searchParams.set("action", action);
+    endpoint.searchParams.set("accountId", selectedDriveAccountId);
     if (options.query) {
       Object.entries(options.query).forEach(([key, value]) => endpoint.searchParams.set(key, String(value)));
     }
@@ -191,7 +197,9 @@ const firebaseConfig = {
     return response;
   }
 
-  function setDriveFilesStatus(message, isError = false) {
+  function formatDriveBytes(bytes) { const value = Number(bytes) || 0; if (value < 1024) return value + " B"; const units = ["KB","MB","GB","TB"]; let size = value / 1024, index = 0; while (size >= 1024 && index < units.length - 1) { size /= 1024; index++; } return size.toFixed(size >= 10 ? 1 : 2) + " " + units[index]; }
+
+function setDriveFilesStatus(message, isError = false) {
     if (!googleDriveFilesStatus) return;
     googleDriveFilesStatus.textContent = message;
     googleDriveFilesStatus.style.color = isError ? "#a23c32" : "#53617b";
@@ -202,6 +210,10 @@ const firebaseConfig = {
       const response = await googleDriveRequest("status");
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Could not check Google Drive status.");
+      googleDriveAccounts = Array.isArray(payload.accounts) ? payload.accounts : [];
+      if (googleDriveAccountSelect) { const current = selectedDriveAccountId; googleDriveAccountSelect.replaceChildren(); googleDriveAccounts.forEach(account => { const option = document.createElement("option"); option.value = account.id; option.textContent = (account.name || account.email || account.id) + (account.email && account.name ? " · " + account.email : ""); googleDriveAccountSelect.append(option); }); if (googleDriveAccounts.some(account => account.id === current)) googleDriveAccountSelect.value = current; else if (googleDriveAccounts.length) { selectedDriveAccountId = googleDriveAccounts[0].id; googleDriveAccountSelect.value = selectedDriveAccountId; } }
+      const selectedAccount = googleDriveAccounts.find(account => account.id === selectedDriveAccountId);
+      if (googleDriveAccountStorage) googleDriveAccountStorage.textContent = selectedAccount ? "Accounts: " + googleDriveAccounts.length + " · " + (selectedAccount.storageAvailable ? "Used " + formatDriveBytes(selectedAccount.storageUsed) + " / " + formatDriveBytes(selectedAccount.storageTotal) + " · Free " + formatDriveBytes(selectedAccount.storageRemaining) : "Storage quota unavailable (reconnect with storage access)") : "No accounts connected";
       googleDriveConnected = payload.connected === true;
       updateDriveOverview();
       if (googleDriveUploadButton) googleDriveUploadButton.disabled = !googleDriveConnected;
@@ -495,11 +507,15 @@ const firebaseConfig = {
     } catch (error) { setDriveFilesStatus(error.message || "Google Drive upload failed.", true); }
     finally { googleDriveUploadButton.disabled = !googleDriveConnected; googleDriveRefreshButton.disabled = !googleDriveConnected; }
   }
-  if (googleDriveButton) googleDriveButton.addEventListener("click", connectGoogleDrive);
+  if (googleDriveButton) googleDriveButton.addEventListener("click", () => connectGoogleDrive("pixelForge-owner"));
+if (googleDriveAddAccountButton) googleDriveAddAccountButton.addEventListener("click", () => connectGoogleDrive("drive-" + (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36))));
+if (googleDriveAccountSelect) googleDriveAccountSelect.addEventListener("change", () => { selectedDriveAccountId = googleDriveAccountSelect.value || "pixelForge-owner"; refreshGoogleDriveStatus(); });
   if (googleDriveRefreshButton) googleDriveRefreshButton.addEventListener("click", loadGoogleDriveFiles);
   if (googleDriveUploadButton) googleDriveUploadButton.addEventListener("click", uploadGoogleDriveFile);
 
-  const googleDriveResult = new URLSearchParams(window.location.search).get("google_drive");
+  const driveAccountFromOAuth = new URLSearchParams(window.location.search).get("drive_account");
+if (driveAccountFromOAuth && /^[a-zA-Z0-9_-]{3,80}$/.test(driveAccountFromOAuth)) selectedDriveAccountId = driveAccountFromOAuth;
+const googleDriveResult = new URLSearchParams(window.location.search).get("google_drive");
   if (googleDriveResult === "connected") {
     setGoogleDriveStatus("Google Drive account connected. Token storage confirmation received.");
     const cleanUrl = new URL(window.location.href);
@@ -1651,7 +1667,7 @@ const firebaseConfig = {
         headers: { "apikey": SUPABASE_PUBLISHABLE_KEY, "Authorization": "Bearer " + token }
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || "Unavailable");
+      if (!response.ok) { const diagnostic = payload.diagnostic ? " (" + String(payload.diagnostic).slice(0, 240) + ")" : ""; throw new Error((payload.error || "Unavailable") + diagnostic); }
       overviewPageViewsStat.textContent = Number(payload.totalPageViews || 0).toLocaleString();
       if (overviewPageViewsNote) overviewPageViewsNote.textContent = "Last " + payload.days + " days";
     } catch (_) {
@@ -1678,7 +1694,7 @@ const firebaseConfig = {
         headers: { "apikey": SUPABASE_PUBLISHABLE_KEY, "Authorization": "Bearer " + token }
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || "Analytics could not be loaded.");
+      if (!response.ok) { const diagnostic = payload.diagnostic ? " (" + String(payload.diagnostic).slice(0, 240) + ")" : ""; throw new Error((payload.error || "Analytics could not be loaded.") + diagnostic); }
       if (sequence !== analyticsLoadSequence) return;
       totalElement.textContent = Number(payload.totalPageViews || 0).toLocaleString();
       visitorsElement.textContent = Number(payload.uniqueVisitors || 0).toLocaleString();

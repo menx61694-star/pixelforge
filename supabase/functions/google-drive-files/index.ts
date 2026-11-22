@@ -60,10 +60,10 @@ function supabaseAdmin() {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
-async function getAccessToken() {
+async function getAccessToken(accountId = "pixelForge-owner") {
   const db = supabaseAdmin();
   const { data, error } = await db.from("google_drive_oauth_tokens")
-    .select("refresh_token_encrypted").eq("id", "pixelForge-owner").maybeSingle();
+    .select("refresh_token_encrypted").eq("id", accountId).maybeSingle();
   if (error) throw error;
   if (!data?.refresh_token_encrypted) throw new Error("Google Drive is not connected. Connect the owner account first.");
   const [ivPart, cipherPart] = data.refresh_token_encrypted.split(".");
@@ -134,6 +134,7 @@ Deno.serve(async (request) => {
     if (origin && !allowedOrigins.has(origin)) return json({ error: "Origin is not allowed." }, 403, request);
     const url = new URL(request.url);
     const action = url.searchParams.get("action");
+    const selectedAccountId = url.searchParams.get("accountId") || "pixelForge-owner";
 
     // Public listing exposes metadata only; public-download verifies the published record.
     if (request.method === "GET" && action === "public-list") {
@@ -149,11 +150,11 @@ Deno.serve(async (request) => {
       if (!/^[a-zA-Z0-9_-]{10,200}$/.test(fileId)) return json({ error: "Invalid Drive file ID." }, 400, request);
       const db = supabaseAdmin();
       const { data: published, error: publishedError } = await db.from("pixel_forge_published_documents")
-        .select("drive_file_id,title,mime_type,tags")
+        .select("drive_file_id,title,mime_type,tags,account_id")
         .eq("source", "google_drive").eq("drive_file_id", fileId).eq("published", true).maybeSingle();
       if (publishedError) throw publishedError;
       if (!published) return json({ error: "This document is not published." }, 404, request);
-      const accessToken = await getAccessToken();
+      const accessToken = await getAccessToken(published.account_id || "pixelForge-owner");
       const range = request.headers.get("Range");
       const response = await fetch("https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(fileId) + "?alt=media", {
         headers: { Authorization: "Bearer " + accessToken, ...(range ? { Range: range } : {}) }
@@ -161,7 +162,7 @@ Deno.serve(async (request) => {
       if (!response.ok && response.status !== 206) {
         if (response.status === 404) {
           await supabaseAdmin().from("pixel_forge_published_documents")
-            .delete().eq("source", "google_drive").eq("drive_file_id", fileId);
+            .delete().eq("source", "google_drive").eq("drive_file_id", fileId).eq("account_id", published.account_id || "pixelForge-owner");
           return json({ error: "The original Drive file is no longer available; its public listing was removed." }, 404, request);
         }
         return json({ error: "Published document could not be retrieved." }, 502, request);
@@ -239,10 +240,25 @@ Deno.serve(async (request) => {
       return json({ saved: true, tags }, 200, request);
     }
     if (request.method === "GET" && action === "status") {
-      const { data, error } = await supabaseAdmin().from("google_drive_oauth_tokens")
-        .select("connected_at").eq("id", "pixelForge-owner").maybeSingle();
+      const db = supabaseAdmin();
+      const { data: accounts, error } = await db.from("google_drive_oauth_tokens")
+        .select("id,account_email,display_name,connected_at").order("connected_at", { ascending: false });
       if (error) throw error;
-      return json({ connected: Boolean(data?.connected_at), connectedAt: data?.connected_at ?? null }, 200, request);
+      const accountDetails = await Promise.all((accounts ?? []).map(async (account) => {
+        try {
+          const token = await getAccessToken(account.id);
+          const aboutResponse = await fetch("https://www.googleapis.com/drive/v3/about?fields=user,storageQuota", { headers: { Authorization: "Bearer " + token } });
+          const about = aboutResponse.ok ? await aboutResponse.json().catch(() => ({})) : {};
+          const quota = about.storageQuota ?? {};
+          return { id: account.id, email: account.account_email, name: account.display_name, connected: Boolean(account.connected_at), storageAvailable: aboutResponse.ok && Boolean(quota.limit), connectedAt: account.connected_at,
+            storageTotal: quota.limit ? Number(quota.limit) : null, storageUsed: quota.usage ? Number(quota.usage) : null, storageRemaining: quota.limit && quota.usage ? Math.max(0, Number(quota.limit) - Number(quota.usage)) : null };
+        } catch (_) {
+          return { id: account.id, email: account.account_email, name: account.display_name, connected: false, connectedAt: account.connected_at, storageTotal: 0, storageUsed: 0, storageRemaining: 0 };
+        }
+      }));
+      const selectedId = url.searchParams.get("accountId") || "pixelForge-owner";
+      const selected = accountDetails.find((account) => account.id === selectedId);
+      return json({ accounts: accountDetails, accountCount: accountDetails.length, accountId: selectedId, connected: selected?.connected === true, connectedAt: selected?.connectedAt ?? null }, 200, request);
     }
     if (request.method === "GET" && action === "published-list") {
       const { data, error } = await supabaseAdmin().from("pixel_forge_published_documents")
@@ -258,7 +274,7 @@ Deno.serve(async (request) => {
       const db = supabaseAdmin();
       if (action === "unpublish") {
         const { error } = await db.from("pixel_forge_published_documents").delete()
-          .eq("source", "google_drive").eq("drive_file_id", fileId).eq("owner_uid", uid);
+          .eq("source", "google_drive").eq("drive_file_id", fileId).eq("owner_uid", uid).eq("account_id", selectedAccountId);
         if (error) throw error;
         return json({ unpublished: true }, 200, request);
       }
@@ -270,14 +286,15 @@ Deno.serve(async (request) => {
       const tags = normalizeTags(input.tags);
       if (!allowedCategories.includes(category) || !title || !tags) return json({ error: "A valid category, title and up to 10 valid tags are required." }, 400, request);
       const { error } = await db.from("pixel_forge_published_documents").upsert({
-        source: "google_drive", owner_uid: uid, drive_file_id: fileId, storage_path: null,
+        source: "google_drive", owner_uid: uid, drive_file_id: fileId, storage_path: null, account_id: selectedAccountId,
         category, title, mime_type: mimeType, size_bytes: Number.isSafeInteger(sizeBytes) && sizeBytes > 0 ? sizeBytes : null,
         tags, published: true, updated_at: new Date().toISOString()
       }, { onConflict: "source,drive_file_id" });
       if (error) throw error;
       return json({ published: true }, 200, request);
     }
-    const accessToken = await getAccessToken();
+    if (!/^[a-zA-Z0-9_-]{3,80}$/.test(selectedAccountId)) return json({ error: "Invalid Drive account selection." }, 400, request);
+    const accessToken = await getAccessToken(selectedAccountId);
     const googleHeaders = { Authorization: "Bearer " + accessToken };
 
     if (request.method === "GET" && action === "list") {

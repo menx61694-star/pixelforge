@@ -8,10 +8,12 @@ create table if not exists public.google_drive_oauth_states (
 );
 
 create table if not exists public.google_drive_oauth_tokens (
-  id text primary key check (id = 'pixelForge-owner'),
+  id text primary key,
   refresh_token_encrypted text not null,
   scope text not null,
-  connected_at timestamptz not null default now()
+  connected_at timestamptz not null default now(),
+  account_email text,
+  display_name text
 );
 
 alter table public.google_drive_oauth_states enable row level security;
