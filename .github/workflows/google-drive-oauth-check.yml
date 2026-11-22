@@ -143,6 +143,7 @@ jobs:
           node --test tests/analytics-contract.test.js
           node --test tests/role-permissions.test.js
           node --test tests/settings-contract.test.js
+          node --test tests/edge-api-key-contract.test.js
           node --test tests/maintenance-mode.test.js
 
       - name: Type-check Edge Functions
