@@ -31,6 +31,7 @@ alter table public.pixel_forge_site_settings
       when 'maintenance.message' then jsonb_typeof(setting_value) = 'string' and length(setting_value #>> '{}') <= 500
       when 'sync.drive.auto_enabled' then jsonb_typeof(setting_value) = 'boolean'
       when 'sync.vault.auto_enabled' then jsonb_typeof(setting_value) = 'boolean'
+      when 'home.library.pdf_preview_enabled' then jsonb_typeof(setting_value) = 'boolean'
       when 'home.knowledge.enabled' then jsonb_typeof(setting_value) = 'boolean'
       when 'home.knowledge.items' then
         case when jsonb_typeof(setting_value) = 'array'
@@ -116,6 +117,7 @@ begin
     when 'maintenance.message' then jsonb_typeof(p_value) = 'string' and length(p_value #>> '{}') <= 500
     when 'sync.drive.auto_enabled' then jsonb_typeof(p_value) = 'boolean'
     when 'sync.vault.auto_enabled' then jsonb_typeof(p_value) = 'boolean'
+    when 'home.library.pdf_preview_enabled' then jsonb_typeof(p_value) = 'boolean'
     when 'home.knowledge.enabled' then jsonb_typeof(p_value) = 'boolean'
     when 'home.knowledge.items' then
       case when jsonb_typeof(p_value) = 'array' then
