@@ -12,7 +12,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js" defer></script>
   <script src="vault-storage-utils.js" defer></script>
-  <script src="admin.js?v=ist-header-1" defer></script>
+  <script src="admin.js?v=drive-folder-ui-1" defer></script>
 </head>
 <body>
   <main class="admin-shell">
@@ -154,20 +154,69 @@
         </div>
 
         <div class="dashboard-content dashboard-page" id="google-drive" hidden>
-          <section class="panel" aria-labelledby="google-drive-heading" style="margin-bottom: 1.5rem;">
-            <div class="panel-heading">
-              <div><p class="eyebrow">EXTERNAL STORAGE</p><h2 id="google-drive-heading">Google Drive</h2></div>
-              <button id="google-drive-connect" type="button">Connect owner Drive</button><button id="google-drive-add-account" type="button">Add Drive account</button>
+          <section class="drive-manager-panel" aria-labelledby="google-drive-heading">
+            <div class="drive-manager-hero">
+              <div class="drive-identity">
+                <div class="google-drive-logo" aria-hidden="true">
+                  <svg viewBox="0 0 48 48" role="img" focusable="false">
+                    <path fill="#4285F4" d="M16.1 4.8h10.1L42.4 32.7H32.2z"/>
+                    <path fill="#34A853" d="M32.2 32.7h10.2l-5.1 8.8H27.1z"/>
+                    <path fill="#FBBC04" d="M16.1 4.8 1.9 29.4l5.1 8.8L21.2 14z"/>
+                    <path fill="#EA4335" d="M7 38.2 1.9 29.4h10.2l5.1 8.8z"/>
+                    <path fill="#188038" d="M17.2 38.2 22.3 29.4h19.1l-5.1 8.8z"/>
+                  </svg>
+                </div>
+                <div>
+                  <p class="eyebrow">EXTERNAL STORAGE · CLOUD ACCOUNTS</p>
+                  <h2 id="google-drive-heading">Google Drive</h2>
+                  <p class="drive-subtitle">Manage connected accounts and upload directly to the account or folder you choose.</p>
+                </div>
+              </div>
+              <div class="drive-connection-actions">
+                <button id="google-drive-connect" type="button">Connect owner Drive</button>
+                <button id="google-drive-add-account" class="drive-add-account" type="button">＋ Add account</button>
+              </div>
             </div>
-            <p class="panel-copy">Connect the owner Google account securely. This step only authorizes access; document migration and storage routing are not enabled yet.</p>
-            <p id="google-drive-status" class="vault-status" role="status" aria-live="polite"></p>
-            <div class="drive-tools" style="display:grid;gap:.8rem;margin-top:1rem;"><div style="display:flex;gap:.7rem;flex-wrap:wrap;align-items:center;"><label for="google-drive-account-select">Account</label><select id="google-drive-account-select" aria-label="Select Google Drive account"></select><span id="google-drive-account-storage" class="panel-copy"></span></div>
-              <div style="display:flex;gap:.7rem;flex-wrap:wrap;align-items:center;">
+
+            <div class="drive-connection-status" role="status">
+              <span class="drive-status-indicator" aria-hidden="true"></span>
+              <p id="google-drive-status" class="vault-status" aria-live="polite">Checking connection…</p>
+            </div>
+
+            <div class="drive-account-card">
+              <div class="drive-account-topline">
+                <div class="drive-account-label"><span class="drive-account-icon">G</span><div><strong>Connected account</strong><small>Select which Drive to manage</small></div></div>
+                <label class="drive-account-select-wrap" for="google-drive-account-select"><span>Account</span><select id="google-drive-account-select" aria-label="Select Google Drive account"></select></label>
+              </div>
+              <div class="drive-storage-summary">
+                <div class="drive-storage-heading"><span id="google-drive-account-storage">Checking storage…</span><strong id="google-drive-storage-percent"></strong></div>
+                <div class="drive-storage-track" aria-label="Storage used"><span id="google-drive-storage-fill"></span></div>
+                <p class="drive-storage-caption">Storage details are provided by Google for the selected account.</p>
+              </div>
+            </div>
+
+            <div class="drive-upload-card">
+              <div class="drive-upload-heading"><div><p class="eyebrow">UPLOAD DESTINATION</p><h3>Where should files go?</h3></div><span class="drive-upload-badge">Multi-file supported</span></div>
+              <div class="drive-destination-row">
+                <label class="drive-destination-label" for="google-drive-folder-select">Folder</label>
+                <select id="google-drive-folder-select" aria-label="Choose Google Drive upload folder">
+                  <option value="">My Drive · Root (default)</option>
+                </select>
+                <span id="google-drive-folder-note" class="drive-folder-note">New uploads go to the selected account’s My Drive root by default.</span>
+              </div>
+              <div class="drive-file-picker">
                 <input id="google-drive-file" type="file" accept="application/pdf,image/jpeg,image/png" multiple>
-                <button id="google-drive-upload" type="button" disabled>Upload to Google Drive</button>
-                <button id="google-drive-refresh" type="button" disabled>Refresh Drive files</button>
+                <small>PDF, JPG or PNG · Up to 2 GB per file</small>
+              </div>
+              <div class="drive-upload-actions">
+                <button id="google-drive-upload" type="button" disabled>Upload to selected Drive <span aria-hidden="true">↗</span></button>
+                <button id="google-drive-refresh" class="drive-secondary-button" type="button" disabled>Refresh files</button>
               </div>
               <p id="google-drive-files-status" class="vault-status" role="status" aria-live="polite">Connect Google Drive to manage Drive files.</p>
+            </div>
+
+            <div class="drive-files-card">
+              <div class="drive-files-heading"><div><p class="eyebrow">ACCOUNT CONTENT</p><h3>Drive files</h3></div><span class="drive-files-tip">Switch accounts to view their files</span></div>
               <div id="drive-bulk-toolbar" class="bulk-actions-toolbar" hidden>
                 <div class="bulk-actions-heading"><label><input id="drive-select-all" type="checkbox"> Select all Drive files</label><span id="drive-selected-count">0 selected</span></div>
                 <div class="bulk-actions-controls">
