@@ -513,7 +513,9 @@ if (googleDriveAccountSelect) googleDriveAccountSelect.addEventListener("change"
   if (googleDriveRefreshButton) googleDriveRefreshButton.addEventListener("click", loadGoogleDriveFiles);
   if (googleDriveUploadButton) googleDriveUploadButton.addEventListener("click", uploadGoogleDriveFile);
 
-  const googleDriveResult = new URLSearchParams(window.location.search).get("google_drive");
+  const driveAccountFromOAuth = new URLSearchParams(window.location.search).get("drive_account");
+if (driveAccountFromOAuth && /^[a-zA-Z0-9_-]{3,80}$/.test(driveAccountFromOAuth)) selectedDriveAccountId = driveAccountFromOAuth;
+const googleDriveResult = new URLSearchParams(window.location.search).get("google_drive");
   if (googleDriveResult === "connected") {
     setGoogleDriveStatus("Google Drive account connected. Token storage confirmation received.");
     const cleanUrl = new URL(window.location.href);
