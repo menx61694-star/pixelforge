@@ -293,3 +293,15 @@
 .announcement-manager-card p{margin:8px 0;white-space:pre-wrap}
 .announcement-manager-actions{display:flex;gap:8px;margin-top:10px}
 @media(max-width:650px){.announcement-editor-row{grid-template-columns:1fr}}
+
+/* Learning Corner Manager */
+.learning-path-form{display:grid;gap:10px;margin:12px 0;padding:14px;border:1px solid var(--border-color,#dbe3f2);border-radius:12px}
+.learning-path-form input,.learning-path-form textarea,.learning-path-form select{width:100%;box-sizing:border-box}
+.learning-form-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.learning-form-row>div{display:grid;gap:6px}
+.learning-step-editor-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) auto;gap:8px;margin:8px 0}
+.learning-path-list{display:grid;gap:10px;margin:12px 0}
+.learning-path-card{border:1px solid var(--border-color,#dbe3f2);border-radius:12px;padding:12px}
+.learning-path-card p{white-space:pre-wrap}
+.learning-path-actions{display:flex;gap:8px;margin-top:10px}
+@media(max-width:650px){.learning-form-row,.learning-step-editor-row{grid-template-columns:1fr}}
