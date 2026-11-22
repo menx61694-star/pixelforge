@@ -130,7 +130,7 @@ test("Daily Quiz is admin-managed, validated server-side, and never exposes the 
   const migration = read("supabase/phase-7-daily-quiz.sql");
   const homepage = read("index.html");
   const publicScript = read("script.js");
-  assert.match(adminHtml, /setting-quiz-enabled/);
+  assert.match(adminJs, /setting-quiz-enabled/);
   assert.match(adminHtml, /setting-quiz-items/);
   assert.match(adminJs, /saveSetting\("home\.quiz\.items"/);
   assert.match(adminJs, /saveSetting\("home\.quiz\.enabled"/);
@@ -165,7 +165,7 @@ test("Quick Digital Tools are admin-managed, ordered, allow-listed and exposed w
   const publicScript = read("script.js");
   const toolsPage = read("tools.html");
   const toolsScript = read("tools.js");
-  assert.match(adminHtml, /setting-tools-enabled/);
+  assert.match(adminJs, /setting-tools-enabled/);
   assert.match(adminHtml, /setting-tools-items/);
   assert.match(adminJs, /saveSetting\("home\.tools\.items"/);
   assert.match(adminJs, /saveSetting\("home\.tools\.enabled"/);
@@ -192,7 +192,7 @@ test("Featured Resources are admin-managed, published-only and restricted to saf
   const migration = read("supabase/phase-9-featured-resources.sql");
   const homepage = read("index.html");
   const publicScript = read("script.js");
-  assert.match(adminHtml, /setting-featured-enabled/);
+  assert.match(adminJs, /setting-featured-enabled/);
   assert.match(adminHtml, /setting-featured-items/);
   assert.match(adminJs, /saveSetting\("home\.featured\.items"/);
   assert.match(adminJs, /saveSetting\("home\.featured\.enabled"/);
@@ -215,7 +215,7 @@ test("Announcements are admin-managed, date-validated, scheduled in India time a
   const homepage = read("index.html");
   const publicScript = read("script.js");
   assert.match(adminHtml, /setting-announcements-enabled/);
-  assert.match(adminHtml, /setting-announcements-items/);
+  assert.match(adminJs, /setting-announcements-items/);
   assert.match(adminJs, /saveSetting\("home\.announcements\.items"/);
   assert.match(adminJs, /saveSetting\("home\.announcements\.enabled"/);
   assert.match(edge, /isValidIsoDate/);
@@ -238,7 +238,7 @@ test("Smart Document Search is admin-configurable and exposes only validated pub
   const publicScript = read("script.js");
   const library = read("library.js");
   const libraryHtml = read("library.html");
-  assert.match(adminHtml, /setting-search-enabled/);
+  assert.match(adminJs, /setting-search-enabled/);
   assert.match(adminHtml, /setting-search-smart/);
   assert.match(adminHtml, /setting-search-filters/);
   assert.match(adminJs, /saveSetting\("home\.search\.max_results"/);
@@ -275,7 +275,7 @@ test("Learning Corner paths are admin-managed and expose only published steps wi
   const homepage = read("index.html");
   const publicScript = read("script.js");
   assert.match(adminHtml, /setting-learning-enabled/);
-  assert.match(adminHtml, /setting-learning-items/);
+  assert.match(adminJs, /setting-learning-items/);
   assert.match(adminJs, /saveSetting\("home\.learning\.items"/);
   assert.match(edge, /home\.learning\.items/);
   assert.match(edge, /learningCorner:/);
@@ -294,7 +294,7 @@ test("User Feedback is moderated, privacy-conscious and controlled from Admin Se
   const migration = read("supabase/phase-13-user-feedback.sql");
   const homepage = read("index.html");
   const publicScript = read("script.js");
-  assert.match(adminHtml, /setting-feedback-enabled/);
+  assert.match(adminJs, /setting-feedback-enabled/);
   assert.match(adminHtml, /feedback-inbox-list/);
   assert.match(adminJs, /feedback-moderate/);
   assert.match(edge, /action === "submit-feedback"/);
@@ -322,7 +322,7 @@ test("SEO Management validates metadata and applies page-specific canonical and 
   const migration = read("supabase/phase-14-seo-management.sql");
   const seoScript = read("seo.js");
   assert.match(adminHtml, /setting-seo-enabled/);
-  assert.match(adminHtml, /setting-seo-pages/);
+  assert.match(adminJs, /setting-seo-pages/);
   assert.match(adminJs, /saveSetting\("home\.seo\.page_overrides"/);
   assert.match(edge, /home\.seo\.page_overrides/);
   assert.match(edge, /isSafeHttpsUrl/);
@@ -347,7 +347,7 @@ test("Homepage Layout Manager validates a complete section order and applies vis
   const edge = read("supabase/functions/site-settings/index.ts");
   const migration = read("supabase/phase-15-homepage-layout.sql");
   const layoutScript = read("layout.js");
-  assert.match(adminHtml, /setting-layout-sections/);
+  assert.match(adminJs, /setting-layout-sections/);
   assert.match(adminJs, /saveSetting\("home\.layout\.sections"/);
   assert.match(edge, /home\.layout\.sections/);
   assert.match(migration, /home\.layout\.sections/);
@@ -413,7 +413,7 @@ test("Google Drive and Private Vault support sequential multi-file uploads", () 
   assert.ok(js.includes("Array.from(fileInput.files || [])"));
   assert.ok(js.includes("Array.from(googleDriveFileInput ? googleDriveFileInput.files : [])"));
   assert.ok(js.includes("uploadLargeFile(BUCKET, currentUserUid + \"/\" + objectName, file, index + 1, uploadable.length)"));
-  assert.ok(js.includes("uploadGoogleDriveSingleFile(files[index], index + 1, files.length)"));
+  assert.ok(js.includes("uploadGoogleDriveSingleFile(files[index], index + 1, files.length, targetAccountId, targetFolderId)"));
   assert.ok(js.includes('currentPermissions.has("vault.write")'));
   assert.ok(js.includes('currentPermissions.has("drive.write")'));
   assert.ok(js.includes("Uploaded \" + succeeded + \" of \" + files.length"));
@@ -542,7 +542,7 @@ test("Google Drive file list supports multi-select and permission-gated bulk act
   assert.match(adminHtml, /id="drive-bulk-publish"/);
   assert.match(adminHtml, /id="drive-bulk-unpublish"/);
   assert.match(adminHtml, /id="drive-bulk-delete"/);
-  assert.match(adminJs, /className="drive-file-select"/);
+  assert.match(adminJs, /select\.className = "drive-file-select"/);
   assert.match(adminJs, /selectedDriveFileIds/);
   assert.match(adminJs, /currentPermissions\.has\("vault\.publish"\)/);
   assert.match(adminJs, /currentPermissions\.has\("drive\.delete"\)/);
