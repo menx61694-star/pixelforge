@@ -471,13 +471,14 @@ function setDriveFilesStatus(message, isError = false) {
       const results = await Promise.all(accounts.map(async account => {
         const response = await googleDriveRequest("list", { accountId: account.id });
         const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error((account.email || account.name || account.id) + ": " + (payload.error || "Could not list files."));
-        return (Array.isArray(payload.files) ? payload.files : []).map(file => ({
+        if (!response.ok) return { files: [], error: (account.email || account.name || account.id) + ": " + (payload.error || "Could not list files.") };
+        return { files: (Array.isArray(payload.files) ? payload.files : []).map(file => ({
           ...file, driveAccountId: account.id, driveAccountName: account.email || account.name || account.id,
           selectionKey: account.id + "::" + file.id
-        }));
+        })) };
       }));
-      const files = results.flat();
+      const files = results.flatMap(result => result.files);
+      const accountErrors = results.filter(result => result.error).map(result => result.error);
       googleDriveFileList.replaceChildren();
       currentDriveFiles = files; driveFilesLoaded = true;
       updateDriveOverview(); updateDashboardActivity();
@@ -530,7 +531,7 @@ function setDriveFilesStatus(message, isError = false) {
         actions.append(download, category, tagsInput, publish, unpublish, remove); item.append(selectWrap, info, actions); googleDriveFileList.append(item);
       });
       updateDriveBulkSelection();
-      setDriveFilesStatus(files.length + " file(s) from " + accounts.length + " connected account(s) listed.");
+      setDriveFilesStatus(files.length + " file(s) from " + accounts.length + " account(s) loaded." + (accountErrors.length ? " Some accounts failed: " + accountErrors.join(" · ") : ""), accountErrors.length > 0);
     } catch (error) { setDriveFilesStatus(error.message || "Google Drive listing failed.", true); }
     finally { if (googleDriveRefreshButton) googleDriveRefreshButton.disabled = !googleDriveConnected; }
   }
@@ -654,11 +655,11 @@ function setDriveFilesStatus(message, isError = false) {
     }
   }
 
-  async function uploadGoogleDriveSingleFile(file, fileIndex, fileCount) {
+  async function uploadGoogleDriveSingleFile(file, fileIndex, fileCount, accountId, folderId) {
     setDriveFilesStatus("Preparing Google Drive upload (" + fileIndex + "/" + fileCount + "): " + file.name);
     const sessionResponse = await googleDriveRequest("create-upload-session", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: file.name, mimeType: file.type, size: file.size, parentFolderId: selectedDriveFolderId || null })
+      accountId, method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: file.name, mimeType: file.type, size: file.size, parentFolderId: folderId || null })
     });
     const session = await sessionResponse.json();
     if (!sessionResponse.ok || !session.uploadUrl) throw new Error(session.error || "Could not start upload.");
@@ -667,7 +668,7 @@ function setDriveFilesStatus(message, isError = false) {
     while (uploaded < file.size) {
       const endExclusive = Math.min(uploaded + chunkSize, file.size);
       const response = await googleDriveRequest("upload-chunk", {
-        method: "POST",
+        accountId, method: "POST,
         headers: { "X-Drive-Upload-Url": session.uploadUrl, "Content-Range": "bytes " + uploaded + "-" + (endExclusive - 1) + "/" + file.size },
         body: file.slice(uploaded, endExclusive)
       });
@@ -685,13 +686,15 @@ function setDriveFilesStatus(message, isError = false) {
     const invalid = files.find(file => !ALLOWED_TYPES.has(file.type) || !file.size || file.size > 2 * 1024 * 1024 * 1024);
     if (invalid) { setDriveFilesStatus("Every selected file must be a non-empty PDF, JPEG or PNG up to 2 GB. Invalid: " + invalid.name, true); return; }
     if (!googleDriveConnected || selectedDriveAccountId === "__all__" || !currentPermissions.has("drive.write")) { setDriveFilesStatus("Your account does not have Google Drive upload permission.", true); return; }
+    const targetAccountId = selectedDriveAccountId;
+    const targetFolderId = selectedDriveFolderId;
     googleDriveUploadButton.disabled = true;
     googleDriveRefreshButton.disabled = true;
     let succeeded = 0;
     const failures = [];
     try {
       for (let index = 0; index < files.length; index++) {
-        try { await uploadGoogleDriveSingleFile(files[index], index + 1, files.length); succeeded++; }
+        try { await uploadGoogleDriveSingleFile(files[index], index + 1, files.length, targetAccountId, targetFolderId); succeeded++; }
         catch (error) { failures.push(files[index].name + ": " + (error.message || "Upload failed")); }
       }
       googleDriveFileInput.value = "";
@@ -699,7 +702,7 @@ function setDriveFilesStatus(message, isError = false) {
       if (failures.length) setDriveFilesStatus("Uploaded " + succeeded + " of " + files.length + " files. Failed: " + failures.join(" · "), true);
       else setDriveFilesStatus("Successfully uploaded " + succeeded + " file" + (succeeded === 1 ? "" : "s") + " to Google Drive.");
     } catch (error) { setDriveFilesStatus(error.message || "Google Drive upload failed.", true); }
-    finally { googleDriveUploadButton.disabled = !googleDriveConnected; googleDriveRefreshButton.disabled = !googleDriveConnected; }
+    finally { googleDriveUploadButton.disabled = !googleDriveConnected || selectedDriveAccountId === "__all__"; googleDriveRefreshButton.disabled = !googleDriveConnected; }
   }
   if (googleDriveButton) googleDriveButton.addEventListener("click", () => connectGoogleDrive("pixelForge-owner"));
 if (googleDriveAddAccountButton) googleDriveAddAccountButton.addEventListener("click", () => connectGoogleDrive("drive-" + (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36))));
