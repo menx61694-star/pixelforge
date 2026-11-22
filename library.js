@@ -154,7 +154,7 @@
           let visitorId = sessionStorage.getItem("pf-resource-visitor");
           if (!visitorId) { visitorId = crypto.randomUUID(); sessionStorage.setItem("pf-resource-visitor", visitorId); }
           fetch(SUPABASE_URL + "/functions/v1/site-settings?action=track-resource", {
-            method: "POST", headers: { "Content-Type": "application/json" }, headers: { "apikey": SUPABASE_PUBLISHABLE_KEY }, credentials: "omit", keepalive: true,
+            method: "POST", headers: { "Content-Type": "application/json" }, credentials: "omit", keepalive: true,
             body: JSON.stringify({ source: doc.source, resourceId: doc.resourceId, visitorId })
           }).catch(() => {});
         } catch (_) { /* Tracking is optional; never block opening a document. */ }
