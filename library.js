@@ -11,9 +11,9 @@
     } catch (_) { return null; }
   }
   fetch(SUPABASE_URL + "/functions/v1/analytics?action=collect", {
-    method: "POST", headers: { "Content-Type": "application/json" },
+    method: "POST", headers: { "apikey": SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" },
     body: JSON.stringify({ pagePath: window.location.pathname || "/", visitorSessionId: getVisitorSessionId() }),
-    keepalive: true, credentials: "omit"
+    keepalive: true, headers: { "apikey": SUPABASE_PUBLISHABLE_KEY }, credentials: "omit"
   }).catch(() => {});
   const categories = [{"slug":"pdf-documents","name":"PDF Documents","desc":"Published PDF files and downloadable documents."},{"slug":"study-notes","name":"Study Notes","desc":"Organized notes and learning material."},{"slug":"books-resources","name":"Books & Resources","desc":"Helpful books, references and learning resources."},{"slug":"other-documents","name":"Other Documents","desc":"Additional public documents and useful files."},{"slug":"exam-materials","name":"Exam Materials","desc":"Exam-focused notes, practice material and preparation files."},{"slug":"technology-guides","name":"Technology Guides","desc":"Practical technology guides, tutorials and references."}];
   const root = document.querySelector("[data-library]");
@@ -154,7 +154,7 @@
           let visitorId = sessionStorage.getItem("pf-resource-visitor");
           if (!visitorId) { visitorId = crypto.randomUUID(); sessionStorage.setItem("pf-resource-visitor", visitorId); }
           fetch(SUPABASE_URL + "/functions/v1/site-settings?action=track-resource", {
-            method: "POST", headers: { "Content-Type": "application/json" }, credentials: "omit", keepalive: true,
+            method: "POST", headers: { "Content-Type": "application/json" }, headers: { "apikey": SUPABASE_PUBLISHABLE_KEY }, credentials: "omit", keepalive: true,
             body: JSON.stringify({ source: doc.source, resourceId: doc.resourceId, visitorId })
           }).catch(() => {});
         } catch (_) { /* Tracking is optional; never block opening a document. */ }
@@ -168,7 +168,7 @@
   }
   async function loadSearchConfig() {
     try {
-      const response = await fetch(SUPABASE_URL + "/functions/v1/site-settings?action=public-content", { credentials: "omit" });
+      const response = await fetch(SUPABASE_URL + "/functions/v1/site-settings?action=public-content", { headers: { "apikey": SUPABASE_PUBLISHABLE_KEY }, credentials: "omit" });
       if (!response.ok) throw new Error("Search settings unavailable");
       const payload = await response.json(), config = payload.search || {};
       state.searchConfig = {
@@ -224,7 +224,7 @@
 
       const drivePromise = (async () => {
         try {
-          const driveResponse = await fetch(SUPABASE_URL + "/functions/v1/google-drive-files?action=public-list", { credentials: "omit" });
+          const driveResponse = await fetch(SUPABASE_URL + "/functions/v1/google-drive-files?action=public-list", { headers: { "apikey": SUPABASE_PUBLISHABLE_KEY }, credentials: "omit" });
           const drivePayload = await driveResponse.json();
           if (!driveResponse.ok) throw new Error(drivePayload.error || "Published Drive documents could not be loaded.");
           return (drivePayload.documents || [])
