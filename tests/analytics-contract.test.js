@@ -142,7 +142,9 @@ test("security logs encrypt raw IP addresses with AES-GCM before persistence", (
   assert.match(edge, /ip_ciphertext/);
   assert.match(edge, /ip_iv/);
   assert.match(edge, /await storeSecurityLog\(pagePath, db, observedIp\)/);
-  assert.match(edge, /safeDecrypt\(row\.ip_ciphertext, row\.ip_iv\)/);\n  assert.match(edge, /async function safeDecrypt/);\n  assert.match(edge, /localIpAddress: await safeDecrypt/);
+  assert.match(edge, /safeDecrypt\(row\.ip_ciphertext, row\.ip_iv\)/);
+  assert.match(edge, /async function safeDecrypt/);
+  assert.match(edge, /localIpAddress: await safeDecrypt/);
 });
 
 test("security logs table denies public and authenticated direct access and has 90-day scheduled retention", () => {
@@ -200,7 +202,7 @@ test("local IP diagnostic requires explicit consent, accepts only private addres
   assert.match(edge, /local_ip_ciphertext: localEncrypted\.ip_ciphertext/);
   assert.match(edge, /local_ip_source: "browser-webrtc-explicit-consent"/);
   assert.match(edge, /local_ip_ciphertext,local_ip_iv,local_ip_source/);
-  assert.match(edge, /localIpAddress: row\.local_ip_ciphertext/);
+  assert.match(edge, /localIpAddress: await safeDecrypt/);
   assert.match(read("supabase/phase-4-security-logs.sql"), /local_ip_ciphertext text/);
   assert.match(read("supabase/phase-4-security-logs.sql"), /'local_ip_diagnostic'/);
 });
@@ -236,7 +238,7 @@ test("direct page views use Supabase-managed client IP and never trust caller fo
   assert.match(edge, /return trustedProxyIp \? await hmacHash\("rate:" \+ trustedProxyIp\) : null/);
   assert.match(edge, /await storeSecurityLog\(pagePath, db, observedIp\)/);
   assert.match(edge, /ip_source: observedIp\?\.source \?\? "unavailable"/);
-  assert.match(edge, /ipAddress: row\.ip_ciphertext && row\.ip_iv \? await decryptIp/);
+  assert.match(edge, /ipAddress: await safeDecrypt/);
   const securitySql = read("supabase/phase-4-security-logs.sql");
   assert.match(securitySql, /ip_ciphertext text,/);
   assert.match(securitySql, /alter column ip_ciphertext drop not null/i);
