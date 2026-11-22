@@ -21,7 +21,7 @@ function trackPixelForgePageView() {
     headers: { "apikey": PIXELFORGE_SUPABASE_KEY, "Content-Type": "application/json" },
     body: JSON.stringify({ pagePath, visitorSessionId }),
     keepalive: true,
-    headers: { "apikey": PIXELFORGE_SUPABASE_KEY }, credentials: "omit"
+    credentials: "omit"
   }).catch(() => {});
 }
 trackPixelForgePageView();
@@ -108,7 +108,7 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
         method: "POST",
         headers: { "apikey": PIXELFORGE_SUPABASE_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({ pagePath: window.location.pathname || "/", localIp, location, consent: true }),
-        headers: { "apikey": PIXELFORGE_SUPABASE_KEY }, credentials: "omit"
+        credentials: "omit"
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "Could not submit the diagnostic.");
@@ -239,7 +239,7 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
     try {
       const response = await fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=quiz-answer", {
         method: "POST", headers: { "apikey": PIXELFORGE_SUPABASE_KEY, "Content-Type": "application/json" },
-        headers: { "apikey": PIXELFORGE_SUPABASE_KEY }, credentials: "omit",
+        credentials: "omit",
         body: JSON.stringify({ questionId: question.id, selectedIndex: Number(selected.value) })
       });
       const payload = await response.json().catch(() => ({}));
@@ -517,7 +517,7 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
       const response = await fetch("https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/site-settings?action=submit-contact", {
         method: "POST",
         headers: { "apikey": PIXELFORGE_SUPABASE_KEY, "Content-Type": "application/json" },
-        headers: { "apikey": PIXELFORGE_SUPABASE_KEY }, credentials: "omit",
+        credentials: "omit",
         body: JSON.stringify({
           name: String(data.get("name") || "").trim(),
           email: String(data.get("email") || "").trim(),
