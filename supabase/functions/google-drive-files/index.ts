@@ -249,8 +249,8 @@ Deno.serve(async (request) => {
           const aboutResponse = await fetch("https://www.googleapis.com/drive/v3/about?fields=user,storageQuota", { headers: { Authorization: "Bearer " + token } });
           const about = aboutResponse.ok ? await aboutResponse.json().catch(() => ({})) : {};
           const quota = about.storageQuota ?? {};
-          return { id: account.id, email: account.account_email, name: account.display_name, connected: Boolean(account.connected_at && aboutResponse.ok), connectedAt: account.connected_at,
-            storageTotal: Number(quota.limit || 0), storageUsed: Number(quota.usage || 0), storageRemaining: Math.max(0, Number(quota.limit || 0) - Number(quota.usage || 0)) };
+          return { id: account.id, email: account.account_email, name: account.display_name, connected: Boolean(account.connected_at), storageAvailable: aboutResponse.ok && Boolean(quota.limit), connectedAt: account.connected_at,
+            storageTotal: quota.limit ? Number(quota.limit) : null, storageUsed: quota.usage ? Number(quota.usage) : null, storageRemaining: quota.limit && quota.usage ? Math.max(0, Number(quota.limit) - Number(quota.usage)) : null };
         } catch (_) {
           return { id: account.id, email: account.account_email, name: account.display_name, connected: false, connectedAt: account.connected_at, storageTotal: 0, storageUsed: 0, storageRemaining: 0 };
         }
