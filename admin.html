@@ -12,7 +12,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js" defer></script>
   <script src="vault-storage-utils.js" defer></script>
-  <script src="admin.js?v=learning-manager-ui-1" defer></script>
+  <script src="admin.js?v=remove-json-admin-fields-1" defer></script>
 </head>
 <body>
   <main class="admin-shell">
@@ -319,14 +319,6 @@
                 <p class="settings-help">Use one fact per line in CATEGORY | FACT format. Up to 50 facts; each fact should be 8–240 characters. Visitors can request another fact with the refresh button.</p>
                 <button type="button" data-setting-save="home.knowledge">Save homepage knowledge</button>
               </article>
-              <details class="settings-card settings-collapsible">
-                <summary>Daily Quiz</summary>
-                <label class="settings-toggle"><input id="setting-quiz-enabled" type="checkbox"><span>Enable Question of the Day</span></label>
-                <label for="setting-quiz-items">Quiz questions (JSON)</label>
-                <textarea id="setting-quiz-items" rows="12" maxlength="18000" spellcheck="false" placeholder='[{"id":"q1","category":"Science","publishDate":"2026-11-15","published":true,"question":"Which planet is known as the Red Planet?","options":["Earth","Mars","Venus","Jupiter"],"correctIndex":1,"explanation":"Mars appears reddish because iron minerals in its soil oxidize."}]'></textarea>
-                <p class="settings-help">Add up to 100 questions. Each object needs id, category, publishDate (YYYY-MM-DD), published, question, exactly four options, correctIndex (0–3), and explanation. Only a published question scheduled for today's India date is shown publicly. Correct answers are checked by the server.</p>
-                <button type="button" data-setting-save="home.quiz">Save Daily Quiz</button>
-              </details>
               <article class="settings-card">
                 <h3>Popular Resources</h3>
                 <label class="settings-toggle"><input id="setting-popular-enabled" type="checkbox"><span>Show Popular Resources on the homepage</span></label>
@@ -344,14 +336,6 @@
                 <p class="settings-help">Applies only to published public PDFs from PixelForge Storage and Google Drive. Private Vault files are excluded. The Open document link remains available as a fallback.</p>
                 <button type="button" data-setting-save="home.library">Save Document Library Settings</button>
               </article>
-              <details class="settings-card settings-collapsible">
-                <summary>Homepage Layout Manager</summary>
-                <label class="settings-toggle"><input id="setting-layout-enabled" type="checkbox"><span>Apply Admin-managed homepage layout</span></label>
-                <label for="setting-layout-sections">Homepage sections (JSON, array order = display order)</label>
-                <textarea id="setting-layout-sections" rows="14" maxlength="14000" spellcheck="false" placeholder='[{"id":"smart-document-search","enabled":true,"title":"","subtitle":""},{"id":"discover","enabled":true,"title":"","subtitle":""},{"id":"user-feedback","enabled":true,"title":"","subtitle":""},{"id":"learning-corner","enabled":true,"title":"","subtitle":""},{"id":"announcements","enabled":true,"title":"","subtitle":""},{"id":"featured-resources","enabled":true,"title":"","subtitle":""},{"id":"popular-resources","enabled":true,"title":"","subtitle":""},{"id":"quick-tools","enabled":true,"title":"","subtitle":""},{"id":"knowledge","enabled":true,"title":"","subtitle":""},{"id":"daily-quiz","enabled":true,"title":"","subtitle":""},{"id":"about","enabled":true,"title":"","subtitle":""},{"id":"contact","enabled":true,"title":"","subtitle":""}]'></textarea>
-                <p class="settings-help">Keep all 12 section IDs exactly once. Set enabled to false to hide a section. Optional title/subtitle overrides are plain text. Reorder objects in the array to change homepage order; the hero and highlights strip stay fixed at the top.</p>
-                <button type="button" data-setting-save="home.layout">Save Homepage Layout</button>
-              </details>
               <article class="settings-card">
                 <h3>SEO Management</h3>
                 <label class="settings-toggle"><input id="setting-seo-enabled" type="checkbox"><span>Enable dynamic SEO metadata</span></label>
@@ -365,9 +349,7 @@
                 <input id="setting-seo-canonical" type="url" maxlength="300" placeholder="https://your-domain.example">
                 <label for="setting-seo-og-image">Open Graph image URL (optional HTTPS URL)</label>
                 <input id="setting-seo-og-image" type="url" maxlength="1200" placeholder="https://your-domain.example/social-preview.png">
-                <label for="setting-seo-pages">Page-specific SEO overrides (JSON)</label>
-                <textarea id="setting-seo-pages" rows="10" maxlength="18000" spellcheck="false" placeholder='[{"page":"/library.html","title":"Document Library | PixelForge","description":"Browse published study notes, documents and learning resources on PixelForge.","keywords":"document library, study notes","robots":"index,follow","canonical":""}]'></textarea>
-                <p class="settings-help">Add up to 20 page overrides. Page paths must be local paths beginning with /. Robots options: index,follow; noindex,follow; noindex,nofollow. Titles and descriptions must meet the limits above.</p>
+                <p class="settings-help">Default SEO details apply site-wide. Page-specific SEO customization will be available through a simple page manager instead of manual JSON.</p>
                 <button type="button" data-setting-save="home.seo">Save SEO Settings</button>
               </article>
               <article class="settings-card">
@@ -440,14 +422,6 @@ Suggestion</textarea>
                 <p class="settings-help">Add up to 20 announcements using the form above. Active notices appear only during their dates. Optional links must use HTTPS.</p>
                 <button type="button" id="save-announcements-settings">Save Announcements</button><p id="announcements-save-status" role="status" aria-live="polite"></p>
               </article>
-              <details class="settings-card settings-collapsible">
-                <summary>Featured Resources</summary>
-                <label class="settings-toggle"><input id="setting-featured-enabled" type="checkbox"><span>Show Featured Resources on the homepage</span></label>
-                <label for="setting-featured-items">Featured resources (JSON)</label>
-                <textarea id="setting-featured-items" rows="10" maxlength="18000" spellcheck="false" placeholder='[{"id":"resource-1","title":"Getting Started Guide","description":"A practical introduction for new visitors.","category":"GUIDES","url":"https://example.com/guide","label":"Read guide","published":true}]'></textarea>
-                <p class="settings-help">Add up to 12 resources in display order. Each needs a unique id, title, description, category, HTTPS URL, link label and published status. Set published to false to keep a draft hidden.</p>
-                <button type="button" data-setting-save="home.featured">Save Featured Resources</button>
-              </details>
               <article class="settings-card">
                 <h3>Quick Digital Tools</h3>
                 <label class="settings-toggle"><input id="setting-tools-enabled" type="checkbox"><span>Show Quick Tools on the public website</span></label>
