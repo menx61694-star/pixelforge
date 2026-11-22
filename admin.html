@@ -12,7 +12,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js" defer></script>
   <script src="vault-storage-utils.js" defer></script>
-  <script src="admin.js?v=announcement-manager-ui-1" defer></script>
+  <script src="admin.js?v=learning-manager-ui-1" defer></script>
 </head>
 <body>
   <main class="admin-shell">
@@ -387,10 +387,24 @@ Suggestion</textarea>
               <details class="settings-card settings-collapsible">
                 <summary>Learning Corner</summary>
                 <label class="settings-toggle"><input id="setting-learning-enabled" type="checkbox"><span>Show Learning Corner on the homepage</span></label>
-                <label for="setting-learning-items">Guided learning paths (JSON)</label>
-                <textarea id="setting-learning-items" rows="12" maxlength="18000" spellcheck="false" placeholder='[{"id":"web-basics","title":"Web Development Basics","description":"A beginner-friendly path to understand how websites work.","topic":"WEB DEVELOPMENT","level":"beginner","duration":"2 weeks","published":true,"steps":[{"title":"Understand HTML","url":"https://example.com/html"},{"title":"Learn CSS","url":"https://example.com/css"}]}]'></textarea>
-                <p class="settings-help">Add up to 12 paths, each with 1–8 steps. Levels: beginner, intermediate or advanced. Every step needs a title and HTTPS URL. Reorder paths and steps in the JSON to change their display order.</p>
-                <button type="button" data-setting-save="home.learning">Save Learning Corner</button>
+                <div class="learning-manager">
+                  <div class="learning-path-form">
+                    <label for="learning-title">Path name</label><input id="learning-title" maxlength="100" placeholder="e.g. Python Programming">
+                    <label for="learning-description">Short description</label><textarea id="learning-description" rows="2" maxlength="240" placeholder="What will learners learn?"></textarea>
+                    <div class="learning-form-row">
+                      <div><label for="learning-topic">Topic label</label><input id="learning-topic" maxlength="40" placeholder="PROGRAMMING"></div>
+                      <div><label for="learning-level">Level</label><select id="learning-level"><option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option></select></div>
+                      <div><label for="learning-duration">Duration</label><input id="learning-duration" maxlength="32" placeholder="e.g. 4 weeks"></div>
+                    </div>
+                    <h4>Steps</h4><div id="learning-steps-editor"></div>
+                    <button type="button" id="learning-add-step">+ Add step</button>
+                    <label class="settings-toggle"><input type="checkbox" id="learning-published" checked><span>Published</span></label>
+                    <button type="button" id="learning-add-path">Add Learning Path</button><button type="button" id="learning-cancel-edit" hidden>Cancel edit</button>
+                  </div>
+                  <div id="learning-path-list" class="learning-path-list" aria-live="polite"></div>
+                </div>
+                <p class="settings-help">Add up to 12 learning paths, each with 1–8 steps. No JSON required. Step links must be HTTPS.</p>
+                <button type="button" id="save-learning-settings">Save Learning Corner</button><p id="learning-save-status" role="status" aria-live="polite"></p>
               </details>
               <article class="settings-card">
                 <h3>Smart Document Search</h3>
