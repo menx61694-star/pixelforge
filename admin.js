@@ -162,6 +162,81 @@ let googleDriveAccounts = [];
     }catch(error){console.error("Announcements save error",error);if(announcementSaveStatus){announcementSaveStatus.textContent="Save failed: "+(error?.message||"Unknown error");announcementSaveStatus.style.color="#a23c32";}}
     finally{announcementSaveButton.disabled=false;}
   });
+  // Learning Corner visual manager; stores the same existing JSON schema behind the UI.
+  let learningItems = [];
+  let learningEditId = null;
+  const learningStepsEditor = document.getElementById("learning-steps-editor");
+  const learningPathList = document.getElementById("learning-path-list");
+  const learningAddPathButton = document.getElementById("learning-add-path");
+  const learningCancelEdit = document.getElementById("learning-cancel-edit");
+  const learningSaveButton = document.getElementById("save-learning-settings");
+  const learningSaveStatus = document.getElementById("learning-save-status");
+  const learningField = id => document.getElementById(id);
+  function learningToday(){const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);}
+  function addLearningStepRow(title="",url=""){
+    if(learningStepsEditor.children.length>=8){alert("Maximum 8 steps per learning path.");return;}
+    const row=document.createElement("div");row.className="learning-step-editor-row";
+    const titleInput=document.createElement("input");titleInput.maxLength=100;titleInput.placeholder="Step title";titleInput.value=title;
+    const urlInput=document.createElement("input");urlInput.type="url";urlInput.placeholder="https://resource-link";urlInput.value=url;
+    const remove=document.createElement("button");remove.type="button";remove.textContent="Remove";remove.addEventListener("click",()=>row.remove());
+    row.append(titleInput,urlInput,remove);learningStepsEditor.append(row);
+  }
+  function resetLearningForm(){
+    learningEditId=null;learningField("learning-title").value="";learningField("learning-description").value="";
+    learningField("learning-topic").value="LEARNING";learningField("learning-level").value="beginner";
+    learningField("learning-duration").value="";learningField("learning-published").checked=true;
+    learningStepsEditor.innerHTML="";addLearningStepRow();learningAddPathButton.textContent="Add Learning Path";learningCancelEdit.hidden=true;
+  }
+  function renderLearningPaths(){
+    if(!learningPathList)return;learningPathList.innerHTML="";
+    if(!learningItems.length){learningPathList.textContent="No learning paths added yet.";return;}
+    learningItems.forEach(path=>{
+      const card=document.createElement("article");card.className="learning-path-card";
+      const title=document.createElement("strong");title.textContent=path.title;card.append(title);
+      const desc=document.createElement("p");desc.textContent=path.description;card.append(desc);
+      const meta=document.createElement("small");meta.textContent=(path.level||"beginner")+" · "+(path.duration||"Duration not set")+" · "+(path.published?"Published":"Draft")+" · "+path.steps.length+" steps";card.append(meta);
+      const actions=document.createElement("div");actions.className="learning-path-actions";
+      const edit=document.createElement("button");edit.type="button";edit.textContent="Edit";edit.addEventListener("click",()=>{
+        learningEditId=path.id;learningField("learning-title").value=path.title;learningField("learning-description").value=path.description;
+        learningField("learning-topic").value=path.topic;learningField("learning-level").value=path.level;learningField("learning-duration").value=path.duration;
+        learningField("learning-published").checked=!!path.published;learningStepsEditor.innerHTML="";
+        path.steps.forEach(step=>addLearningStepRow(step.title,step.url));learningAddPathButton.textContent="Update Learning Path";learningCancelEdit.hidden=false;
+      });
+      const del=document.createElement("button");del.type="button";del.textContent="Delete";del.addEventListener("click",()=>{
+        learningItems=learningItems.filter(x=>x.id!==path.id);renderLearningPaths();if(learningEditId===path.id)resetLearningForm();
+      });
+      actions.append(edit,del);card.append(actions);learningPathList.append(card);
+    });
+  }
+  document.getElementById("learning-add-step")?.addEventListener("click",()=>addLearningStepRow());
+  learningAddPathButton?.addEventListener("click",()=>{
+    const title=learningField("learning-title").value.trim(),description=learningField("learning-description").value.trim();
+    const topic=learningField("learning-topic").value.trim(),level=learningField("learning-level").value,duration=learningField("learning-duration").value.trim(),published=learningField("learning-published").checked;
+    const steps=Array.from(learningStepsEditor.children).map(row=>({title:row.children[0].value.trim(),url:row.children[1].value.trim()}));
+    if(!title||!description||!topic||!duration||steps.length<1||steps.length>8||steps.some(step=>!step.title||!step.url)){alert("Fill path details and each step's title and link.");return;}
+    if(steps.some(step=>{try{const u=new URL(step.url);return u.protocol!=="https:"||u.username||u.password;}catch(_){return true;}})){alert("Each step link must be a valid HTTPS URL.");return;}
+    if(learningItems.length>=12&&!learningEditId){alert("Maximum 12 learning paths.");return;}
+    const item={id:learningEditId||("learning-"+Date.now()),title,description,topic,level,duration,published,steps};
+    if(learningEditId)learningItems=learningItems.map(x=>x.id===learningEditId?item:x);else learningItems.push(item);
+    renderLearningPaths();resetLearningForm();
+  });
+  learningCancelEdit?.addEventListener("click",resetLearningForm);
+  resetLearningForm();renderLearningPaths();
+  learningSaveButton?.addEventListener("click",async()=>{
+    const enabled=document.getElementById("setting-learning-enabled").checked;
+    learningSaveButton.disabled=true;if(learningSaveStatus){learningSaveStatus.textContent="Saving…";learningSaveStatus.style.color="#52617b";}
+    try{
+      await saveSettingStrict("home.learning.items",learningItems);
+      await saveSettingStrict("home.learning.enabled",enabled);
+      const list=await settingsRequest("list");const saved=Object.fromEntries((list.settings||[]).map(item=>[item.setting_key,item.setting_value]));
+      const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==="object"?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value;
+      const itemsMatch=JSON.stringify(canonical(saved["home.learning.items"]))===JSON.stringify(canonical(learningItems));
+      const enabledMatch=saved["home.learning.enabled"]===enabled||saved["home.learning.enabled"]===String(enabled);
+      if(!itemsMatch||!enabledMatch)throw new Error("Saved data did not match database read-back.");
+      if(learningSaveStatus){learningSaveStatus.textContent="Learning Corner saved and verified.";learningSaveStatus.style.color="#16834b";}
+    }catch(error){console.error("Learning Corner save failed",error);if(learningSaveStatus){learningSaveStatus.textContent="Save failed: "+(error?.message||"Unknown error");learningSaveStatus.style.color="#a23c32";}}
+    finally{learningSaveButton.disabled=false;}
+  });
   const refreshSettingsButton = document.getElementById("refresh-settings");
   const analyticsNavLink = document.getElementById("analytics-nav-link");
   const securityLogsNavLink = document.getElementById("security-logs-nav-link");
@@ -1494,7 +1569,8 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
       if (feedbackCategories) feedbackCategories.value = (Array.isArray(values["home.feedback.categories"]) ? values["home.feedback.categories"] : ["General","Website","Resources","Suggestion"]).join("\n");
       setChecked("setting-learning-enabled", values["home.learning.enabled"]);
       const learningTextarea = document.getElementById("setting-learning-items");
-      if (learningTextarea) learningTextarea.value = JSON.stringify(Array.isArray(values["home.learning.items"]) ? values["home.learning.items"] : [], null, 2);
+      learningItems = Array.isArray(values["home.learning.items"]) ? values["home.learning.items"].map(path => ({...path, steps: Array.isArray(path.steps) ? path.steps.map(step => ({...step})) : []})) : [];
+      renderLearningPaths(); resetLearningForm();
       setChecked("setting-search-enabled", values["home.search.enabled"]);
       setChecked("setting-search-smart", values["home.search.smart_enabled"]);
       setChecked("setting-search-filters", values["home.search.filters_enabled"]);
@@ -1663,34 +1739,6 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
         .then(() => saveSetting("home.seo.og_image", ogImage, button))
         .then(() => saveSetting("home.seo.page_overrides", overrides, button))
         .then(() => saveSetting("home.seo.enabled", document.getElementById("setting-seo-enabled").checked, button));
-    } else if (group === "home.learning") {
-      let items;
-      try { items = JSON.parse(document.getElementById("setting-learning-items").value || "[]"); }
-      catch (_) { setSettingsStatus("Learning paths must be valid JSON.", true); return; }
-      const valid = Array.isArray(items) && items.length <= 12 && items.every(path => {
-        if (!path || typeof path !== "object" || Array.isArray(path) ||
-            !Object.keys(path).every(key => ["id","title","description","topic","level","duration","published","steps"].includes(key)) ||
-            typeof path.id !== "string" || !path.id.trim() || path.id.length > 64 ||
-            typeof path.title !== "string" || !path.title.trim() || path.title.length > 100 ||
-            typeof path.description !== "string" || !path.description.trim() || path.description.length > 240 ||
-            typeof path.topic !== "string" || !path.topic.trim() || path.topic.length > 40 ||
-            !["beginner","intermediate","advanced"].includes(path.level) ||
-            typeof path.duration !== "string" || path.duration.length > 32 ||
-            typeof path.published !== "boolean" || !Array.isArray(path.steps) || path.steps.length < 1 || path.steps.length > 8) return false;
-        return path.steps.every(step => {
-          if (!step || typeof step !== "object" || Array.isArray(step) ||
-              !Object.keys(step).every(key => ["title","url"].includes(key)) ||
-              typeof step.title !== "string" || !step.title.trim() || step.title.length > 100 ||
-              typeof step.url !== "string" || step.url.length > 1200) return false;
-          try { const url = new URL(step.url); return url.protocol === "https:" && !url.username && !url.password; }
-          catch (_) { return false; }
-        });
-      });
-      if (!valid || new Set(items.map(path => path.id)).size !== items.length) {
-        setSettingsStatus("Add up to 12 valid paths with unique IDs and 1–8 HTTPS steps each.", true); return;
-      }
-      saveSetting("home.learning.items", items, button)
-        .then(() => saveSetting("home.learning.enabled", document.getElementById("setting-learning-enabled").checked, button));
     } else if (group === "home.search") {
       const maxResults = Number(document.getElementById("setting-search-max-results").value);
       const placeholder = document.getElementById("setting-search-placeholder").value.trim();
