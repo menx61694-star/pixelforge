@@ -1494,6 +1494,12 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
     }
   }
 
+  // Strict helper for grouped feedback settings: propagate failures and avoid false success states.
+  async function saveSettingStrict(key, value) {
+    if (!currentPermissions.has("settings.manage")) throw new Error("Administrator settings permission is required.");
+    await settingsRequest("update", { method: "POST", body: { key, value } });
+  }
+
   document.querySelectorAll("[data-setting-save]").forEach(button => button.addEventListener("click", () => {
     const group = button.getAttribute("data-setting-save");
     if (group === "site.identity") {
@@ -1594,11 +1600,35 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
           !Number.isInteger(maxDisplay) || maxDisplay < 1 || maxDisplay > 12) {
         setSettingsStatus("Add 1–8 unique categories (2–32 characters) and choose 1–12 approved comments to display.", true); return;
       }
-      saveSetting("home.feedback.categories", categories, button)
-        .then(() => saveSetting("home.feedback.allow_anonymous", document.getElementById("setting-feedback-anonymous").checked, button))
-        .then(() => saveSetting("home.feedback.display_approved", document.getElementById("setting-feedback-display").checked, button))
-        .then(() => saveSetting("home.feedback.max_display", maxDisplay, button))
-        .then(() => saveSetting("home.feedback.enabled", document.getElementById("setting-feedback-enabled").checked, button));
+      (async () => {
+        const valuesToSave = [
+          ["home.feedback.categories", categories],
+          ["home.feedback.allow_anonymous", document.getElementById("setting-feedback-anonymous").checked],
+          ["home.feedback.display_approved", document.getElementById("setting-feedback-display").checked],
+          ["home.feedback.max_display", maxDisplay],
+          ["home.feedback.enabled", document.getElementById("setting-feedback-enabled").checked],
+        ];
+        button.disabled = true;
+        try {
+          setSettingsStatus("Saving User Feedback settings…");
+          for (const [key, value] of valuesToSave) await saveSettingStrict(key, value);
+          const verifyPayload = await settingsRequest("list");
+          const saved = Object.fromEntries((verifyPayload.settings || []).map(item => [item.setting_key, item.setting_value]));
+          const verified = JSON.stringify(saved["home.feedback.categories"]) === JSON.stringify(categories) &&
+            saved["home.feedback.allow_anonymous"] === valuesToSave[1][1] &&
+            saved["home.feedback.display_approved"] === valuesToSave[2][1] &&
+            saved["home.feedback.max_display"] === maxDisplay &&
+            saved["home.feedback.enabled"] === valuesToSave[4][1];
+          if (!verified) throw new Error("Saved values did not match. Reload and retry.");
+          const audit = await settingsRequest("audit");
+          renderSettingsAudit(audit.audit || []);
+          setSettingsStatus("User Feedback settings saved and verified.");
+        } catch (error) {
+          setSettingsStatus("User Feedback settings could not be saved: " + (error.message || "Unknown error"), true);
+        } finally {
+          button.disabled = false;
+        }
+      })();
     } else if (group === "home.learning") {
       let items;
       try { items = JSON.parse(document.getElementById("setting-learning-items").value || "[]"); }
