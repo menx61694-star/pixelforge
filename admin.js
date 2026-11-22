@@ -1651,7 +1651,7 @@ const firebaseConfig = {
         headers: { "apikey": SUPABASE_PUBLISHABLE_KEY, "Authorization": "Bearer " + token }
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || "Unavailable");
+      if (!response.ok) { const diagnostic = payload.diagnostic ? " (" + String(payload.diagnostic).slice(0, 240) + ")" : ""; throw new Error((payload.error || "Unavailable") + diagnostic); }
       overviewPageViewsStat.textContent = Number(payload.totalPageViews || 0).toLocaleString();
       if (overviewPageViewsNote) overviewPageViewsNote.textContent = "Last " + payload.days + " days";
     } catch (_) {
@@ -1678,7 +1678,7 @@ const firebaseConfig = {
         headers: { "apikey": SUPABASE_PUBLISHABLE_KEY, "Authorization": "Bearer " + token }
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || "Analytics could not be loaded.");
+      if (!response.ok) { const diagnostic = payload.diagnostic ? " (" + String(payload.diagnostic).slice(0, 240) + ")" : ""; throw new Error((payload.error || "Analytics could not be loaded.") + diagnostic); }
       if (sequence !== analyticsLoadSequence) return;
       totalElement.textContent = Number(payload.totalPageViews || 0).toLocaleString();
       visitorsElement.textContent = Number(payload.uniqueVisitors || 0).toLocaleString();
