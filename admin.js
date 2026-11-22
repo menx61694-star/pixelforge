@@ -161,7 +161,7 @@ const firebaseConfig = {
       const idToken = await auth.currentUser.getIdToken();
       const response = await fetch(SUPABASE_URL + "/functions/v1/google-drive-oauth?action=start", {
         method: "POST",
-        headers: { "Authorization": "Bearer " + idToken, "Content-Type": "application/json" }
+        headers: { "apikey": SUPABASE_PUBLISHABLE_KEY, "Authorization": "Bearer " + idToken, "Content-Type": "application/json" }
       });
       const payload = await response.json();
       if (!response.ok || !payload.authorization_url) throw new Error(payload.error || "Could not start Google authorization.");
@@ -176,6 +176,7 @@ const firebaseConfig = {
     const user = auth.currentUser;
     if (!user || !currentPermissions.has("drive.read")) throw new Error("Drive access is not permitted for this account.");
     const headers = new Headers(options.headers || {});
+    headers.set("apikey", SUPABASE_PUBLISHABLE_KEY);
     headers.set("Authorization", "Bearer " + await user.getIdToken());
     const endpoint = new URL(SUPABASE_URL + "/functions/v1/google-drive-files");
     endpoint.searchParams.set("action", action);
@@ -1025,6 +1026,7 @@ const firebaseConfig = {
     const user = auth.currentUser;
     if (!user) throw new Error("Sign in is required to manage private document tags.");
     const headers = new Headers(options.headers || {});
+    headers.set("apikey", SUPABASE_PUBLISHABLE_KEY);
     headers.set("Authorization", "Bearer " + await user.getIdToken());
     const endpoint = new URL(SUPABASE_URL + "/functions/v1/google-drive-files");
     endpoint.searchParams.set("action", action);
@@ -1261,7 +1263,7 @@ const firebaseConfig = {
   async function managementRequest(action, options = {}) {
     const user = auth.currentUser;
     if (!user) throw new Error("Please sign in again.");
-    const headers = { "Authorization": "Bearer " + await user.getIdToken() };
+    const headers = { "apikey": SUPABASE_PUBLISHABLE_KEY, "Authorization": "Bearer " + await user.getIdToken() };
     if (options.body) headers["Content-Type"] = "application/json";
     const response = await fetch(SUPABASE_URL + "/functions/v1/user-management?action=" + encodeURIComponent(action), {
       method: options.method || "GET", headers, body: options.body ? JSON.stringify(options.body) : undefined
@@ -1279,7 +1281,7 @@ const firebaseConfig = {
     if (!user || !currentPermissions.has(options.method === "POST" ? "settings.manage" : "settings.view")) {
       throw new Error("Administrator settings permission is required.");
     }
-    const headers = { "Authorization": "Bearer " + await user.getIdToken() };
+    const headers = { "apikey": SUPABASE_PUBLISHABLE_KEY, "Authorization": "Bearer " + await user.getIdToken() };
     if (options.body) headers["Content-Type"] = "application/json";
     const response = await fetch(SUPABASE_URL + "/functions/v1/site-settings?action=" + encodeURIComponent(action), {
       method: options.method || "GET", headers, body: options.body ? JSON.stringify(options.body) : undefined
@@ -1646,7 +1648,7 @@ const firebaseConfig = {
     try {
       const token = await auth.currentUser.getIdToken();
       const response = await fetch(SUPABASE_URL + "/functions/v1/analytics?action=summary&days=7", {
-        headers: { "Authorization": "Bearer " + token }
+        headers: { "apikey": SUPABASE_PUBLISHABLE_KEY, "Authorization": "Bearer " + token }
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Unavailable");
@@ -1673,7 +1675,7 @@ const firebaseConfig = {
     try {
       const token = await auth.currentUser.getIdToken();
       const response = await fetch(SUPABASE_URL + "/functions/v1/analytics?action=summary&days=" + encodeURIComponent(days), {
-        headers: { "Authorization": "Bearer " + token }
+        headers: { "apikey": SUPABASE_PUBLISHABLE_KEY, "Authorization": "Bearer " + token }
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Analytics could not be loaded.");
@@ -1784,7 +1786,7 @@ const firebaseConfig = {
   async function securityLogsRequest(action, options = {}) {
     const user = auth.currentUser;
     if (!user) throw new Error("Please sign in again.");
-    const headers = { "Authorization": "Bearer " + await user.getIdToken() };
+    const headers = { "apikey": SUPABASE_PUBLISHABLE_KEY, "Authorization": "Bearer " + await user.getIdToken() };
     if (options.body) headers["Content-Type"] = "application/json";
     const response = await fetch(SUPABASE_URL + "/functions/v1/analytics?action=" + encodeURIComponent(action), {
       method: options.method || "GET", headers, body: options.body ? JSON.stringify(options.body) : undefined

@@ -13,7 +13,7 @@ function corsHeaders(request: Request) {
   const origin = request.headers.get("Origin") ?? "";
   return {
     ...(allowedOrigins.has(origin) ? { "Access-Control-Allow-Origin": origin } : {}),
-    "Access-Control-Allow-Headers": "authorization, content-type, content-range, range, x-drive-upload-url",
+    "Access-Control-Allow-Headers": "authorization, apikey, content-type, content-range, range, x-drive-upload-url",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Expose-Headers": "Content-Disposition, Content-Length, Content-Range, Accept-Ranges",
     "Vary": "Origin",
