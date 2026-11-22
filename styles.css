@@ -235,3 +235,31 @@
 /* Google Drive bulk selection controls */
 .drive-file-select-wrap{display:flex;align-items:center;justify-content:center;flex:0 0 24px}
 .drive-file-select{width:17px;height:17px;accent-color:#5968d9;cursor:pointer}
+
+
+/* Contact forms are accessible from the Contact navigation only, inside a dialog. */
+.pf-contact-dialog{width:min(920px,calc(100vw - 28px));max-height:min(90vh,900px);overflow:auto;border:1px solid #dfe5f1;border-radius:22px;padding:clamp(18px,4vw,36px);background:#fff;color:#1b2948;box-shadow:0 30px 100px rgba(12,24,58,.24)}
+.pf-contact-dialog::backdrop{background:rgba(10,19,45,.66);backdrop-filter:blur(5px)}
+.pf-contact-dialog[open]{display:block}
+.pf-contact-dialog-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1.3rem}
+.pf-contact-dialog-head .eyebrow{margin-bottom:.6rem}
+.pf-contact-dialog-head h2{font:700 clamp(1.5rem,4vw,2.35rem)/1.1 'Space Grotesk',sans-serif;letter-spacing:-.04em;margin:0}
+.pf-contact-close{width:40px;height:40px;border:1px solid #dfe5f1;border-radius:50%;background:#f5f7fb;color:#243452;font-size:1.6rem;cursor:pointer;line-height:1}
+.pf-contact-choices{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.pf-contact-choice{display:flex;align-items:center;gap:1rem;text-align:left;padding:1.3rem;border:1px solid #e0e6f1;border-radius:16px;background:#f9faff;color:#1b2948;cursor:pointer;transition:transform .18s,border-color .18s,box-shadow .18s}
+.pf-contact-choice:hover{transform:translateY(-2px);border-color:#ff861c;box-shadow:0 10px 28px rgba(24,40,80,.08)}
+.pf-contact-choice-icon{flex:0 0 44px;width:44px;height:44px;display:grid;place-items:center;border-radius:13px;background:#fff0df;color:#e87913;font-size:1.3rem}
+.pf-contact-choice-icon-blue{background:#eaf0ff;color:#3f61b7}
+.pf-contact-choice>span:nth-child(2){display:grid;gap:.35rem;flex:1}
+.pf-contact-choice strong{font:700 1rem 'Space Grotesk',sans-serif}
+.pf-contact-choice small{color:#66738c;font-size:.82rem;line-height:1.5}
+.pf-contact-choice-arrow{font-weight:800;color:#e87913}
+.pf-contact-back{display:inline-flex;margin:0 0 1rem;padding:.55rem .8rem;border:1px solid #e1e6f0;border-radius:9px;background:#f6f8fc;color:#354664;font-weight:750;cursor:pointer}
+.pf-contact-view[hidden],.pf-contact-choices[hidden]{display:none!important}
+.pf-contact-view>.user-feedback-section,.pf-contact-view>.contact-section{padding:0;background:transparent}
+.pf-contact-view .feedback-layout{grid-template-columns:1fr}
+.pf-contact-view .contact-band{background:transparent;color:var(--ink);padding:0;display:block}
+.pf-contact-view .contact-band p:not(.eyebrow){color:var(--muted)}
+.pf-contact-view .contact-form{max-width:none}
+.pf-contact-unavailable{grid-column:1/-1;color:#9b4d14;background:#fff6ed;border:1px solid #f4d6ba;border-radius:10px;padding:.8rem;margin:0;font-size:.85rem}
+@media(max-width:650px){.pf-contact-choices{grid-template-columns:1fr}.pf-contact-dialog{padding:18px}.pf-contact-choice{padding:1rem}}
