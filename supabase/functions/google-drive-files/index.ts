@@ -297,6 +297,22 @@ Deno.serve(async (request) => {
     const accessToken = await getAccessToken(selectedAccountId);
     const googleHeaders = { Authorization: "Bearer " + accessToken };
 
+    if (request.method === "GET" && action === "folders") {
+      const query = new URLSearchParams({
+        q: "trashed = false and mimeType = 'application/vnd.google-apps.folder'",
+        pageSize: "1000",
+        orderBy: "name",
+        fields: "files(id,name,mimeType,parents),nextPageToken",
+        spaces: "drive",
+      });
+      const response = await fetch("https://www.googleapis.com/drive/v3/files?" + query, { headers: googleHeaders });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        return json({ error: "Google Drive folder listing failed.", details: payload.error?.message }, 502, request);
+      }
+      return json({ folders: payload.files ?? [], nextPageToken: payload.nextPageToken ?? null }, 200, request);
+    }
+
     if (request.method === "GET" && action === "list") {
       const query = new URLSearchParams({
         q: "trashed = false",
@@ -315,9 +331,18 @@ Deno.serve(async (request) => {
       const name = typeof input.name === "string" ? input.name.trim().slice(0, 180) : "";
       const mimeType = typeof input.mimeType === "string" ? input.mimeType : "";
       const size = Number(input.size);
+      const parentFolderId = typeof input.parentFolderId === "string" ? input.parentFolderId.trim() : "";
       if (!name || !["application/pdf", "image/jpeg", "image/png"].includes(mimeType) ||
-          !Number.isSafeInteger(size) || size <= 0 || size > MAX_FILE_SIZE) {
-        return json({ error: "Choose a non-empty PDF, JPEG or PNG file up to 2 GB." }, 400, request);
+          !Number.isSafeInteger(size) || size <= 0 || size > MAX_FILE_SIZE ||
+          (parentFolderId && !/^[a-zA-Z0-9_-]{10,200}$/.test(parentFolderId))) {
+        return json({ error: "Choose a non-empty PDF, JPEG or PNG file up to 2 GB and a valid destination folder." }, 400, request);
+      }
+      if (parentFolderId) {
+        const folderResponse = await fetch("https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(parentFolderId) + "?fields=id,mimeType,trashed", { headers: googleHeaders });
+        const folder = await folderResponse.json().catch(() => ({}));
+        if (!folderResponse.ok || folder.mimeType !== "application/vnd.google-apps.folder" || folder.trashed === true) {
+          return json({ error: "The selected upload destination is not a valid folder in this Google Drive account." }, 400, request);
+        }
       }
       // Refuse same-name uploads instead of creating a confusing duplicate or replacing a document.
       const escapedName = name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
@@ -340,7 +365,7 @@ Deno.serve(async (request) => {
           code: "DUPLICATE_FILE_NAME"
         }, 409, request);
       }
-      const metadata = { name, mimeType };
+      const metadata = { name, mimeType, ...(parentFolderId ? { parents: [parentFolderId] } : {}) };
       const response = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name,mimeType,size,modifiedTime,webViewLink", {
         method: "POST",
         headers: {
