@@ -11,7 +11,7 @@
       if (!main) return;
       config.sections.filter(item => item && allowed.has(item.id)).forEach(item => {
         const section = document.getElementById(item.id);
-        if (!section || section.parentElement !== main) return;
+        if (!section) return;
         section.classList.toggle("layout-hidden", item.enabled === false);
         if (typeof item.title === "string" && item.title.trim()) {
           const heading = section.querySelector("h2");
@@ -24,7 +24,7 @@
             section.querySelector(".contact-band div > p:not(.eyebrow)");
           if (subtitle) subtitle.textContent = item.subtitle;
         }
-        main.append(section);
+        if (section.parentElement === main) main.append(section);
       });
     }).catch(() => { /* Keep the authored homepage order if layout settings cannot be loaded. */ });
 })();
