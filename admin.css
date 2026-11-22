@@ -265,3 +265,60 @@ button:disabled{opacity:.6;cursor:wait}
 .settings-collapsible[open]>summary{border-bottom:1px solid var(--line);margin-bottom:14px}
 .settings-collapsible>*:not(summary){margin-left:16px;margin-right:16px}
 .settings-collapsible>*:last-child{margin-bottom:16px}
+
+
+/* Google Drive workspace refresh: clear connection state, storage visibility and destination controls */
+.drive-manager-panel{display:grid;gap:18px;margin-bottom:24px}
+.drive-manager-hero{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px 26px;border:1px solid #f0dfcf;border-radius:18px;background:linear-gradient(125deg,#fffaf4,#fff 58%,#f7fbff);box-shadow:0 12px 30px #17254b08}
+.drive-identity{display:flex;align-items:center;gap:16px;min-width:0}
+.google-drive-logo{width:54px;height:54px;flex:0 0 54px;display:grid;place-items:center;border-radius:16px;background:#fff;box-shadow:0 5px 18px #17254b12;border:1px solid #edf0f5}
+.google-drive-logo svg{width:36px;height:36px}
+.drive-identity h2{margin:0;color:#172342;font-size:22px;letter-spacing:-.04em}
+.drive-subtitle{margin:7px 0 0;color:#75829a;font-size:12px;line-height:1.5}
+.drive-connection-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+.drive-connection-actions button{min-height:42px;padding:0 17px;border:1px solid #ff861c;border-radius:10px;background:#ff861c;color:#182544;font-size:12px;font-weight:800;box-shadow:0 5px 14px #ff861c25}
+.drive-connection-actions .drive-add-account{border-color:#e0e6f0;background:#fff;color:#334365;box-shadow:none}
+.drive-connection-actions button:hover{filter:brightness(.98);transform:translateY(-1px)}
+.drive-connection-status{display:flex;align-items:center;gap:9px;padding:11px 14px;border:1px solid #d9efe5;border-radius:11px;background:#f3fbf7}
+.drive-status-indicator{width:9px;height:9px;flex:0 0 9px;border-radius:50%;background:#18a56f;box-shadow:0 0 0 4px #18a56f1a}
+.drive-connection-status #google-drive-status{min-height:0;margin:0;color:#207553;font-size:11px;font-weight:750}
+.drive-account-card,.drive-upload-card,.drive-files-card{padding:21px;border:1px solid #e4e9f2;border-radius:15px;background:#fff;box-shadow:0 8px 22px #17254b06}
+.drive-account-topline{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.drive-account-label{display:flex;align-items:center;gap:10px}
+.drive-account-icon{width:35px;height:35px;display:grid;place-items:center;border-radius:11px;background:#eef5ff;color:#4285f4;font-size:17px;font-weight:900}
+.drive-account-label strong,.drive-account-label small{display:block}
+.drive-account-label strong{font-size:12px;color:#243352}
+.drive-account-label small{margin-top:4px;font-size:10px;color:#8895aa}
+.drive-account-select-wrap{display:flex;align-items:center;gap:9px;color:#66748c;font-size:11px}
+.drive-account-select-wrap select,.drive-destination-row select{min-height:38px;max-width:100%;padding:0 12px;border:1px solid #dce3ef;border-radius:9px;background:#fff;color:#263858;font-size:12px;outline:none}
+.drive-account-select-wrap select:focus,.drive-destination-row select:focus{border-color:#8ca6d6;box-shadow:0 0 0 3px #4285f414}
+.drive-storage-summary{margin-top:18px;padding:15px 16px;border-radius:12px;background:#f7f9fd}
+.drive-storage-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;color:#52627f;font-size:11px;line-height:1.6}
+.drive-storage-heading strong{color:#273957;font-size:11px;white-space:nowrap}
+.drive-storage-track{height:8px;margin-top:11px;overflow:hidden;border-radius:99px;background:#e5eaf3}
+.drive-storage-track span{display:block;width:0;height:100%;border-radius:99px;background:linear-gradient(90deg,#4285f4,#34a853,#fbbc04);transition:width .25s ease}
+.drive-storage-caption{margin:8px 0 0;color:#9aa5b8;font-size:10px}
+.drive-upload-card{border-color:#f0dfcf;background:linear-gradient(180deg,#fffdfa,#fff 45%)}
+.drive-upload-heading,.drive-files-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.drive-upload-heading h3,.drive-files-heading h3{margin:0;font-size:16px;color:#243352}
+.drive-upload-heading .eyebrow,.drive-files-heading .eyebrow{margin-bottom:5px}
+.drive-upload-badge{padding:6px 9px;border-radius:999px;background:#fff1e3;color:#bc6a22;font-size:10px;font-weight:750;white-space:nowrap}
+.drive-destination-row{display:grid;grid-template-columns:auto minmax(220px,1fr);gap:9px 12px;align-items:center;margin-top:18px}
+.drive-destination-label{color:#53627e;font-size:11px;font-weight:750}
+#google-drive-folder-select{width:100%}
+.drive-folder-note{grid-column:2;color:#8b97ab;font-size:10px;line-height:1.5}
+.drive-file-picker{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:16px;padding:14px;border:1px dashed #d5deec;border-radius:12px;background:#fafcff}
+.drive-file-picker input[type=file]{max-width:100%;min-width:0;border:0;padding:0;background:transparent;font-size:11px}
+.drive-file-picker small{color:#8a96aa;font-size:10px}
+.drive-upload-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+.drive-upload-actions button{min-height:40px;padding:0 15px;border:1px solid #ff861c;border-radius:9px;background:#ff861c;color:#182544;font-size:11px;font-weight:800;cursor:pointer}
+.drive-upload-actions button span{margin-left:8px}
+.drive-upload-actions .drive-secondary-button{border-color:#dce4ef;background:#fff;color:#344565;font-weight:750}
+.drive-upload-actions button:disabled{opacity:.5;cursor:not-allowed}
+.drive-upload-card #google-drive-files-status{margin:10px 0 0}
+.drive-files-card .file-list{margin-top:14px}
+.drive-files-tip{color:#9aa4b7;font-size:10px}
+.drive-files-card .bulk-actions-toolbar{margin-top:15px}
+.drive-files-card .file-item{background:#fbfcff}
+@media(max-width:850px){.drive-manager-hero{align-items:flex-start;flex-direction:column}.drive-connection-actions{justify-content:flex-start}}
+@media(max-width:600px){.drive-manager-panel{gap:12px}.drive-manager-hero,.drive-account-card,.drive-upload-card,.drive-files-card{padding:16px}.drive-identity{align-items:flex-start;gap:11px}.google-drive-logo{width:46px;height:46px;flex-basis:46px;border-radius:13px}.google-drive-logo svg{width:31px;height:31px}.drive-identity h2{font-size:19px}.drive-subtitle{font-size:11px}.drive-connection-actions{width:100%}.drive-connection-actions button{flex:1}.drive-account-topline{align-items:flex-start;flex-direction:column}.drive-account-select-wrap{width:100%;align-items:stretch;flex-direction:column}.drive-account-select-wrap select{width:100%}.drive-storage-heading{flex-direction:column;gap:3px}.drive-destination-row{grid-template-columns:1fr;gap:8px}.drive-folder-note{grid-column:1}.drive-file-picker{align-items:flex-start;flex-direction:column}.drive-upload-actions button{flex:1}.drive-upload-heading,.drive-files-heading{align-items:flex-start;flex-direction:column}.drive-files-tip{display:none}}
