@@ -92,6 +92,74 @@ let googleDriveAccounts = [];
   const settingsStatus = document.getElementById("settings-status");
   const settingsAuditStatus = document.getElementById("settings-audit-status");
   const settingsAuditBody = document.getElementById("settings-audit-body");
+  const announcementsSaveButton = document.getElementById("save-announcements-settings");
+  const announcementsSaveStatus = document.getElementById("announcements-save-status");
+  if (announcementsSaveButton) announcementsSaveButton.addEventListener("click", async () => {
+    const input = document.getElementById("setting-announcements-items").value.trim();
+    const enabled = document.getElementById("setting-announcements-enabled").checked;
+    let items;
+    try {
+      items = JSON.parse(input);
+    } catch (_) {
+      // Allow quick single-line announcements instead of forcing JSON for simple notices.
+      const lines = input.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+      if (!lines.length) items = [];
+      else {
+        const now = new Date();
+        const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        items = lines.map((message, index) => ({
+          id: "notice-" + Date.now() + "-" + (index + 1),
+          title: "Announcement",
+          message,
+          type: "info",
+          startDate: today,
+          endDate: "2099-12-31",
+          published: true,
+          url: "",
+          label: ""
+        }));
+      }
+    }
+    const valid = Array.isArray(items) && items.length <= 20 && items.every(item => {
+      if (!item || typeof item !== "object" || Array.isArray(item) ||
+          !Object.keys(item).every(key => ["id","title","message","type","startDate","endDate","published","url","label"].includes(key)) ||
+          typeof item.id !== "string" || !item.id.trim() || item.id.length > 64 ||
+          typeof item.title !== "string" || !item.title.trim() || item.title.length > 120 ||
+          typeof item.message !== "string" || !item.message.trim() || item.message.length > 500 ||
+          !["info","update","important"].includes(item.type) ||
+          typeof item.startDate !== "string" || typeof item.endDate !== "string" ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(item.startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(item.endDate) ||
+          Number.isNaN(Date.parse(item.startDate + "T00:00:00.000Z")) || Number.isNaN(Date.parse(item.endDate + "T00:00:00.000Z")) ||
+          new Date(item.startDate + "T00:00:00.000Z").toISOString().slice(0, 10) !== item.startDate ||
+          new Date(item.endDate + "T00:00:00.000Z").toISOString().slice(0, 10) !== item.endDate ||
+          item.startDate > item.endDate || typeof item.published !== "boolean" ||
+          typeof item.url !== "string" || item.url.length > 1200 ||
+          typeof item.label !== "string" || item.label.length > 32) return false;
+      if (!item.url) return item.label === "";
+      try { const url = new URL(item.url); return url.protocol === "https:" && !url.username && !url.password && item.label.trim().length > 0; }
+      catch (_) { return false; }
+    });
+    if (!valid || new Set(items.map(item => item.id)).size !== items.length) {
+      if (announcementsSaveStatus) { announcementsSaveStatus.textContent = "Invalid announcement data. Enter plain text or valid JSON (maximum 20 notices)."; announcementsSaveStatus.style.color = "#a23c32"; }
+      return;
+    }
+    announcementsSaveButton.disabled = true;
+    if (announcementsSaveStatus) { announcementsSaveStatus.textContent = "Saving…"; announcementsSaveStatus.style.color = "#52617b"; }
+    try {
+      await saveSettingStrict("home.announcements.items", items);
+      await saveSettingStrict("home.announcements.enabled", enabled);
+      const listed = await settingsRequest("list");
+      const saved = Object.fromEntries((listed.settings || []).map(item => [item.setting_key, item.setting_value]));
+      if (JSON.stringify(saved["home.announcements.items"]) !== JSON.stringify(items) || saved["home.announcements.enabled"] !== enabled) throw new Error("Saved values do not match database values.");
+      const audit = await settingsRequest("audit");
+      renderSettingsAudit(audit.audit || []);
+      if (announcementsSaveStatus) { announcementsSaveStatus.textContent = "Announcements saved and verified."; announcementsSaveStatus.style.color = "#16834b"; }
+    } catch (error) {
+      console.error("Announcements save error", error);
+      if (announcementsSaveStatus) { announcementsSaveStatus.textContent = "Save failed: " + (error?.message || "Unknown error"); announcementsSaveStatus.style.color = "#a23c32"; }
+    } finally { announcementsSaveButton.disabled = false; }
+  });
+
   const refreshSettingsButton = document.getElementById("refresh-settings");
   const analyticsNavLink = document.getElementById("analytics-nav-link");
   const securityLogsNavLink = document.getElementById("security-logs-nav-link");
@@ -1631,34 +1699,6 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
         .then(() => saveSetting("home.search.filters_enabled", document.getElementById("setting-search-filters").checked, button))
         .then(() => saveSetting("home.search.max_results", maxResults, button))
         .then(() => saveSetting("home.search.placeholder", placeholder, button));
-    } else if (group === "home.announcements") {
-      let items;
-      try { items = JSON.parse(document.getElementById("setting-announcements-items").value || "[]"); }
-      catch (_) { setSettingsStatus("Announcements must be valid JSON.", true); return; }
-      const valid = Array.isArray(items) && items.length <= 20 && items.every(item => {
-        if (!item || typeof item !== "object" || Array.isArray(item) ||
-            !Object.keys(item).every(key => ["id","title","message","type","startDate","endDate","published","url","label"].includes(key)) ||
-            typeof item.id !== "string" || !item.id.trim() || item.id.length > 64 ||
-            typeof item.title !== "string" || !item.title.trim() || item.title.length > 120 ||
-            typeof item.message !== "string" || !item.message.trim() || item.message.length > 500 ||
-            !["info","update","important"].includes(item.type) ||
-            typeof item.startDate !== "string" || typeof item.endDate !== "string" ||
-            !/^\d{4}-\d{2}-\d{2}$/.test(item.startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(item.endDate) ||
-            Number.isNaN(Date.parse(item.startDate + "T00:00:00.000Z")) || Number.isNaN(Date.parse(item.endDate + "T00:00:00.000Z")) ||
-            new Date(item.startDate + "T00:00:00.000Z").toISOString().slice(0, 10) !== item.startDate ||
-            new Date(item.endDate + "T00:00:00.000Z").toISOString().slice(0, 10) !== item.endDate ||
-            item.startDate > item.endDate || typeof item.published !== "boolean" ||
-            typeof item.url !== "string" || item.url.length > 1200 ||
-            typeof item.label !== "string" || item.label.length > 32) return false;
-        if (!item.url) return item.label === "";
-        try { const url = new URL(item.url); return url.protocol === "https:" && !url.username && !url.password && item.label.trim().length > 0; }
-        catch (_) { return false; }
-      });
-      if (!valid || new Set(items.map(item => item.id)).size !== items.length) {
-        setSettingsStatus("Add up to 20 valid announcements with unique IDs and valid dates.", true); return;
-      }
-      saveSetting("home.announcements.items", items, button)
-        .then(() => saveSetting("home.announcements.enabled", document.getElementById("setting-announcements-enabled").checked, button));
     } else if (group === "home.featured") {
       let items;
       try { items = JSON.parse(document.getElementById("setting-featured-items").value || "[]"); }
