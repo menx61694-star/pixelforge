@@ -275,8 +275,8 @@ function setDriveFilesStatus(message, isError = false) {
       if (googleDriveStorageFill) googleDriveStorageFill.style.width = storagePercent + "%";
       if (googleDriveStoragePercent) googleDriveStoragePercent.textContent = storageTotal ? storagePercent.toFixed(1) + "% used" : "";
       googleDriveConnected = payload.connected === true;
-      if (googleDriveStatusContainer) googleDriveStatusContainer.classList.toggle("disconnected", !googleDriveConnected);
-      if (googleDriveStatusIndicator) googleDriveStatusIndicator.classList.toggle("disconnected", !googleDriveConnected);
+      if (googleDriveStatusContainer) { googleDriveStatusContainer.classList.remove("pending"); googleDriveStatusContainer.classList.toggle("disconnected", !googleDriveConnected); }
+      if (googleDriveStatusIndicator) { googleDriveStatusIndicator.classList.remove("pending"); googleDriveStatusIndicator.classList.toggle("disconnected", !googleDriveConnected); }
       updateDriveOverview();
       if (googleDriveUploadButton) googleDriveUploadButton.disabled = !googleDriveConnected;
       if (googleDriveRefreshButton) googleDriveRefreshButton.disabled = !googleDriveConnected;
