@@ -2,7 +2,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const FIREBASE_PROJECT_ID = "pixelforge-66f0c";
 const allowedOrigins = new Set([
-  Deno.env.get("PIXELFORGE_ADMIN_ORIGIN") ?? "https://pixelforge.jo3.org",
+  "https://pixelforge.jo3.org",
+  ...(Deno.env.get("PIXELFORGE_ADMIN_ORIGIN") ? [Deno.env.get("PIXELFORGE_ADMIN_ORIGIN")!] : []),
   "http://localhost:8000",
 ]);
 const settingKeys = new Set([

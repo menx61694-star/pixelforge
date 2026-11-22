@@ -1,7 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const allowedOrigins = new Set([
-  Deno.env.get("PIXELFORGE_ADMIN_ORIGIN") ?? "https://pixelforge.jo3.org",
+  "https://pixelforge.jo3.org",
+  ...(Deno.env.get("PIXELFORGE_ADMIN_ORIGIN") ? [Deno.env.get("PIXELFORGE_ADMIN_ORIGIN")!] : []),
   "http://localhost:8000",
 ]);
 const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024;
