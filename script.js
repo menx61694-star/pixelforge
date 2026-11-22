@@ -547,7 +547,9 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
   const messageView = dialog.querySelector("[data-contact-message-view]");
   const feedbackSection = dialog.querySelector("#user-feedback");
   const feedbackForm = dialog.querySelector("#public-feedback-form");
+  const contactSection = dialog.querySelector("#contact");
   const unavailable = dialog.querySelector("[data-feedback-unavailable]");
+  const messageUnavailable = dialog.querySelector("[data-message-unavailable]");
   const openFeedback = dialog.querySelector("[data-contact-open-feedback]");
   const openMessage = dialog.querySelector("[data-contact-open-message]");
   const closeButton = dialog.querySelector("[data-contact-close]");
@@ -559,6 +561,7 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
     feedbackView.hidden = true;
     messageView.hidden = true;
     unavailable.hidden = true;
+    messageUnavailable.hidden = true;
     dialog.querySelector("#contact-dialog-title").textContent = "How can we help?";
   }
   function showView(view) {
@@ -574,13 +577,19 @@ if (localIpDiagnosticButton && localIpDiagnosticStatus) {
   }
   contactLinks.forEach(link => link.addEventListener("click", openDialog));
   openFeedback?.addEventListener("click", () => {
-    if (feedbackSection?.hidden || feedbackForm?.hidden) {
+    if (feedbackSection?.hidden || feedbackSection?.classList.contains("layout-hidden") || feedbackForm?.hidden) {
       unavailable.hidden = false;
       return;
     }
     showView("feedback");
   });
-  openMessage?.addEventListener("click", () => showView("message"));
+  openMessage?.addEventListener("click", () => {
+    if (contactSection?.classList.contains("layout-hidden")) {
+      messageUnavailable.hidden = false;
+      return;
+    }
+    showView("message");
+  });
   closeButton?.addEventListener("click", () => dialog.close());
   backButtons.forEach(button => button.addEventListener("click", resetView));
   dialog.addEventListener("click", event => {
