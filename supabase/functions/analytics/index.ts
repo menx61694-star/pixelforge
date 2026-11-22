@@ -304,13 +304,6 @@ Deno.serve(async (request) => {
         return json({ error: "Security log permission is required." }, 403, request);
       }
       const db = dbAdmin();
-      if (request.method === "GET") {
-        try {
-          await ipEncryptionKey();
-        } catch (_) {
-          return json({ error: "Security log encryption is not configured. Add ANALYTICS_IP_ENCRYPTION_KEY to Supabase Edge Function secrets." }, 503, request);
-        }
-      }
       if (request.method === "POST") {
         const input = await request.json().catch(() => ({}));
         if (Object.keys(input ?? {}).length !== 0) return json({ error: "Invalid deletion request." }, 400, request);
@@ -328,16 +321,25 @@ Deno.serve(async (request) => {
         .select("id,event_type,page_path,ip_ciphertext,ip_iv,ip_source,local_ip_ciphertext,local_ip_iv,local_ip_source,location_latitude,location_longitude,location_accuracy_m,created_at")
         .order("created_at", { ascending: false }).limit(200);
       if (error) throw error;
+      const safeDecrypt = async (ciphertext: string | null, iv: string | null) => {
+        if (!ciphertext || !iv) return null;
+        try { return await decryptIp(ciphertext, iv); } catch (_) { return null; }
+      };
       const logs = await Promise.all((data ?? []).map(async (row) => ({
         id: row.id, eventType: row.event_type, pagePath: row.page_path,
-        ipAddress: row.ip_ciphertext && row.ip_iv ? await decryptIp(row.ip_ciphertext, row.ip_iv) : null, ipSource: row.ip_source ?? "unknown (legacy log)", localIpAddress: row.local_ip_ciphertext && row.local_ip_iv ? await decryptIp(row.local_ip_ciphertext, row.local_ip_iv) : null, localIpSource: row.local_ip_source ?? null, latitude: row.location_latitude ?? null, longitude: row.location_longitude ?? null, locationAccuracyM: row.location_accuracy_m ?? null, createdAt: row.created_at,
+        ipAddress: await safeDecrypt(row.ip_ciphertext, row.ip_iv), ipSource: row.ip_source ?? "unknown (legacy log)",
+        localIpAddress: await safeDecrypt(row.local_ip_ciphertext, row.local_ip_iv), localIpSource: row.local_ip_source ?? null,
+        latitude: row.location_latitude ?? null, longitude: row.location_longitude ?? null, locationAccuracyM: row.location_accuracy_m ?? null, createdAt: row.created_at,
       })));
-      return json({ logs, retentionDays: 90 }, 200, request);
+      return json({ logs, retentionDays: 90, ipDecryptionAvailable: logs.some((log) => log.ipAddress !== null) }, 200, request);
     }
 
     return json({ error: "Unsupported analytics action." }, 404, request);
   } catch (error) {
     console.error("PixelForge analytics error:", error);
-    return json({ error: "Analytics request failed." }, 500, request);
+    const message = error instanceof Error ? error.message : "Unknown server error";
+    const action = new URL(request.url).searchParams.get("action") ?? "";
+    const isAdminAction = ["summary", "security-logs", "delete-security-logs"].includes(action);
+    return json({ error: "Analytics request failed.", ...(isAdminAction ? { diagnostic: message.slice(0, 240) } : {}) }, 500, request);
   }
 });
