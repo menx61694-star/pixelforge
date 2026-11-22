@@ -255,3 +255,13 @@ button:disabled{opacity:.6;cursor:wait}
 .drive-tools input[type=file]{max-width:100%;min-width:0;padding:10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font-size:12px}
 .drive-tools button:disabled{opacity:.55;cursor:not-allowed}
 .settings-card select{width:100%;min-height:38px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-size:12px}
+
+/* Keep advanced JSON configuration panels collapsed by default for a cleaner admin workspace. */
+.settings-collapsible{padding:0}
+.settings-collapsible>summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px;font-weight:750;color:var(--ink)}
+.settings-collapsible>summary::-webkit-details-marker{display:none}
+.settings-collapsible>summary::after{content:"+";font-size:18px;color:var(--muted);line-height:1}
+.settings-collapsible[open]>summary::after{content:"−"}
+.settings-collapsible[open]>summary{border-bottom:1px solid var(--line);margin-bottom:14px}
+.settings-collapsible>*:not(summary){margin-left:16px;margin-right:16px}
+.settings-collapsible>*:last-child{margin-bottom:16px}
