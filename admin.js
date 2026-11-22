@@ -340,7 +340,7 @@ let googleDriveAccounts = [];
     headers.set("Authorization", "Bearer " + await user.getIdToken());
     const endpoint = new URL(SUPABASE_URL + "/functions/v1/google-drive-files");
     endpoint.searchParams.set("action", action);
-    endpoint.searchParams.set("accountId", selectedDriveAccountId);
+    endpoint.searchParams.set("accountId", options.accountId || selectedDriveAccountId);
     if (options.query) {
       Object.entries(options.query).forEach(([key, value]) => endpoint.searchParams.set(key, String(value)));
     }
@@ -367,7 +367,7 @@ function setDriveFilesStatus(message, isError = false) {
     rootOption.value = "";
     rootOption.textContent = "My Drive · Root (default)";
     googleDriveFolderSelect.append(rootOption);
-    if (!googleDriveConnected) {
+    if (!googleDriveConnected || selectedDriveAccountId === "__all__") {
       googleDriveFolderSelect.disabled = true;
       if (googleDriveFolderNote) googleDriveFolderNote.textContent = "Connect a Drive account to choose a folder.";
       return;
@@ -409,31 +409,47 @@ function setDriveFilesStatus(message, isError = false) {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Could not check Google Drive status.");
       googleDriveAccounts = Array.isArray(payload.accounts) ? payload.accounts : [];
-      if (googleDriveAccountSelect) { const current = selectedDriveAccountId; googleDriveAccountSelect.replaceChildren(); googleDriveAccounts.forEach(account => { const option = document.createElement("option"); option.value = account.id; option.textContent = (account.name || account.email || account.id) + (account.email && account.name ? " · " + account.email : ""); googleDriveAccountSelect.append(option); }); if (googleDriveAccounts.some(account => account.id === current)) googleDriveAccountSelect.value = current; else if (googleDriveAccounts.length) { selectedDriveAccountId = googleDriveAccounts[0].id; googleDriveAccountSelect.value = selectedDriveAccountId; } }
+      if (googleDriveAccountSelect) {
+        const current = selectedDriveAccountId;
+        googleDriveAccountSelect.replaceChildren();
+        const all = document.createElement("option"); all.value = "__all__"; all.textContent = "All connected Drives";
+        googleDriveAccountSelect.append(all);
+        googleDriveAccounts.forEach(account => {
+          const option = document.createElement("option"); option.value = account.id;
+          option.textContent = (account.name || account.email || account.id) + (account.email && account.name ? " · " + account.email : "");
+          googleDriveAccountSelect.append(option);
+        });
+        if (current === "__all__" || googleDriveAccounts.some(account => account.id === current)) googleDriveAccountSelect.value = current;
+        else { selectedDriveAccountId = "__all__"; googleDriveAccountSelect.value = "__all__"; }
+      }
+      const allMode = selectedDriveAccountId === "__all__";
       const selectedAccount = googleDriveAccounts.find(account => account.id === selectedDriveAccountId);
-      if (googleDriveAccountStorage) googleDriveAccountStorage.textContent = selectedAccount
-        ? "Account " + (selectedAccount.email || selectedAccount.name || selectedAccount.id) + " · " + (selectedAccount.storageAvailable ? formatDriveBytes(selectedAccount.storageUsed) + " used of " + formatDriveBytes(selectedAccount.storageTotal) + " · " + formatDriveBytes(selectedAccount.storageRemaining) + " free" : "Storage quota unavailable")
+      const connected = googleDriveAccounts.filter(account => account.connected);
+      const storageAccounts = allMode ? connected : (selectedAccount && selectedAccount.connected ? [selectedAccount] : []);
+      const total = storageAccounts.reduce((sum, account) => sum + (Number(account.storageTotal) || 0), 0);
+      const used = storageAccounts.reduce((sum, account) => sum + (Number(account.storageUsed) || 0), 0);
+      const free = storageAccounts.reduce((sum, account) => sum + (Number(account.storageRemaining) || 0), 0);
+      const percent = total ? Math.min(100, Math.max(0, used / total * 100)) : 0;
+      if (googleDriveAccountStorage) googleDriveAccountStorage.textContent = allMode
+        ? connected.length + " connected account(s) · " + formatDriveBytes(used) + " used · " + formatDriveBytes(free) + " free combined"
+        : selectedAccount ? "Account " + (selectedAccount.email || selectedAccount.name || selectedAccount.id) + " · " + (selectedAccount.storageAvailable ? formatDriveBytes(selectedAccount.storageUsed) + " used of " + formatDriveBytes(selectedAccount.storageTotal) + " · " + formatDriveBytes(selectedAccount.storageRemaining) + " free" : "Storage quota unavailable")
         : "No accounts connected";
-      const storageTotal = selectedAccount && Number(selectedAccount.storageTotal) > 0 ? Number(selectedAccount.storageTotal) : 0;
-      const storageUsed = selectedAccount && Number(selectedAccount.storageUsed) >= 0 ? Number(selectedAccount.storageUsed) : 0;
-      const storagePercent = storageTotal ? Math.min(100, Math.max(0, storageUsed / storageTotal * 100)) : 0;
-      if (googleDriveStorageFill) googleDriveStorageFill.style.width = storagePercent + "%";
-      if (googleDriveStoragePercent) googleDriveStoragePercent.textContent = storageTotal ? storagePercent.toFixed(1) + "% used" : "";
-      googleDriveConnected = payload.connected === true;
+      if (googleDriveStorageFill) googleDriveStorageFill.style.width = percent + "%";
+      if (googleDriveStoragePercent) googleDriveStoragePercent.textContent = total ? percent.toFixed(1) + "% used" : "";
+      googleDriveConnected = allMode ? connected.length > 0 : payload.connected === true;
+      const uploadEnabled = googleDriveConnected && !allMode;
       if (googleDriveStatusContainer) { googleDriveStatusContainer.classList.remove("pending"); googleDriveStatusContainer.classList.toggle("disconnected", !googleDriveConnected); }
       if (googleDriveStatusIndicator) { googleDriveStatusIndicator.classList.remove("pending"); googleDriveStatusIndicator.classList.toggle("disconnected", !googleDriveConnected); }
       updateDriveOverview();
-      if (googleDriveUploadButton) googleDriveUploadButton.disabled = !googleDriveConnected;
+      if (googleDriveUploadButton) googleDriveUploadButton.disabled = !uploadEnabled;
       if (googleDriveRefreshButton) googleDriveRefreshButton.disabled = !googleDriveConnected;
       if (googleDriveConnected) {
-        setGoogleDriveStatus("Google Drive is connected.");
+        setGoogleDriveStatus(allMode ? "Showing all connected Google Drive accounts." : "Google Drive is connected.");
         await loadGoogleDriveFolders();
         await loadGoogleDriveFiles();
       } else {
-        currentDriveFiles = [];
-        driveFilesLoaded = false;
-        updateDriveOverview();
-        updateDashboardActivity();
+        currentDriveFiles = []; driveFilesLoaded = false;
+        updateDriveOverview(); updateDashboardActivity();
         setGoogleDriveStatus("Google Drive is not connected.");
         await loadGoogleDriveFolders();
         setDriveFilesStatus("Connect Google Drive to list or upload files.");
@@ -444,122 +460,91 @@ function setDriveFilesStatus(message, isError = false) {
       setDriveFilesStatus(error.message || "Google Drive status check failed.", true);
     }
   }
-
   async function loadGoogleDriveFiles() {
     if (!googleDriveConnected || !googleDriveFileList) return;
     if (googleDriveRefreshButton) googleDriveRefreshButton.disabled = true;
-    setDriveFilesStatus("Loading Google Drive files…");
+    setDriveFilesStatus("Loading files from connected Google Drive account(s)…");
     try {
-      const response = await googleDriveRequest("list");
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Could not list Google Drive files.");
+      const accounts = selectedDriveAccountId === "__all__"
+        ? googleDriveAccounts.filter(account => account.connected)
+        : googleDriveAccounts.filter(account => account.id === selectedDriveAccountId && account.connected);
+      const results = await Promise.all(accounts.map(async account => {
+        const response = await googleDriveRequest("list", { accountId: account.id });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error((account.email || account.name || account.id) + ": " + (payload.error || "Could not list files."));
+        return (Array.isArray(payload.files) ? payload.files : []).map(file => ({
+          ...file, driveAccountId: account.id, driveAccountName: account.email || account.name || account.id,
+          selectionKey: account.id + "::" + file.id
+        }));
+      }));
+      const files = results.flat();
       googleDriveFileList.replaceChildren();
-      const files = Array.isArray(payload.files) ? payload.files : [];
-      currentDriveFiles = files;
-      driveFilesLoaded = true;
-      updateDriveOverview();
-      updateDashboardActivity();
+      currentDriveFiles = files; driveFilesLoaded = true;
+      updateDriveOverview(); updateDashboardActivity();
       if (!files.length) {
-        const empty = document.createElement("li");
-        empty.className = "empty-state";
-        empty.textContent = "No files found in the connected Drive app space.";
+        const empty = document.createElement("li"); empty.className = "empty-state";
+        empty.textContent = "No files found in the selected connected Drive account(s).";
         googleDriveFileList.append(empty);
       }
       let publishedFiles = new Map();
       try { publishedFiles = await getPublishedFilesIndex(); }
-      catch (publishError) { setDriveFilesStatus("Drive files loaded; published status could not be checked: " + (publishError.message || "Storage access error"), true); }
+      catch (err) { setDriveFilesStatus("Drive files loaded; published status could not be checked: " + (err.message || "Storage access error"), true); }
       files.forEach(file => {
-        const item = document.createElement("li");
-        item.className = "file-item";
-        const selectWrap=document.createElement("label");selectWrap.className="drive-file-select-wrap";
-        const select=document.createElement("input");select.type="checkbox";select.className="drive-file-select";select.value=file.id;select.checked=selectedDriveFileIds.has(file.id);select.setAttribute("aria-label","Select "+(file.name||"Drive file"));
-        select.addEventListener("change",()=>{if(select.checked)selectedDriveFileIds.add(file.id);else selectedDriveFileIds.delete(file.id);updateDriveBulkSelection();});selectWrap.append(select);
-        const info = document.createElement("div");
-        info.className = "file-info";
-        const name = document.createElement("div");
-        name.className = "file-name";
-        name.textContent = file.name || "Untitled file";
-        const meta = document.createElement("div");
-        meta.className = "file-meta";
-        const size = Number(file.size || 0);
-        meta.textContent = (file.mimeType || "Unknown type") + (size ? " · " + formatBytes(size) : "");
-        info.append(name, meta);
-        const actions = document.createElement("div");
-        actions.className = "file-actions";
-        const download = document.createElement("button");
-        download.type = "button";
-        download.textContent = "Download";
+        const item = document.createElement("li"); item.className = "file-item";
+        const selectWrap = document.createElement("label"); selectWrap.className = "drive-file-select-wrap";
+        const select = document.createElement("input"); select.type = "checkbox"; select.className = "drive-file-select";
+        select.value = file.selectionKey; select.checked = selectedDriveFileIds.has(file.selectionKey);
+        select.setAttribute("aria-label", "Select " + (file.name || "Drive file"));
+        select.addEventListener("change", () => { if (select.checked) selectedDriveFileIds.add(file.selectionKey); else selectedDriveFileIds.delete(file.selectionKey); updateDriveBulkSelection(); });
+        selectWrap.append(select);
+        const info = document.createElement("div"); info.className = "file-info";
+        const name = document.createElement("div"); name.className = "file-name"; name.textContent = file.name || "Untitled file";
+        const meta = document.createElement("div"); meta.className = "file-meta";
+        const size = Number(file.size || 0); meta.textContent = (file.mimeType || "Unknown type") + (size ? " · " + formatBytes(size) : "");
+        const accountBadge = document.createElement("span"); accountBadge.className = "drive-account-file-badge"; accountBadge.textContent = file.driveAccountName;
+        info.append(name, meta, accountBadge);
+        const actions = document.createElement("div"); actions.className = "file-actions";
+        const download = document.createElement("button"); download.type = "button"; download.textContent = "Download";
         download.addEventListener("click", () => downloadGoogleDriveFile(file, download));
-        const category = document.createElement("select");
-        category.className = "publish-category";
+        const category = document.createElement("select"); category.className = "publish-category";
         category.setAttribute("aria-label", "Public category for " + (file.name || "Drive file"));
-        const placeholder = document.createElement("option");
-        placeholder.value = "";
-        placeholder.textContent = "Choose category";
-        category.append(placeholder);
-        PUBLIC_CATEGORIES.forEach(value => {
-          const option = document.createElement("option");
-          option.value = value;
-          option.textContent = value.replace(/-/g, " ").replace(/\\b\\w/g, char => char.toUpperCase());
-          category.append(option);
-        });
-        const safeName = safeFileName(file.name || "drive-file");
-        const publishedInfo = publishedFiles.get(file.id);
-        const publishedCategory = publishedInfo && publishedInfo.category;
+        const placeholder = document.createElement("option"); placeholder.value = ""; placeholder.textContent = "Choose category"; category.append(placeholder);
+        PUBLIC_CATEGORIES.forEach(value => { const option = document.createElement("option"); option.value = value; option.textContent = value.replace(/-/g, " ").replace(/\\b\\w/g, char => char.toUpperCase()); category.append(option); });
+        const publishedInfo = publishedFiles.get(file.id), publishedCategory = publishedInfo && publishedInfo.category;
         if (publishedCategory) category.value = publishedCategory;
-        const publish = document.createElement("button");
-        publish.type = "button";
-        publish.className = "publish-button";
-        publish.textContent = publishedCategory ? "Republish" : "Publish";
-        const tagsInput = document.createElement("input");
-        tagsInput.type = "text";
-        tagsInput.className = "publish-tags";
-        tagsInput.placeholder = "Tags: CTET, UP Police";
-        tagsInput.maxLength = 320;
+        const publish = document.createElement("button"); publish.type = "button"; publish.className = "publish-button"; publish.textContent = publishedCategory ? "Republish" : "Publish";
+        const tagsInput = document.createElement("input"); tagsInput.type = "text"; tagsInput.className = "publish-tags"; tagsInput.placeholder = "Tags: CTET, UP Police"; tagsInput.maxLength = 320;
         tagsInput.setAttribute("aria-label", "Public search tags for " + (file.name || "Drive file"));
         tagsInput.value = publishedInfo && Array.isArray(publishedInfo.tags) ? publishedInfo.tags.join(", ") : "";
         publish.addEventListener("click", () => publishGoogleDriveFile(file, category.value, tagsInput.value, publish));
-        const unpublish = document.createElement("button");
-        unpublish.type = "button";
-        unpublish.className = "unpublish-button";
-        unpublish.textContent = "Unpublish";
-        unpublish.disabled = !publishedCategory;
-        unpublish.title = publishedCategory ? "Remove from " + publishedCategory : "This file is not published";
+        const unpublish = document.createElement("button"); unpublish.type = "button"; unpublish.className = "unpublish-button"; unpublish.textContent = "Unpublish";
+        unpublish.disabled = !publishedCategory; unpublish.title = publishedCategory ? "Remove from " + publishedCategory : "This file is not published";
         unpublish.addEventListener("click", () => unpublishGoogleDriveFile(file, category.value || publishedCategory, unpublish));
-        const canPublishDriveFile = ALLOWED_TYPES.has(file.mimeType);
-        category.hidden = !currentPermissions.has("vault.publish") || !canPublishDriveFile;
-        publish.hidden = !currentPermissions.has("vault.publish") || !canPublishDriveFile;
-        unpublish.hidden = !currentPermissions.has("vault.publish") || !canPublishDriveFile;
-        const remove = document.createElement("button");
-        remove.type = "button";
-        remove.className = "delete-button";
-        remove.textContent = "Delete";
+        const canPublish = ALLOWED_TYPES.has(file.mimeType);
+        category.hidden = !currentPermissions.has("vault.publish") || !canPublish;
+        publish.hidden = !currentPermissions.has("vault.publish") || !canPublish;
+        unpublish.hidden = !currentPermissions.has("vault.publish") || !canPublish;
+        const remove = document.createElement("button"); remove.type = "button"; remove.className = "delete-button"; remove.textContent = "Delete";
         remove.addEventListener("click", () => deleteGoogleDriveFile(file, item, remove));
         remove.hidden = !currentPermissions.has("drive.delete");
-        actions.append(download, category, tagsInput, publish, unpublish, remove);
-        item.append(selectWrap, info, actions);
-        googleDriveFileList.append(item);
+        actions.append(download, category, tagsInput, publish, unpublish, remove); item.append(selectWrap, info, actions); googleDriveFileList.append(item);
       });
       updateDriveBulkSelection();
-      setDriveFilesStatus(files.length + " Google Drive file(s) listed.");
-    } catch (error) {
-      setDriveFilesStatus(error.message || "Google Drive listing failed.", true);
-    } finally {
-      if (googleDriveRefreshButton) googleDriveRefreshButton.disabled = !googleDriveConnected;
-    }
+      setDriveFilesStatus(files.length + " file(s) from " + accounts.length + " connected account(s) listed.");
+    } catch (error) { setDriveFilesStatus(error.message || "Google Drive listing failed.", true); }
+    finally { if (googleDriveRefreshButton) googleDriveRefreshButton.disabled = !googleDriveConnected; }
   }
-
   if(driveBulkCategory)PUBLIC_CATEGORIES.forEach(value=>{const option=document.createElement("option");option.value=value;option.textContent=value.replace(/-/g," ").toUpperCase();driveBulkCategory.append(option);});
   if(driveSelectAll)driveSelectAll.addEventListener("change",()=>{(googleDriveFileList?googleDriveFileList.querySelectorAll(".drive-file-select"):[]).forEach(box=>{box.checked=driveSelectAll.checked;if(box.checked)selectedDriveFileIds.add(box.value);else selectedDriveFileIds.delete(box.value);});updateDriveBulkSelection();});
   async function runDriveBulkAction(action){
-    const selected=currentDriveFiles.filter(file=>selectedDriveFileIds.has(file.id));if(!selected.length)return;
+    const selected=currentDriveFiles.filter(file=>selectedDriveFileIds.has(file.selectionKey));if(!selected.length)return;
     if(action==="publish"&&(!currentPermissions.has("vault.publish")||!driveBulkCategory.value)){setDriveFilesStatus("Choose a category and ensure you have publish permission.",true);return;}
     if(action==="unpublish"&&!currentPermissions.has("vault.publish")){setDriveFilesStatus("Your account does not have publish permission.",true);return;}
     if(action==="delete"&&!currentPermissions.has("drive.delete")){setDriveFilesStatus("Your account does not have Drive delete permission.",true);return;}
     const tags=normalizeDocumentTags(driveBulkTags?driveBulkTags.value:"");if(action==="publish"&&!tags){setDriveFilesStatus("Use up to 10 valid tags separated by commas.",true);return;}
     if(!window.confirm(action+" "+selected.length+" selected Google Drive file(s)?"))return;
     [driveBulkPublish,driveBulkUnpublish,driveBulkDelete].forEach(button=>{if(button)button.disabled=true;});let succeeded=0;const failures=[];
-    for(const file of selected){try{let response;if(action==="publish"){if(!ALLOWED_TYPES.has(file.mimeType))throw new Error("Unsupported file type");response=await googleDriveRequest("publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fileId:file.id,category:driveBulkCategory.value,title:file.name||"Drive document",mimeType:file.mimeType||"application/octet-stream",sizeBytes:Number(file.size||0)||null,tags})});}else if(action==="unpublish"){response=await googleDriveRequest("unpublish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fileId:file.id})});}else{response=await googleDriveRequest("delete",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:file.id})});}const payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload.error||"Action failed");succeeded++;selectedDriveFileIds.delete(file.id);}catch(error){failures.push((file.name||file.id)+": "+(error.message||"Failed"));}}
+    for(const file of selected){try{let response;if(action==="publish"){if(!ALLOWED_TYPES.has(file.mimeType))throw new Error("Unsupported file type");response=await googleDriveRequest("publish",{accountId:file.driveAccountId,method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fileId:file.id,category:driveBulkCategory.value,title:file.name||"Drive document",mimeType:file.mimeType||"application/octet-stream",sizeBytes:Number(file.size||0)||null,tags})});}else if(action==="unpublish"){response=await googleDriveRequest("unpublish",{accountId:file.driveAccountId,method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fileId:file.id})});}else{response=await googleDriveRequest("delete",{accountId:file.driveAccountId,method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:file.id})});}const payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload.error||"Action failed");succeeded++;selectedDriveFileIds.delete(file.selectionKey);}catch(error){failures.push((file.name||file.id)+": "+(error.message||"Failed"));}}
     await loadGoogleDriveFiles();setDriveFilesStatus("Bulk "+action+": "+succeeded+"/"+selected.length+" succeeded."+(failures.length?" Failures: "+failures.slice(0,3).join("; "):""),failures.length>0);
   }
   if(driveBulkPublish)driveBulkPublish.addEventListener("click",()=>runDriveBulkAction("publish"));if(driveBulkUnpublish)driveBulkUnpublish.addEventListener("click",()=>runDriveBulkAction("unpublish"));if(driveBulkDelete)driveBulkDelete.addEventListener("click",()=>runDriveBulkAction("delete"));
@@ -578,7 +563,7 @@ function setDriveFilesStatus(message, isError = false) {
     button.disabled = true;
     try {
       setDriveFilesStatus("Publishing Drive reference…");
-      const response = await googleDriveRequest("publish", {
+      const response = await googleDriveRequest("publish", { accountId: file.driveAccountId,
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -609,7 +594,7 @@ function setDriveFilesStatus(message, isError = false) {
     if (!window.confirm("Remove this Drive file from the public library? The Google Drive original will remain unchanged.")) return;
     button.disabled = true;
     try {
-      const response = await googleDriveRequest("unpublish", {
+      const response = await googleDriveRequest("unpublish", { accountId: file.driveAccountId,
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fileId: file.id })
@@ -628,7 +613,7 @@ function setDriveFilesStatus(message, isError = false) {
   async function downloadGoogleDriveFile(file, button) {
     button.disabled = true;
     try {
-      const response = await googleDriveRequest("download", { query: { id: file.id } });
+      const response = await googleDriveRequest("download", { accountId: file.driveAccountId, query: { id: file.id } });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
         throw new Error(payload.error || "Download failed.");
@@ -654,7 +639,7 @@ function setDriveFilesStatus(message, isError = false) {
     if (!window.confirm("Permanently delete " + (file.name || "this Drive file") + "?")) return;
     button.disabled = true;
     try {
-      const response = await googleDriveRequest("delete", {
+      const response = await googleDriveRequest("delete", { accountId: file.driveAccountId,
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: file.id })
@@ -699,7 +684,7 @@ function setDriveFilesStatus(message, isError = false) {
     if (!files.length) { setDriveFilesStatus("Choose one or more files first.", true); return; }
     const invalid = files.find(file => !ALLOWED_TYPES.has(file.type) || !file.size || file.size > 2 * 1024 * 1024 * 1024);
     if (invalid) { setDriveFilesStatus("Every selected file must be a non-empty PDF, JPEG or PNG up to 2 GB. Invalid: " + invalid.name, true); return; }
-    if (!googleDriveConnected || !currentPermissions.has("drive.write")) { setDriveFilesStatus("Your account does not have Google Drive upload permission.", true); return; }
+    if (!googleDriveConnected || selectedDriveAccountId === "__all__" || !currentPermissions.has("drive.write")) { setDriveFilesStatus("Your account does not have Google Drive upload permission.", true); return; }
     googleDriveUploadButton.disabled = true;
     googleDriveRefreshButton.disabled = true;
     let succeeded = 0;
@@ -718,7 +703,7 @@ function setDriveFilesStatus(message, isError = false) {
   }
   if (googleDriveButton) googleDriveButton.addEventListener("click", () => connectGoogleDrive("pixelForge-owner"));
 if (googleDriveAddAccountButton) googleDriveAddAccountButton.addEventListener("click", () => connectGoogleDrive("drive-" + (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36))));
-if (googleDriveAccountSelect) googleDriveAccountSelect.addEventListener("change", () => { selectedDriveAccountId = googleDriveAccountSelect.value || "pixelForge-owner"; selectedDriveFolderId = ""; if (googleDriveFolderSelect) googleDriveFolderSelect.value = ""; refreshGoogleDriveStatus(); });
+if (googleDriveAccountSelect) googleDriveAccountSelect.addEventListener("change", () => { selectedDriveAccountId = googleDriveAccountSelect.value || "__all__"; selectedDriveFolderId = ""; if (googleDriveFolderSelect) googleDriveFolderSelect.value = ""; refreshGoogleDriveStatus(); });
   if (googleDriveFolderSelect) googleDriveFolderSelect.addEventListener("change", () => { selectedDriveFolderId = googleDriveFolderSelect.value || ""; if (googleDriveFolderNote) googleDriveFolderNote.textContent = selectedDriveFolderId ? "Selected folder: " + (googleDriveFolderSelect.selectedOptions[0]?.textContent || "Drive folder") + ". New uploads will be placed here." : "Uploads go to this account’s My Drive root by default. Choose a folder to change the destination."; });
   if (googleDriveRefreshButton) googleDriveRefreshButton.addEventListener("click", loadGoogleDriveFiles);
   if (googleDriveUploadButton) googleDriveUploadButton.addEventListener("click", uploadGoogleDriveFile);
