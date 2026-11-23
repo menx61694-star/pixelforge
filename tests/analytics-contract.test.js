@@ -54,9 +54,11 @@ test("stored page-view schema contains no raw visitor, IP, referrer, or document
 
 test("analytics.view is an accepted role-permission namespace", () => {
   const userManagement = read("supabase/functions/user-management/index.ts");
-  assert.match(userManagement, /const validPermissions = new Set\([\s\S]*?\);/);\n  const permissionAllowlist = userManagement.match(/const validPermissions = new Set\(([\s\S]*?)\);/)?.[1] ?? "";\n  for (const permission of ["analytics.view", "security.logs.view", "security.logs.delete"]) {\n    assert.ok(permissionAllowlist.includes(`"${permission}"`), `permission missing from allowlist: ${permission}`);\n  }
+  const permissionAllowlist = userManagement.match(/const validPermissions = new Set\\(([\\s\\S]*?)\\);/)?.[1] ?? "";
+  for (const permission of ["analytics.view", "security.logs.view", "security.logs.delete"]) {
+    assert.ok(permissionAllowlist.includes('"'+permission+'"'), "permission missing from allowlist: " + permission);
+  }
 });
-
 test("public homepage and library send allowlisted page paths without visitor credentials", () => {
   const homepage = read("script.js");
   const library = read("library.js");
