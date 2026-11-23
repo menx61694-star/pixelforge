@@ -12,3 +12,13 @@
 .document-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px}
 .document-tag{border:1px solid #dce4f3;border-radius:999px;padding:4px 9px;background:#f4f7fc;color:#34456f;font-size:11px;cursor:pointer}
 .document-tag:hover{background:#e8eefb}
+
+.library-personal-toolbar{display:flex;flex-wrap:wrap;gap:9px;margin:0 0 18px}
+.library-view-button{border:1px solid #dbe1ed;border-radius:999px;padding:10px 15px;background:#fff;color:#273958;font:inherit;font-size:13px;font-weight:750;cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
+.library-view-button:hover{border-color:#ff861c;transform:translateY(-1px)}
+.library-view-button.active{border-color:#101d49;background:#101d49;color:#fff}
+.library-view-hint{margin:0 0 24px;color:#71809b;font-size:12px;line-height:1.5}
+.document-favorite-button{align-self:flex-start;border:1px solid #dbe1ed;border-radius:8px;padding:8px 11px;background:#fff;color:#334568;font-size:12px;font-weight:800;cursor:pointer;margin:0 0 9px}
+.document-favorite-button[aria-pressed="true"]{background:#fff6e8;border-color:#ffb66d;color:#a85c08}
+.document-card .document-preview-button{align-self:flex-start}
+@media(max-width:520px){.library-personal-toolbar{gap:7px}.library-view-button{padding:9px 12px;font-size:12px}}
