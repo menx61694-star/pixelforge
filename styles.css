@@ -320,3 +320,16 @@
 .discover-card h2,.discover-card h3,.quick-tool-card h2,.quick-tool-card h3,.featured-resource-card h2,.featured-resource-card h3,.learning-path-card h2,.learning-path-card h3,.popular-resource-card h2,.popular-resource-card h3{overflow-wrap:anywhere}
 @media(max-width:520px){.discover-grid,.featured-resources-grid,.popular-resources-grid,.learning-path-grid{grid-template-columns:minmax(0,1fr);gap:12px}.quick-tools-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}}
 @media(max-width:380px){.quick-tools-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Phase 2 Task 4 — touch usability audit for secondary controls and admin forms. */
+.pf-contact-close,.pf-contact-choice,.pf-contact-back,.pf-contact-view .contact-form button,
+.announcement-manager-actions button,.learning-path-actions button,.learning-step-editor-row button{min-height:44px}
+.announcement-editor-fields input,.announcement-editor-fields textarea,.announcement-editor-fields select,
+.learning-path-form input,.learning-path-form textarea,.learning-path-form select{min-height:44px}
+.announcement-manager-actions,.learning-path-actions{gap:8px;flex-wrap:wrap}
+@media(max-width:650px){
+ .pf-contact-close{width:44px;height:44px;flex:0 0 44px}
+ .pf-contact-choice{min-height:64px}
+ .pf-contact-back{min-height:44px;padding:.65rem .9rem}
+ .announcement-manager-actions button,.learning-path-actions button,.learning-step-editor-row button{flex:1 1 auto}
+}
