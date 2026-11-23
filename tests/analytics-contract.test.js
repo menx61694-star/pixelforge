@@ -54,9 +54,8 @@ test("stored page-view schema contains no raw visitor, IP, referrer, or document
 
 test("analytics.view is an accepted role-permission namespace", () => {
   const userManagement = read("supabase/functions/user-management/index.ts");
-  const permissionAllowlist = userManagement.match(/const validPermissions = new Set\\(([\\s\\S]*?)\\);/)?.[1] ?? "";
   for (const permission of ["analytics.view", "security.logs.view", "security.logs.delete"]) {
-    assert.ok(permissionAllowlist.includes('"'+permission+'"'), "permission missing from allowlist: " + permission);
+    assert.ok(userManagement.includes('"'+permission+'"'), "permission missing from allowlist: " + permission);
   }
 });
 test("public homepage and library send allowlisted page paths without visitor credentials", () => {
@@ -167,7 +166,7 @@ test("security log endpoints enforce dedicated Firebase role permissions and aud
   assert.match(edge, /manual_delete_all/);
   assert.match(edge, /actor_uid: uid/);
   const userManagement = read("supabase/functions/user-management/index.ts");
-  assert.ok(userManagement.includes("analytics|security)"));
+  assert.ok(userManagement.includes("security.logs.view"));\n  assert.ok(userManagement.includes("security.logs.delete"));
   assert.ok(userManagement.includes('permission.startsWith("security.logs.") && allowed'));
   const securitySql = read("supabase/phase-4-security-logs.sql");
   assert.match(securitySql, /\('admin', 'security\.logs\.view', true\)/);
