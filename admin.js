@@ -459,6 +459,7 @@ function setDriveFilesStatus(message, isError = false) {
         await loadGoogleDriveFolders();
         setDriveFilesStatus("Connect Google Drive to list or upload files.");
       }
+      if (pyqDriveLibraryList) await loadOwnerPyqDriveLibrary();
     } catch (error) {
       if (driveStatusStat) driveStatusStat.textContent = "Unknown";
       if (driveStatusNote) driveStatusNote.textContent = "Status check failed";
