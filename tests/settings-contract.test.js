@@ -293,6 +293,9 @@ test("User Feedback is moderated, privacy-conscious and controlled from Admin Se
   assert.match(adminJs, /setting-feedback-enabled/);
   assert.match(adminHtml, /feedback-inbox-list/);
   assert.match(adminJs, /feedback-moderate/);
+  assert.match(adminHtml, /publish-approved-feedback/);
+  assert.match(adminJs, /inbox-action-status/);
+  assert.match(adminJs, /displayToggle\.checked=true/);
   assert.match(edge, /action === "submit-feedback"/);
   assert.match(edge, /action === "feedback-list"/);
   assert.match(edge, /action === "feedback-moderate"/);
