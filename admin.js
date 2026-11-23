@@ -2363,6 +2363,7 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
             actions.append(remove);
             card.append(actions);
           }
+          const actionStatus = document.createElement("p"); actionStatus.className = "inbox-action-status"; actionStatus.setAttribute("role", "status"); card.append(actionStatus);
           container.append(card);
         });
       }
@@ -2386,7 +2387,7 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
         const actions=document.createElement("div");actions.className="feedback-inbox-actions";
         const reply=document.createElement("a");reply.className="button button-small";reply.textContent="Reply by email";reply.href="mailto:"+encodeURIComponent(item.email||"")+"?subject="+encodeURIComponent("Re: "+(item.subject||"Your message"));actions.append(reply);
         if(item.status!=="archived"&&currentPermissions.has("settings.manage")){const next=item.status==="new"?"read":"archived";const button=document.createElement("button");button.type="button";button.textContent=next==="read"?"Mark as read":"Archive";button.dataset.contactAction=next;button.dataset.contactId=item.id;actions.append(button);}
-        card.append(actions);container.append(card);
+        const actionStatus=document.createElement("p");actionStatus.className="inbox-action-status";actionStatus.setAttribute("role","status");card.append(actions,actionStatus);container.append(card);
       });
       if(status)status.textContent=entries.length+" message(s), newest first.";
     }catch(error){if(status)status.textContent=error.message||"Could not load contact messages.";}
@@ -2395,9 +2396,17 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
   document.getElementById("contact-inbox-list")?.addEventListener("click",async event=>{
     const button=event.target.closest("[data-contact-action]");if(!button)return;button.disabled=true;
     try{await settingsRequest("contact-status",{method:"POST",body:{id:button.dataset.contactId,status:button.dataset.contactAction}});await loadContactInbox();}
-    catch(error){setSettingsStatus(error.message||"Could not update contact message.",true);button.disabled=false;}
+    catch(error){const cardStatus=button.closest(".feedback-inbox-card")?.querySelector(".inbox-action-status");if(cardStatus)cardStatus.textContent="Update failed: "+(error.message||"Unknown error");setSettingsStatus(error.message||"Could not update contact message.",true);button.disabled=false;}
   });
   document.getElementById("refresh-feedback")?.addEventListener("click", loadFeedbackInbox);
+  document.getElementById("publish-approved-feedback")?.addEventListener("click", () => {
+    const displayToggle=document.getElementById("setting-feedback-display");
+    const saveButton=document.getElementById("save-feedback-settings");
+    if(!displayToggle||!saveButton){setSettingsStatus("Feedback display settings are unavailable.",true);return;}
+    displayToggle.checked=true;
+    saveButton.click();
+  });
+
   document.getElementById("feedback-inbox-list")?.addEventListener("click", async event => {
     const deleteButton = event.target.closest("[data-feedback-delete]");
     if (deleteButton) {
@@ -2407,7 +2416,7 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
       try {
         await settingsRequest("feedback-delete", { method: "POST", body: { id } });
         await loadFeedbackInbox();
-      } catch (error) { setSettingsStatus(error.message || "Could not delete feedback.", true); deleteButton.disabled = false; }
+      } catch (error) { const cardStatus=deleteButton.closest(".feedback-inbox-card")?.querySelector(".inbox-action-status"); if(cardStatus) cardStatus.textContent="Delete failed: "+(error.message||"Unknown error"); setSettingsStatus(error.message || "Could not delete feedback.", true); deleteButton.disabled = false; }
       return;
     }
     const button = event.target.closest("[data-feedback-action]");
@@ -2416,7 +2425,7 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
     try {
       await settingsRequest("feedback-moderate", { method: "POST", body: { id: button.dataset.feedbackId, status: button.dataset.feedbackAction } });
       await loadFeedbackInbox();
-    } catch (error) { setSettingsStatus(error.message || "Could not moderate feedback.", true); button.disabled = false; }
+    } catch (error) { const cardStatus=button.closest(".feedback-inbox-card")?.querySelector(".inbox-action-status"); if(cardStatus) cardStatus.textContent="Moderation failed: "+(error.message||"Unknown error"); setSettingsStatus(error.message || "Could not moderate feedback.", true); button.disabled = false; }
   });
 
 })();
