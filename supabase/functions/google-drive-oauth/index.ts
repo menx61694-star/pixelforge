@@ -121,7 +121,7 @@ Deno.serve(async (request) => {
         response_type: "code",
         scope: "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.metadata.readonly",
         access_type: "offline",
-        prompt: "consent",
+        prompt: "select_account consent",
         state,
       }).toString();
       return json({ authorization_url: google.toString() }, 200, request);
