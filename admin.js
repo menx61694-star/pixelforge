@@ -256,13 +256,13 @@ let googleDriveAccounts = [];
   const createUserButton = document.getElementById("create-user-button");
 
   const sidebarLinks = Array.from(document.querySelectorAll(".sidebar .nav-link"));
-  const dashboardPages = ["overview", "recent-activity", "documents", "google-drive", "analytics", "security-logs", "users", "settings"]
+  const dashboardPages = ["overview", "recent-activity", "documents", "pyq-upload", "google-drive", "analytics", "security-logs", "users", "settings"]
     .map(id => document.getElementById(id))
     .filter(Boolean);
   function syncSidebarNavigation() {
     const requestedPage = (window.location.hash || "#overview").slice(1);
     let activePage = dashboardPages.some(page => page.id === requestedPage) ? requestedPage : "overview";
-    const pagePermissions = { overview: "dashboard.view", "recent-activity": "activity.view", documents: "vault.read", "google-drive": "drive.read", analytics: "analytics.view", "security-logs": "security.logs.view", users: "users.manage", settings: "settings.view" };
+    const pagePermissions = { overview: "dashboard.view", "recent-activity": "activity.view", documents: "vault.read", "pyq-upload": "vault.publish", "google-drive": "drive.read", analytics: "analytics.view", "security-logs": "security.logs.view", users: "users.manage", settings: "settings.view" };
     if (currentUserUid && !currentPermissions.has(pagePermissions[activePage])) activePage = "overview";
     dashboardPages.forEach(page => { page.hidden = page.id !== activePage; });
     if (activePage === "analytics" && currentPermissions.has("analytics.view")) loadAnalyticsDashboard();
@@ -2181,6 +2181,64 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
     if (currentPermissions.has("analytics.view")) loadOverviewAnalytics();
   }
 
+  const pyqUploadForm = document.getElementById("pyq-upload-form");
+  const pyqExamName = document.getElementById("pyq-exam-name");
+  const pyqYear = document.getElementById("pyq-year");
+  const pyqSubject = document.getElementById("pyq-subject");
+  const pyqTags = document.getElementById("pyq-tags");
+  const pyqFileInput = document.getElementById("pyq-files");
+  const pyqSelectedFiles = document.getElementById("pyq-selected-files");
+  const pyqUploadButton = document.getElementById("pyq-upload-button");
+  const pyqUploadStatus = document.getElementById("pyq-upload-status");
+  if (pyqFileInput) pyqFileInput.addEventListener("change", () => {
+    const files = Array.from(pyqFileInput.files || []);
+    if (pyqSelectedFiles) pyqSelectedFiles.textContent = files.length ? files.map(file => file.name).join(", ") : "No files selected";
+  });
+  if (pyqUploadForm) pyqUploadForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!currentPermissions.has("vault.publish") || !supabaseClient || !currentUserUid) {
+      if (pyqUploadStatus) pyqUploadStatus.textContent = "Your account cannot publish PYQ papers.";
+      return;
+    }
+    const exam = pyqExamName.value.trim();
+    const year = pyqYear.value.trim();
+    const subject = pyqSubject.value.trim();
+    const files = Array.from(pyqFileInput.files || []);
+    if (!exam || !year || !files.length) {
+      if (pyqUploadStatus) pyqUploadStatus.textContent = "Enter exam name and year, then select PDF files.";
+      return;
+    }
+    if (files.some(file => file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf"))) {
+      if (pyqUploadStatus) pyqUploadStatus.textContent = "Only PDF files are accepted for PYQ uploads.";
+      return;
+    }
+    const tags = normalizeDocumentTags([exam, year, subject, pyqTags.value].filter(Boolean).join(","));
+    if (!tags) {
+      if (pyqUploadStatus) pyqUploadStatus.textContent = "Tags must be valid (maximum 10 tags, 32 characters each).";
+      return;
+    }
+    pyqUploadButton.disabled = true;
+    let uploaded = 0;
+    const errors = [];
+    for (const file of files) {
+      try {
+        const prefix = [exam, year, subject].filter(Boolean).map(safeFileName).join("-");
+        const name = safeFileName(prefix + "-" + file.name);
+        const path = "exam-materials/" + currentUserUid + "-" + Date.now() + "-" + name;
+        const { error } = await supabaseClient.storage.from(PUBLIC_BUCKET).upload(path, file, {
+          cacheControl: "60", contentType: "application/pdf", upsert: false, metadata: { tags }
+        });
+        if (error) throw error;
+        uploaded++;
+      } catch (error) {
+        errors.push(file.name + ": " + (error.message || "Upload failed"));
+      }
+    }
+    if (pyqUploadStatus) pyqUploadStatus.textContent = "Published " + uploaded + "/" + files.length + " paper(s)." + (errors.length ? " Errors: " + errors.join(" · ") : " Papers should now appear in the public PYQ section.");
+    pyqUploadForm.reset();
+    if (pyqSelectedFiles) pyqSelectedFiles.textContent = "No files selected";
+    pyqUploadButton.disabled = false;
+  });
   if (userCreateForm) userCreateForm.addEventListener("submit", createWorkspaceUser);
   const refreshUsersButton = document.getElementById("refresh-users");
   if (refreshUsersButton) refreshUsersButton.addEventListener("click", loadUsersAndPermissions);
