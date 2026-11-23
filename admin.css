@@ -331,3 +331,7 @@ button:disabled{opacity:.6;cursor:wait}
 .drive-connection-status.pending{border-color:#e4e9f2;background:#f7f9fd}
 .drive-connection-status.pending #google-drive-status{color:#71809b}
 .drive-status-indicator.pending{background:#aab5c6;box-shadow:0 0 0 4px #aab5c618}
+
+.drive-upload-mode-note{margin:0 0 12px;color:#687994;font-size:12px;line-height:1.5}
+.drive-auto-upload-card{margin-bottom:14px}
+.drive-auto-upload-card .drive-upload-actions button:disabled{opacity:.5;cursor:not-allowed}
