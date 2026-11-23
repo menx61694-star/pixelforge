@@ -157,8 +157,8 @@
         <div class="dashboard-content dashboard-page" id="pyq-upload" hidden>
           <section class="vault-layout">
             <article class="panel upload-panel">
-              <div class="panel-heading"><div><p class="eyebrow">PUBLIC PYQ COLLECTION</p><h2>Add previous-year papers</h2></div><span class="panel-symbol">＋</span></div>
-              <p class="panel-copy">Upload papers directly to the public PYQ section. PDFs only. Uploaded papers are visible to everyone.</p>
+              <div class="panel-heading"><div><p class="eyebrow">GOOGLE DRIVE · PYQ COLLECTION</p><h2>Add previous-year papers</h2></div><span class="panel-symbol">＋</span></div>
+              <p class="panel-copy">Upload PDF papers directly to the connected Owner Google Drive root. This upload does not publish them to the public website.</p>
               <form id="pyq-upload-form" class="upload-form">
                 <label for="pyq-exam-name">Exam name</label>
                 <input id="pyq-exam-name" type="text" maxlength="80" placeholder="e.g. SSC CGL, CTET, UP Police" required>
@@ -170,10 +170,10 @@
                 <input id="pyq-tags" type="text" maxlength="320" placeholder="e.g. SSC, CGL, Tier 1, Reasoning">
                 <label class="drop-zone" for="pyq-files"><span class="upload-symbol">↑</span><strong>Select PYQ PDF files</strong><small>Multiple PDF papers supported</small><span id="pyq-selected-files" class="selected-file">No files selected</span></label>
                 <input id="pyq-files" type="file" accept="application/pdf,.pdf" multiple required>
-                <button id="pyq-upload-button" type="submit">Publish PYQ papers <span>→</span></button>
+                <button id="pyq-upload-button" type="submit">Upload PYQ papers to Drive <span>→</span></button>
               </form>
               <p id="pyq-upload-status" class="vault-status" role="status" aria-live="polite">Ready to upload papers.</p>
-              <p class="privacy-hint"><span>●</span> Directly publishes in exam-materials. No private-vault step needed.</p>
+              <p class="privacy-hint"><span>●</span> Destination: Owner Google Drive → My Drive (Root). Public website publishing is separate.</p>
             </article>
           </section>
           <footer class="dashboard-footer"><span>PIXELFORGE ADMIN</span><span>Public PYQ uploads · Role permission required</span></footer>
