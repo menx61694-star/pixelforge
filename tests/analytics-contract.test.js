@@ -166,7 +166,8 @@ test("security log endpoints enforce dedicated Firebase role permissions and aud
   assert.match(edge, /manual_delete_all/);
   assert.match(edge, /actor_uid: uid/);
   const userManagement = read("supabase/functions/user-management/index.ts");
-  assert.ok(userManagement.includes("security.logs.view"));\n  assert.ok(userManagement.includes("security.logs.delete"));
+  assert.ok(userManagement.includes("security.logs.view"));
+  assert.ok(userManagement.includes("security.logs.delete"));
   assert.ok(userManagement.includes('permission.startsWith("security.logs.") && allowed'));
   const securitySql = read("supabase/phase-4-security-logs.sql");
   assert.match(securitySql, /\('admin', 'security\.logs\.view', true\)/);
