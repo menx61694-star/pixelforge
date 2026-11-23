@@ -104,3 +104,11 @@ test("Admin UI hides controls that are not included in the signed-in role permis
   assert.match(adminJs, /element\.hidden = !currentPermissions\.has\(element\.getAttribute\("data-permission"\)\)/);
   assert.match(adminJs, /uploadPanel\.hidden = !currentPermissions\.has\("vault\.write"\)/);
 });
+
+test("permission mutations accept only the known permission allowlist", () => {
+  assert.ok(userManagement.includes("const validPermissions = new Set(["));
+  assert.ok(userManagement.includes("!validPermissions.has(permission)"));
+  assert.ok(userManagement.includes('"security.logs.view"'));
+  assert.ok(userManagement.includes('"settings.manage"'));
+  assert.ok(userManagement.includes('"vault.publish"'));
+});

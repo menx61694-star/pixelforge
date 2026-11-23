@@ -61,14 +61,14 @@ test("settings updates use a transactional RPC that records old and new values w
 });
 
 test("settings permissions are admin-only in both role seed and permission management API", () => {
-  assert.match(sql, /\('admin', 'settings\.view', true\)/);
-  assert.match(sql, /\('admin', 'settings\.manage', true\)/);
-  assert.match(sql, /\('editor', 'settings\.view', false\)/);
-  assert.match(sql, /\('viewer', 'settings\.manage', false\)/);
-  assert.ok(userManagement.includes("settings\\\\.[a-z]+"));
-  assert.match(userManagement, /permission\.startsWith\("settings\."\)/);
+  assert.ok(sql.includes("('admin', 'settings.view', true)"));
+  assert.ok(sql.includes("('admin', 'settings.manage', true)"));
+  assert.ok(sql.includes("('editor', 'settings.view', false)"));
+  assert.ok(sql.includes("('viewer', 'settings.manage', false)"));
+  assert.ok(userManagement.includes('"settings.view"'));
+  assert.ok(userManagement.includes('"settings.manage"'));
+  assert.ok(userManagement.includes('permission.startsWith("settings.")'));
 });
-
 test("settings API has a strict origin allowlist and exposes only the minimal public maintenance status", () => {
   assert.match(edge, /allowedOrigins\.has\(origin\)/);
   assert.match(edge, /Access-Control-Allow-Origin/);

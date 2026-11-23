@@ -71,6 +71,13 @@ async function requireAdmin(request: Request) {
   return identity?.role === "admin" ? identity : null;
 }
 const validRoles = new Set(["admin", "editor", "viewer"]);
+const validPermissions = new Set([
+  "activity.view", "analytics.view", "dashboard.view",
+  "drive.delete", "drive.read", "drive.write",
+  "roles.manage", "security.logs.delete", "security.logs.view",
+  "settings.manage", "settings.view", "users.manage",
+  "vault.delete", "vault.publish", "vault.read", "vault.write",
+]);
 const validStatuses = new Set(["active", "suspended"]);
 
 Deno.serve(async (request) => {
@@ -175,7 +182,7 @@ Deno.serve(async (request) => {
       const role = typeof input.role === "string" ? input.role : "";
       const permission = typeof input.permission === "string" ? input.permission : "";
       const allowed = input.allowed === true;
-      if (!validRoles.has(role) || (!/^(dashboard|activity|vault|drive|users|roles|analytics|security)\\.[a-z]+$/.test(permission) && !/^settings\\.[a-z]+$/.test(permission))) {
+      if (!validRoles.has(role) || !validPermissions.has(permission)) {
         return json({ error: "Invalid role or permission." }, 400, request);
       }
       if (role === "admin" && ["users.manage", "roles.manage", "dashboard.view"].includes(permission) && !allowed) {
