@@ -10,6 +10,7 @@ on:
       - '.github/workflows/deploy-phase-2-functions.yml'
       - 'supabase/functions/user-management/**'
       - 'supabase/functions/google-drive-files/**'
+      - 'supabase/functions/google-drive-oauth/**'
       - 'supabase/functions/analytics/**'
       - 'supabase/functions/site-settings/**'
       - 'supabase/phase-5-settings.sql'
@@ -48,6 +49,11 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: supabase functions deploy user-management --project-ref zeueivmdzhkhonkyllij --use-api --yes
+
+      - name: Deploy google-drive-oauth Edge Function
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy google-drive-oauth --project-ref zeueivmdzhkhonkyllij --use-api --yes
 
       - name: Deploy google-drive-files Edge Function
         env:
