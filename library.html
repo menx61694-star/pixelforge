@@ -35,7 +35,14 @@
         <label for="library-type-filter">File type</label>
         <select id="library-type-filter"><option value="all">Any type</option><option value="pdf">PDF</option><option value="image">Images</option><option value="other">Other files</option></select>
       </div>
-      <p class="library-search-hint" id="library-search-hint" hidden>Search across document titles and categories. Try a related keyword if you do not find a match.</p>
+      <p class="library-search-hint" id="library-search-hint" hidden>Search across document titles, categories and tags. Try a related keyword if you do not find a match.</p>
+      <div class="library-personal-toolbar" id="library-personal-toolbar" aria-label="Document collections">
+        <button type="button" class="library-view-button active" data-library-view="all" aria-pressed="true">All documents</button>
+        <button type="button" class="library-view-button" data-library-view="favorites" aria-pressed="false">★ Favorites</button>
+        <button type="button" class="library-view-button" data-library-view="recent" aria-pressed="false">Recently viewed</button>
+        <button type="button" class="library-view-button" data-library-view="new" aria-pressed="false">New this month</button>
+      </div>
+      <p class="library-view-hint" id="library-view-hint" aria-live="polite">Browse all published resources.</p>
       <div class="library-heading"><h2>Browse categories</h2></div>
       <div class="category-grid" id="category-grid"></div>
       <div class="library-heading"><h2 id="documents-heading">Published documents</h2><span class="library-count" id="library-count"></span></div>
