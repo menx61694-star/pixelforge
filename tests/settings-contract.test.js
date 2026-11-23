@@ -604,9 +604,11 @@ test("PYQ uploads are listed from Owner Drive with rename and delete management"
   const adminJs = read("admin.js");
   const driveFiles = read("supabase/functions/google-drive-files/index.ts");
   assert.match(adminHtml, /pyq-drive-library-list/);
+  assert.match(adminHtml, /href="#pyq-upload" data-permission="drive.write"/);
   assert.match(adminJs, /loadOwnerPyqDriveLibrary/);
   assert.match(adminJs, /PYQ-/);
   assert.match(adminJs, /googleDriveRequest\("rename"/);
+  assert.match(adminJs, /del\.hidden=!currentPermissions\.has\("drive\.delete"\)/);
   assert.match(driveFiles, /action === "rename"/);
   assert.match(driveFiles, /method: "PATCH"/);
 });
