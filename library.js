@@ -38,7 +38,23 @@
   const grid = document.getElementById("document-grid");
   const count = document.getElementById("library-count");
   const cards = document.getElementById("category-grid");
-  const state = { documents: [], loading: false, searchConfig: { enabled: true, smartEnabled: true, filtersEnabled: true, maxResults: 30, placeholder: "Search documents, notes and guides…", pdfPreviewEnabled: true }, visibleLimit: 30, pdfPreviewEnabled: true };
+  const viewToolbar = document.getElementById("library-personal-toolbar");
+  const viewHint = document.getElementById("library-view-hint");
+  const FAVORITES_KEY = "pixelforge-library-favorites-v1";
+  const RECENT_KEY = "pixelforge-library-recent-v1";
+  function readLocalList(key) {
+    try { const value = JSON.parse(localStorage.getItem(key) || "[]"); return Array.isArray(value) ? value : []; } catch (_) { return []; }
+  }
+  function writeLocalList(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (_) {} }
+  function documentKey(doc) { return String(doc.source || "") + ":" + String(doc.resourceId || doc.url || doc.title || ""); }
+  function documentAddedAt(doc) { const value = doc.addedAt || doc.updatedAt || ""; const time = Date.parse(value); return Number.isFinite(time) ? time : 0; }
+  const viewDescriptions = {
+    all: "Browse all published resources.",
+    favorites: "Your saved resources are stored only in this browser.",
+    recent: "Resources you recently opened or previewed on this browser.",
+    new: "Resources added or updated in the last 30 days."
+  };
+  const state = { documents: [], loading: false, view: "all", favorites: readLocalList(FAVORITES_KEY), recent: readLocalList(RECENT_KEY), searchConfig: { enabled: true, smartEnabled: true, filtersEnabled: true, maxResults: 30, placeholder: "Search documents, notes and guides…", pdfPreviewEnabled: true }, visibleLimit: 30, pdfPreviewEnabled: true };
   const params = new URLSearchParams(window.location.search);
   search.value = params.get("q") || "";
   if (categoryFilter) categoryFilter.value = params.get("category") || categorySlug;
@@ -106,9 +122,15 @@
     const q = search.value.trim().toLowerCase();
     const selectedCategory = categoryFilter && !categoryFilter.disabled ? categoryFilter.value : (active ? active.slug : "all");
     const selectedType = typeFilter ? typeFilter.value : "all";
+    const recentIds = new Set(state.recent.map(item => typeof item === "string" ? item : item?.id).filter(Boolean));
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
     const ranked = state.documents.map(doc => ({ doc, score: searchScore(doc, q) }))
       .filter(item => item.score >= 0)
       .filter(({ doc }) => selectedCategory === "all" || doc.categorySlug === selectedCategory)
+      .filter(({ doc }) => state.view === "all" ||
+        (state.view === "favorites" && state.favorites.includes(documentKey(doc))) ||
+        (state.view === "recent" && recentIds.has(documentKey(doc))) ||
+        (state.view === "new" && documentAddedAt(doc) >= cutoff))
       .filter(({ doc }) => {
         const ext = doc.ext.toLowerCase();
         return selectedType === "all" ||
@@ -117,8 +139,11 @@
           (selectedType === "other" && !["pdf","png","jpg","jpeg","webp","gif"].includes(ext));
       });
     if (q && state.searchConfig.smartEnabled) ranked.sort((a, b) => b.score - a.score);
+    if (state.view === "recent") ranked.sort((a, b) => state.recent.findIndex(item => (typeof item === "string" ? item : item?.id) === documentKey(a.doc)) - state.recent.findIndex(item => (typeof item === "string" ? item : item?.id) === documentKey(b.doc)));
+    if (state.view === "new") ranked.sort((a, b) => documentAddedAt(b.doc) - documentAddedAt(a.doc));
     const docs = ranked.map(item => item.doc);
-    count.textContent = docs.length + (docs.length === 1 ? " result" : " results") +
+    count.textContent = (state.view === "all" ? "" : ({favorites:"Favorites · ",recent:"Recently viewed · ",new:"New this month · "}[state.view] || "")) +
+      docs.length + (docs.length === 1 ? " result" : " results") +
       (docs.length > state.visibleLimit ? " · showing " + state.visibleLimit : "");
     if (!docs.length) {
       if (loadMoreButton) loadMoreButton.hidden = true;
@@ -130,6 +155,24 @@
       const icon = document.createElement("span"); icon.className = "document-icon"; icon.textContent = doc.ext.toUpperCase();
       const h3 = document.createElement("h3"); h3.textContent = doc.title;
       const p = document.createElement("p"); p.textContent = doc.category + " · " + doc.size + (doc.source === "google_drive" ? " · Google Drive" : " · PixelForge Storage");
+      const favoriteButton = document.createElement("button");
+      favoriteButton.type = "button";
+      favoriteButton.className = "document-favorite-button";
+      const favoriteKey = documentKey(doc);
+      const updateFavoriteLabel = () => {
+        const isFavorite = state.favorites.includes(favoriteKey);
+        favoriteButton.textContent = isFavorite ? "★ Saved to favorites" : "☆ Add to favorites";
+        favoriteButton.setAttribute("aria-pressed", String(isFavorite));
+        favoriteButton.setAttribute("aria-label", isFavorite ? "Remove from favorites" : "Add to favorites");
+      };
+      updateFavoriteLabel();
+      favoriteButton.addEventListener("click", () => {
+        state.favorites = state.favorites.includes(favoriteKey)
+          ? state.favorites.filter(key => key !== favoriteKey)
+          : [...state.favorites, favoriteKey];
+        writeLocalList(FAVORITES_KEY, state.favorites);
+        render();
+      });
       const tagList = document.createElement("div"); tagList.className = "document-tags";
       (Array.isArray(doc.tags) ? doc.tags : []).forEach(tag => {
         const tagButton = document.createElement("button");
@@ -138,17 +181,24 @@
         tagList.append(tagButton);
       });
       const a = document.createElement("a"); a.href = doc.url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = "Open document ↗";
+      function recordRecent() {
+        const key = documentKey(doc);
+        state.recent = [{ id: key, title: doc.title, viewedAt: Date.now() }, ...state.recent.filter(item => (typeof item === "string" ? item : item?.id) !== key)].slice(0, 39);
+        writeLocalList(RECENT_KEY, state.recent);
+      }
       let previewButton = null;
       if (state.searchConfig.pdfPreviewEnabled && doc.ext.toLowerCase() === "pdf" && previewDialog && previewFrame) {
         previewButton = document.createElement("button");
         previewButton.type = "button"; previewButton.className = "document-preview-button"; previewButton.textContent = "Preview PDF";
         previewButton.addEventListener("click", () => {
+          recordRecent();
           previewTitle.textContent = doc.title; previewOpenLink.href = doc.url;
           previewFrame.src = doc.url + (doc.url.includes("#") ? "" : "#view=FitH");
           if (typeof previewDialog.showModal === "function") previewDialog.showModal(); else window.open(doc.url, "_blank", "noopener");
         });
       }
       a.addEventListener("click", () => {
+        recordRecent();
         if (!doc.resourceId || !["supabase","google_drive"].includes(doc.source)) return;
         try {
           let visitorId = sessionStorage.getItem("pf-resource-visitor");
@@ -159,7 +209,7 @@
           }).catch(() => {});
         } catch (_) { /* Tracking is optional; never block opening a document. */ }
       });
-      card.append(icon, h3, p);
+      card.append(icon, h3, p, favoriteButton);
       if (tagList.childElementCount) card.append(tagList);
       if (previewButton) card.append(previewButton);
       card.append(a); grid.append(card);
@@ -218,7 +268,7 @@
           const bytes = Number(file.metadata && file.metadata.size || 0);
           const size = bytes >= 1048576 ? (bytes / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(bytes / 1024)) + " KB";
           const ext = (file.name.split(".").pop() || "FILE").slice(0, 4);
-          return { title: niceName(file.name), category: category.name, categorySlug: category.slug, url: publicData.publicUrl, size, ext, source: "supabase", resourceId: path, tags: Array.isArray(file.metadata?.tags) ? file.metadata.tags : [] };
+          return { title: niceName(file.name), category: category.name, categorySlug: category.slug, url: publicData.publicUrl, size, ext, source: "supabase", resourceId: path, addedAt: file.created_at || file.updated_at || "", updatedAt: file.updated_at || "", tags: Array.isArray(file.metadata?.tags) ? file.metadata.tags : [] };
         });
       }));
 
@@ -238,6 +288,8 @@
               ext: (doc.title || "").split(".").pop()?.slice(0, 4) || "FILE",
               source: "google_drive",
               resourceId: doc.drive_file_id,
+              addedAt: doc.updated_at || "",
+              updatedAt: doc.updated_at || "",
               tags: Array.isArray(doc.tags) ? doc.tags : []
             }));
         } catch (driveError) {
@@ -259,6 +311,19 @@
   previewDialog?.addEventListener("close", () => { if (previewFrame) previewFrame.src = "about:blank"; });
   previewDialog?.addEventListener("click", event => { if (event.target === previewDialog) previewDialog.close(); });
   previewFullscreen?.addEventListener("click", async () => { try { if (previewFrame?.requestFullscreen) await previewFrame.requestFullscreen(); } catch (_) { previewTitle.textContent += " (Fullscreen unavailable)"; } });
+  viewToolbar?.addEventListener("click", event => {
+    const button = event.target.closest("[data-library-view]");
+    if (!button) return;
+    state.view = button.dataset.libraryView || "all";
+    viewToolbar.querySelectorAll("[data-library-view]").forEach(item => {
+      const activeView = item === button;
+      item.classList.toggle("active", activeView);
+      item.setAttribute("aria-pressed", String(activeView));
+    });
+    if (viewHint) viewHint.textContent = viewDescriptions[state.view] || viewDescriptions.all;
+    state.visibleLimit = state.searchConfig.maxResults;
+    render();
+  });
   search.addEventListener("input", () => { state.visibleLimit = state.searchConfig.maxResults; render(); });
   categoryFilter?.addEventListener("change", () => { state.visibleLimit = state.searchConfig.maxResults; render(); });
   typeFilter?.addEventListener("change", () => { state.visibleLimit = state.searchConfig.maxResults; render(); });
