@@ -13,7 +13,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="library.js" defer></script>
   <script src="seo.js" defer></script>
-<script src="nav-tools.js" defer></script></head>
+<script src="nav-tools.js" defer></script><script src="nav-responsive.js" defer></script></head>
 <body>
   <header class="site-header">
     <a class="brand" href="index.html" aria-label="PixelForge home"><span class="brand-mark">P</span><span>PIXELFORGE</span></a>
@@ -54,6 +54,6 @@
     <iframe id="pdf-preview-frame" title="PDF document preview" src="about:blank" loading="lazy"></iframe>
   </dialog>
   <footer class="footer"><a class="brand footer-brand" href="index.html"><span class="brand-mark">P</span><span>PIXELFORGE</span></a><span>© <span id="year"></span> PixelForge.</span><a href="index.html">Home ↑</a></footer>
-  <script>const y=document.getElementById('year');if(y)y.textContent=new Date().getFullYear();const t=document.querySelector('.menu-toggle'),n=document.querySelector('.nav');if(t&&n)t.addEventListener('click',()=>{const o=n.classList.toggle('open');t.setAttribute('aria-expanded',String(o));});</script>
+  <script>const y=document.getElementById('year');if(y)y.textContent=new Date().getFullYear();</script>
 </body>
 </html>
