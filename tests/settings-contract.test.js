@@ -296,6 +296,11 @@ test("User Feedback is moderated, privacy-conscious and controlled from Admin Se
   assert.match(adminHtml, /publish-approved-feedback/);
   assert.match(adminJs, /inbox-action-status/);
   assert.match(adminJs, /displayToggle\.checked=true/);
+  assert.match(adminHtml, /pyq-drive-library-list/);
+  assert.match(adminJs, /loadOwnerPyqDriveLibrary/);
+  assert.match(adminJs, /PYQ-/);
+  assert.match(adminJs, /googleDriveRequest\("rename"/);
+  assert.match(siteSettings, /action === "rename"/);
   assert.match(edge, /action === "submit-feedback"/);
   assert.match(edge, /action === "feedback-list"/);
   assert.match(edge, /action === "feedback-moderate"/);
