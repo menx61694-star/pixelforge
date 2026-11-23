@@ -3,3 +3,11 @@
 .pyq-search input,.pyq-search button,.pyq-filter-row button{min-height:44px}
 .pyq-search input:focus-visible,.pyq-search button:focus-visible,.pyq-filter-row button:focus-visible,.pyq-card a:focus-visible{outline:3px solid #ffb66d;outline-offset:2px}
 @media(max-width:650px){.pyq-search input,.pyq-search button,.pyq-filter-row button{min-height:46px}.pyq-filter-row{row-gap:9px}}
+
+/* Mobile card/grid audit: keep hero columns and card content shrinkable. */
+.pyq-hero{grid-template-columns:minmax(0,1.3fr) minmax(230px,.7fr)}
+.pyq-hero-inner,.pyq-hero-art,.pyq-card,.pyq-card-top{min-width:0}
+.pyq-card h3,.pyq-card p,.pyq-chip,.pyq-filetype{overflow-wrap:anywhere}
+.pyq-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:900px){.pyq-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.pyq-grid{grid-template-columns:minmax(0,1fr)}}
