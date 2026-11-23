@@ -73,6 +73,9 @@ let selectedDriveAccountId = "__all__";
 let googleDriveAccounts = [];
   const googleDriveStatus = document.getElementById("google-drive-status");
   const googleDriveFileInput = document.getElementById("google-drive-file");
+  const googleDriveAutoFileInput = document.getElementById("google-drive-auto-file");
+  const googleDriveAutoUploadButton = document.getElementById("google-drive-auto-upload");
+  const googleDriveAutoStatus = document.getElementById("google-drive-auto-status");
   const googleDriveUploadButton = document.getElementById("google-drive-upload");
   const googleDriveRefreshButton = document.getElementById("google-drive-refresh");
   const googleDriveFilesStatus = document.getElementById("google-drive-files-status");
@@ -438,6 +441,8 @@ function setDriveFilesStatus(message, isError = false) {
       if (googleDriveStoragePercent) googleDriveStoragePercent.textContent = total ? percent.toFixed(1) + "% used" : "";
       googleDriveConnected = allMode ? connected.length > 0 : payload.connected === true;
       const uploadEnabled = googleDriveConnected && !allMode;
+      const ownerDriveConnected = googleDriveAccounts.some(account => account.id === "pixelForge-owner" && account.connected);
+      if (googleDriveAutoUploadButton) googleDriveAutoUploadButton.disabled = !ownerDriveConnected || !currentPermissions.has("drive.write");
       if (googleDriveStatusContainer) { googleDriveStatusContainer.classList.remove("pending"); googleDriveStatusContainer.classList.toggle("disconnected", !googleDriveConnected); }
       if (googleDriveStatusIndicator) { googleDriveStatusIndicator.classList.remove("pending"); googleDriveStatusIndicator.classList.toggle("disconnected", !googleDriveConnected); }
       updateDriveOverview();
@@ -680,6 +685,32 @@ function setDriveFilesStatus(message, isError = false) {
     }
   }
 
+  async function uploadGoogleDriveAutomatic() {
+    const files = Array.from(googleDriveAutoFileInput ? googleDriveAutoFileInput.files : []);
+    if (!files.length) { if (googleDriveAutoStatus) googleDriveAutoStatus.textContent = "Choose one or more files first."; return; }
+    const invalid = files.find(file => !ALLOWED_TYPES.has(file.type) || !file.size || file.size > 2 * 1024 * 1024 * 1024);
+    if (invalid) { if (googleDriveAutoStatus) googleDriveAutoStatus.textContent = "Invalid file: " + invalid.name + ". Use non-empty PDF, JPEG or PNG up to 2 GB."; return; }
+    const ownerAccount = googleDriveAccounts.find(account => account.id === "pixelForge-owner" && account.connected);
+    if (!ownerAccount || !currentPermissions.has("drive.write")) { if (googleDriveAutoStatus) googleDriveAutoStatus.textContent = "Owner Drive is not connected or upload permission is missing."; return; }
+    googleDriveAutoUploadButton.disabled = true;
+    let succeeded = 0; const failures = [];
+    try {
+      for (let index = 0; index < files.length; index++) {
+        try {
+          await uploadGoogleDriveSingleFile(files[index], index + 1, files.length, "pixelForge-owner", "");
+          succeeded++;
+          if (googleDriveAutoStatus) googleDriveAutoStatus.textContent = "Uploading " + (index + 1) + "/" + files.length + " · " + files[index].name;
+        } catch (error) { failures.push(files[index].name + ": " + (error.message || "Upload failed")); }
+      }
+      googleDriveAutoFileInput.value = "";
+      await loadGoogleDriveFiles();
+      if (googleDriveAutoStatus) googleDriveAutoStatus.textContent = failures.length
+        ? "Uploaded " + succeeded + " of " + files.length + ". Failed: " + failures.join(" · ")
+        : "Successfully uploaded " + succeeded + " file" + (succeeded === 1 ? "" : "s") + " to owner Drive root.";
+    } catch (error) { if (googleDriveAutoStatus) googleDriveAutoStatus.textContent = error.message || "Automatic upload failed."; }
+    finally { googleDriveAutoUploadButton.disabled = !googleDriveAccounts.some(account => account.id === "pixelForge-owner" && account.connected) || !currentPermissions.has("drive.write"); }
+  }
+
   async function uploadGoogleDriveFile() {
     const files = Array.from(googleDriveFileInput ? googleDriveFileInput.files : []);
     if (!files.length) { setDriveFilesStatus("Choose one or more files first.", true); return; }
@@ -710,6 +741,7 @@ if (googleDriveAccountSelect) googleDriveAccountSelect.addEventListener("change"
   if (googleDriveFolderSelect) googleDriveFolderSelect.addEventListener("change", () => { selectedDriveFolderId = googleDriveFolderSelect.value || ""; if (googleDriveFolderNote) googleDriveFolderNote.textContent = selectedDriveFolderId ? "Selected folder: " + (googleDriveFolderSelect.selectedOptions[0]?.textContent || "Drive folder") + ". New uploads will be placed here." : "Uploads go to this account’s My Drive root by default. Choose a folder to change the destination."; });
   if (googleDriveRefreshButton) googleDriveRefreshButton.addEventListener("click", loadGoogleDriveFiles);
   if (googleDriveUploadButton) googleDriveUploadButton.addEventListener("click", uploadGoogleDriveFile);
+  if (googleDriveAutoUploadButton) googleDriveAutoUploadButton.addEventListener("click", uploadGoogleDriveAutomatic);
 
   const driveAccountFromOAuth = new URLSearchParams(window.location.search).get("drive_account");
 if (driveAccountFromOAuth && /^[a-zA-Z0-9_-]{3,80}$/.test(driveAccountFromOAuth)) selectedDriveAccountId = driveAccountFromOAuth;
