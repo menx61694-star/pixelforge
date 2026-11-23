@@ -57,6 +57,7 @@ on:
       - "tests/vault-storage.test.js"
       - "tests/analytics-contract.test.js"
       - "tests/role-permissions.test.js"
+      - "tests/role-permissions.test.js"
       - "tests/settings-contract.test.js"
       - "admin.html"
       - "admin.css"
