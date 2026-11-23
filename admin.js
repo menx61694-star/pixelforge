@@ -2261,7 +2261,7 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
     for (let index = 0; index < files.length; index++) {
       const file = files[index];
       try {
-        const metadataPrefix = [exam, year, subject, ...tags].filter(Boolean).join("-");
+        const metadataPrefix = [exam, year, subject, pyqTags.value.trim()].filter(Boolean).join("-");
         const name = safeFileName(metadataPrefix + "-" + file.name);
         const renamedFile = new File([file], name, { type: file.type, lastModified: file.lastModified });
         await uploadGoogleDriveSingleFile(renamedFile, index + 1, files.length, "pixelForge-owner", "", pyqUploadStatus);
