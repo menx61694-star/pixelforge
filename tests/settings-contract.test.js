@@ -287,6 +287,7 @@ test("User Feedback is moderated, privacy-conscious and controlled from Admin Se
   const adminHtml = read("admin.html");
   const adminJs = read("admin.js");
   const edge = read("supabase/functions/site-settings/index.ts");
+  const driveFiles = read("supabase/functions/google-drive-files/index.ts");
   const migration = read("supabase/phase-13-user-feedback.sql");
   const homepage = read("index.html");
   const publicScript = read("script.js");
@@ -300,7 +301,7 @@ test("User Feedback is moderated, privacy-conscious and controlled from Admin Se
   assert.match(adminJs, /loadOwnerPyqDriveLibrary/);
   assert.match(adminJs, /PYQ-/);
   assert.match(adminJs, /googleDriveRequest\("rename"/);
-  assert.match(siteSettings, /action === "rename"/);
+  assert.match(driveFiles, /action === "rename"/);
   assert.match(edge, /action === "submit-feedback"/);
   assert.match(edge, /action === "feedback-list"/);
   assert.match(edge, /action === "feedback-moderate"/);
