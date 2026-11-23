@@ -2241,7 +2241,7 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
       const response = await googleDriveRequest("list", { accountId: "pixelForge-owner" });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Could not load Owner Drive files.");
-      const files = (Array.isArray(payload.files) ? payload.files : []).filter(file => (file.mimeType === "application/pdf" || (file.name || "").toLowerCase().endsWith(".pdf")) && !file.trashed).map(file => ({...file, driveAccountId:"pixelForge-owner", driveAccountName:ownerAccount.email || ownerAccount.name || "Owner Google Drive"}).sort((a,b)=>(b.modifiedTime||"").localeCompare(a.modifiedTime||""));
+      const files = (Array.isArray(payload.files) ? payload.files : []).filter(file => (file.mimeType === "application/pdf" || (file.name || "").toLowerCase().endsWith(".pdf")) && !file.trashed).map(file => ({...file, driveAccountId:"pixelForge-owner", driveAccountName:ownerAccount.email || ownerAccount.name || "Owner Google Drive"})).sort((a,b)=>(b.modifiedTime||"").localeCompare(a.modifiedTime||""));
       if (!files.length) { const empty=document.createElement("li");empty.className="empty-state";empty.textContent="No PDF files found in Owner Drive root.";pyqDriveLibraryList.append(empty); }
       files.forEach(file=>{
         const item=document.createElement("li");item.className="file-item";
