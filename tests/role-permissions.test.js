@@ -106,9 +106,9 @@ test("Admin UI hides controls that are not included in the signed-in role permis
 });
 
 test("permission mutations accept only the known permission allowlist", () => {
-  assert.match(userManagement, /const validPermissions = new Set\\(\\[/);
-  assert.match(userManagement, /!validPermissions\\.has\\(permission\\)/);
-  assert.match(userManagement, /"security\\.logs\\.view"/);
-  assert.match(userManagement, /"settings\\.manage"/);
-  assert.match(userManagement, /"vault\\.publish"/);
+  assert.ok(userManagement.includes("const validPermissions = new Set(["));
+  assert.ok(userManagement.includes("!validPermissions.has(permission)"));
+  assert.ok(userManagement.includes('"security.logs.view"'));
+  assert.ok(userManagement.includes('"settings.manage"'));
+  assert.ok(userManagement.includes('"vault.publish"'));
 });
