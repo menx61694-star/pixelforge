@@ -265,7 +265,7 @@ let googleDriveAccounts = [];
   function syncSidebarNavigation() {
     const requestedPage = (window.location.hash || "#overview").slice(1);
     let activePage = dashboardPages.some(page => page.id === requestedPage) ? requestedPage : "overview";
-    const pagePermissions = { overview: "dashboard.view", "recent-activity": "activity.view", documents: "vault.read", "pyq-upload": "vault.publish", "google-drive": "drive.read", analytics: "analytics.view", "security-logs": "security.logs.view", users: "users.manage", settings: "settings.view" };
+    const pagePermissions = { overview: "dashboard.view", "recent-activity": "activity.view", documents: "vault.read", "pyq-upload": "drive.write", "google-drive": "drive.read", analytics: "analytics.view", "security-logs": "security.logs.view", users: "users.manage", settings: "settings.view" };
     if (currentUserUid && !currentPermissions.has(pagePermissions[activePage])) activePage = "overview";
     dashboardPages.forEach(page => { page.hidden = page.id !== activePage; });
     if (activePage === "analytics" && currentPermissions.has("analytics.view")) loadAnalyticsDashboard();
@@ -2263,7 +2263,8 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
       try {
         const metadataPrefix = [exam, year, subject, ...tags].filter(Boolean).join("-");
         const name = safeFileName(metadataPrefix + "-" + file.name);
-        await uploadGoogleDriveSingleFile(file, index + 1, files.length, "pixelForge-owner", "", pyqUploadStatus);
+        const renamedFile = new File([file], name, { type: file.type, lastModified: file.lastModified });
+        await uploadGoogleDriveSingleFile(renamedFile, index + 1, files.length, "pixelForge-owner", "", pyqUploadStatus);
         uploaded++;
       } catch (error) {
         errors.push(file.name + ": " + (error.message || "Upload failed"));
