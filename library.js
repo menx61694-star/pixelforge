@@ -183,7 +183,7 @@
       const a = document.createElement("a"); a.href = doc.url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = "Open document ↗";
       function recordRecent() {
         const key = documentKey(doc);
-        state.recent = [{ id: key, title: doc.title, viewedAt: Date.now() }, ...state.recent.filter(item => (typeof item === "string" ? item : item?.id) !== key].slice(0, 39);
+        state.recent = [{ id: key, title: doc.title, viewedAt: Date.now() }, ...state.recent.filter(item => (typeof item === "string" ? item : item?.id) !== key)].slice(0, 39);
         writeLocalList(RECENT_KEY, state.recent);
       }
       let previewButton = null;
