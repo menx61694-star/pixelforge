@@ -2257,7 +2257,7 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
           try{const resp=await googleDriveRequest("rename",{accountId:"pixelForge-owner",method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:file.id,name:trimmed})});const data=await resp.json().catch(()=>({}));if(!resp.ok)throw new Error(data.error||"Rename failed.");pyqDriveLibraryStatus.textContent="Renamed successfully.";await loadOwnerPyqDriveLibrary();}
           catch(err){pyqDriveLibraryStatus.textContent="Rename failed: "+(err.message||"Unknown error");rename.disabled=false;}
         });
-        const del=document.createElement("button");del.type="button";del.textContent="Delete";del.addEventListener("click",()=>deleteGoogleDriveFile(file,item,del));
+        const del=document.createElement("button");del.type="button";del.textContent="Delete";del.hidden=!currentPermissions.has("drive.delete");del.addEventListener("click",()=>deleteGoogleDriveFile(file,item,del));
         actions.append(download,rename,del);item.append(info,actions);pyqDriveLibraryList.append(item);
       });
       pyqDriveLibraryStatus.textContent="Showing "+files.length+" PDF file(s) from Owner Drive root. Rename and delete affect the Drive originals.";
