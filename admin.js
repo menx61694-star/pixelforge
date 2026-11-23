@@ -660,7 +660,7 @@ function setDriveFilesStatus(message, isError = false) {
     }
   }
 
-  async function uploadGoogleDriveSingleFile(file, fileIndex, fileCount, accountId, folderId) {
+  async function uploadGoogleDriveSingleFile(file, fileIndex, fileCount, accountId, folderId, statusElement = null) {
     setDriveFilesStatus("Preparing Google Drive upload (" + fileIndex + "/" + fileCount + "): " + file.name);
     const sessionResponse = await googleDriveRequest("create-upload-session", {
       accountId, method: "POST", headers: { "Content-Type": "application/json" },
@@ -681,6 +681,7 @@ function setDriveFilesStatus(message, isError = false) {
       if (!response.ok && response.status !== 308) throw new Error(result.error || "Upload failed at " + formatBytes(uploaded) + ".");
       uploaded = endExclusive;
       setDriveFilesStatus("Uploading " + fileIndex + "/" + fileCount + " · " + file.name + " · " + Math.round(uploaded / file.size * 100) + "%");
+      if (statusElement) statusElement.textContent = "Uploading " + fileIndex + "/" + fileCount + " · " + file.name + " · " + Math.round(uploaded / file.size * 100) + "%";
       if (result.complete) break;
     }
   }
@@ -2228,8 +2229,13 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
   });
   if (pyqUploadForm) pyqUploadForm.addEventListener("submit", async event => {
     event.preventDefault();
-    if (!currentPermissions.has("vault.publish") || !supabaseClient || !currentUserUid) {
-      if (pyqUploadStatus) pyqUploadStatus.textContent = "Your account cannot publish PYQ papers.";
+    if (!currentPermissions.has("drive.write") || !currentPermissions.has("drive.read") || !auth.currentUser) {
+      if (pyqUploadStatus) pyqUploadStatus.textContent = "Your account does not have Google Drive upload permission.";
+      return;
+    }
+    const ownerAccount = googleDriveAccounts.find(account => account.id === "pixelForge-owner" && account.connected);
+    if (!ownerAccount) {
+      if (pyqUploadStatus) pyqUploadStatus.textContent = "Connect Owner Google Drive first in the Google Drive section.";
       return;
     }
     const exam = pyqExamName.value.trim();
@@ -2252,21 +2258,18 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
     pyqUploadButton.disabled = true;
     let uploaded = 0;
     const errors = [];
-    for (const file of files) {
+    for (let index = 0; index < files.length; index++) {
+      const file = files[index];
       try {
-        const prefix = [exam, year, subject].filter(Boolean).map(safeFileName).join("-");
-        const name = safeFileName(prefix + "-" + file.name);
-        const path = "exam-materials/" + currentUserUid + "-" + Date.now() + "-" + name;
-        const { error } = await supabaseClient.storage.from(PUBLIC_BUCKET).upload(path, file, {
-          cacheControl: "60", contentType: "application/pdf", upsert: false, metadata: { tags }
-        });
-        if (error) throw error;
+        const metadataPrefix = [exam, year, subject, ...tags].filter(Boolean).join("-");
+        const name = safeFileName(metadataPrefix + "-" + file.name);
+        await uploadGoogleDriveSingleFile(file, index + 1, files.length, "pixelForge-owner", "", pyqUploadStatus);
         uploaded++;
       } catch (error) {
         errors.push(file.name + ": " + (error.message || "Upload failed"));
       }
     }
-    if (pyqUploadStatus) pyqUploadStatus.textContent = "Published " + uploaded + "/" + files.length + " paper(s)." + (errors.length ? " Errors: " + errors.join(" · ") : " Papers should now appear in the public PYQ section.");
+    if (pyqUploadStatus) pyqUploadStatus.textContent = "Uploaded " + uploaded + "/" + files.length + " paper(s) to Owner Google Drive → My Drive (Root)." + (errors.length ? " Errors: " + errors.join(" · ") : "");
     pyqUploadForm.reset();
     if (pyqSelectedFiles) pyqSelectedFiles.textContent = "No files selected";
     pyqUploadButton.disabled = false;
