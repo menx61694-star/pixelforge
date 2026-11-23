@@ -183,6 +183,7 @@ Deno.serve(async (request) => {
     if (!uid) return json({ error: "Firebase authentication required." }, 401, request);
     const requiredPermission = ["publish", "unpublish"].includes(action ?? "") ? "vault.publish"
       : action === "delete" ? "drive.delete"
+      : action === "rename" ? "drive.write"
       : action === "private-tags-save" ? "vault.write"
       : action === "private-tags-delete" ? "vault.delete"
       : action === "private-tags-list" ? "vault.read"
@@ -432,6 +433,22 @@ Deno.serve(async (request) => {
       const length = response.headers.get("Content-Length");
       if (length) headers.set("Content-Length", length);
       return new Response(response.body, { status: 200, headers });
+    }
+
+    if (request.method === "POST" && action === "rename") {
+      const input = await request.json();
+      const fileId = typeof input.id === "string" ? input.id : "";
+      const name = typeof input.name === "string" ? input.name.trim() : "";
+      if (!/^[a-zA-Z0-9_-]{10,200}$/.test(fileId) || !name || name.length > 180) {
+        return json({ error: "A valid Drive file ID and filename (1–180 characters) are required." }, 400, request);
+      }
+      const response = await fetch("https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(fileId), {
+        method: "PATCH", headers: { ...googleHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) return json({ error: "Google Drive rename failed.", details: payload.error?.message }, 502, request);
+      return json({ renamed: true, file: payload }, 200, request);
     }
 
     if (request.method === "POST" && action === "delete") {
