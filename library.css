@@ -22,3 +22,10 @@
 .document-favorite-button[aria-pressed="true"]{background:#fff6e8;border-color:#ffb66d;color:#a85c08}
 .document-card .document-preview-button{align-self:flex-start}
 @media(max-width:520px){.library-personal-toolbar{gap:7px}.library-view-button{padding:9px 12px;font-size:12px}}
+
+/* Mobile touch-target and focus improvements for library search/filter controls. */
+.library-search input,.library-search button{min-height:46px}
+.library-search-filters select{min-height:44px}
+.library-search-filters select:focus-visible,.library-search input:focus-visible,.library-search button:focus-visible,.library-load-more:focus-visible,.library-view-button:focus-visible,.document-favorite-button:focus-visible,.document-preview-button:focus-visible{outline:3px solid #ffb66d;outline-offset:2px}
+.document-tag{min-height:32px;display:inline-flex;align-items:center}
+@media(max-width:520px){.library-search-filters select{min-height:46px}.library-personal-toolbar .library-view-button{min-height:44px}.document-favorite-button,.document-preview-button{min-height:44px}}
