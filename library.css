@@ -29,3 +29,10 @@
 .library-search-filters select:focus-visible,.library-search input:focus-visible,.library-search button:focus-visible,.library-load-more:focus-visible,.library-view-button:focus-visible,.document-favorite-button:focus-visible,.document-preview-button:focus-visible{outline:3px solid #ffb66d;outline-offset:2px}
 .document-tag{min-height:32px;display:inline-flex;align-items:center}
 @media(max-width:520px){.library-search-filters select{min-height:46px}.library-personal-toolbar .library-view-button{min-height:44px}.document-favorite-button,.document-preview-button{min-height:44px}}
+
+/* Mobile card/grid audit: prevent long titles and descriptions widening cards. */
+.category-grid,.document-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.category-card,.document-card{min-width:0;overflow-wrap:anywhere}
+.category-card strong,.category-card span,.document-card h3,.document-card p{overflow-wrap:anywhere;word-break:normal}
+@media(max-width:800px){.category-grid,.document-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.category-grid,.document-grid{grid-template-columns:minmax(0,1fr)}}
