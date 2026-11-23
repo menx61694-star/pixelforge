@@ -221,8 +221,21 @@
               </div>
             </div>
 
+            <div class="drive-upload-card drive-auto-upload-card">
+              <div class="drive-upload-heading"><div><p class="eyebrow">AUTOMATIC UPLOAD</p><h3>Quick upload to owner Drive</h3></div><span class="drive-upload-badge">Owner Drive · Root</span></div>
+              <p class="drive-upload-mode-note">Upload directly to the connected owner Google Drive, without choosing an account or folder.</p>
+              <div class="drive-file-picker">
+                <input id="google-drive-auto-file" type="file" accept="application/pdf,image/jpeg,image/png" multiple>
+                <small>PDF, JPG or PNG · Up to 2 GB per file</small>
+              </div>
+              <div class="drive-upload-actions">
+                <button id="google-drive-auto-upload" type="button" disabled>Automatic upload <span aria-hidden="true">↗</span></button>
+              </div>
+              <p id="google-drive-auto-status" class="vault-status" role="status" aria-live="polite">Connect owner Drive to use automatic upload.</p>
+            </div>
+
             <div class="drive-upload-card">
-              <div class="drive-upload-heading"><div><p class="eyebrow">UPLOAD DESTINATION</p><h3>Where should files go?</h3></div><span class="drive-upload-badge">Multi-file supported</span></div>
+              <div class="drive-upload-heading"><div><p class="eyebrow">MANUAL UPLOAD</p><h3>Choose account and folder</h3></div><span class="drive-upload-badge">Multi-file supported</span></div>
               <div class="drive-destination-row">
                 <label class="drive-destination-label" for="google-drive-folder-select">Folder</label>
                 <select id="google-drive-folder-select" aria-label="Choose Google Drive upload folder">
