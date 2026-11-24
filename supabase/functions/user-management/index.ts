@@ -75,7 +75,7 @@ const validPermissions = new Set([
   "activity.view", "analytics.view", "dashboard.view",
   "drive.delete", "drive.read", "drive.write",
   "roles.manage", "security.logs.delete", "security.logs.view",
-  "settings.manage", "settings.view", "users.manage",
+  "mock_tests.manage", "settings.manage", "settings.view", "users.manage",
   "vault.delete", "vault.publish", "vault.read", "vault.write",
 ]);
 const validStatuses = new Set(["active", "suspended"]);
