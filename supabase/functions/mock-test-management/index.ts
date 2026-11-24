@@ -153,8 +153,8 @@ Deno.serve(async (request) => {
         const { data: answers, error: answerError } = await db.from("pixel_forge_mock_attempt_answers")
           .select("question_id,selected_option_index,marked_for_review").eq("attempt_id", attempt.id);
         if (answerError) throw answerError;
-        const answerMap = new Map((answers ?? []).map(a => [a.question_id,a.selected_option_index]));
-        const qMap = new Map((questions ?? []).map(q => [q.id,q]));
+        const answerMap = new Map<string, number | null>((answers ?? []).map(a => [a.question_id,a.selected_option_index] as [string, number | null]));
+        const qMap = new Map<string, any>((questions ?? []).map(q => [q.id,q] as [string, any]));
         return reply(request, { attempt: { id: attempt.id, status: attempt.status, started_at: attempt.started_at, expires_at: attempt.expires_at, total_questions: attempt.total_questions }, questions: (maps ?? []).map(m => { const q=qMap.get(m.question_id); return { id:m.question_id, question_text:q?.question_text ?? "", options:m.option_order.map(i=>q?.options?.[i] ?? ""), selected_option_index: answerMap.has(m.question_id) && answerMap.get(m.question_id)!==null ? m.option_order.indexOf(answerMap.get(m.question_id)) : null, marked_for_review: (answers ?? []).some(a=>a.question_id===m.question_id && a.marked_for_review===true), display_order:m.display_order }; }) });
       }
       if (attempt.status !== "in_progress") return reply(request, { error: "This attempt has already been submitted.", status: attempt.status }, 409);
@@ -180,8 +180,8 @@ Deno.serve(async (request) => {
       if (qError) throw qError;
       const { data: answers, error: aError } = await db.from("pixel_forge_mock_attempt_answers").select("question_id,selected_option_index").eq("attempt_id",attempt.id);
       if (aError) throw aError;
-      const answerMap = new Map((answers ?? []).map(a=>[a.question_id,a.selected_option_index]));
-      const questionMap = new Map((questions ?? []).map(q=>[q.id,q]));
+      const answerMap = new Map<string, number | null>((answers ?? []).map(a=>[a.question_id,a.selected_option_index] as [string, number | null]));
+      const questionMap = new Map<string, any>((questions ?? []).map(q=>[q.id,q] as [string, any]));
       let correct=0, incorrect=0, unanswered=0;
       const review = (maps ?? []).map(m=>{
         const q=questionMap.get(m.question_id); const selected=answerMap.get(m.question_id) ?? null;
