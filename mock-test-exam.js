@@ -84,6 +84,7 @@
     $("exam-prev").disabled = current === 0;
     $("exam-next").textContent = current === questions.length - 1 ? "Review & submit →" : "Save & Next →";
     $("exam-clear").disabled = q.selected_option_index === null || q.selected_option_index === undefined;
+    $("exam-mark-review").textContent = marked.has(q.id) ? "★ Remove review mark" : "☆ Mark for review";
     $("exam-save-state").classList.remove("is-saving", "has-error");
     $("exam-save-state").innerHTML = "<i></i> Answers save automatically";
     $("exam-save-state").querySelector("i").setAttribute("aria-hidden", "true");
@@ -184,6 +185,7 @@
     $("exam-prev").addEventListener("click", () => { if (current > 0) { current--; renderQuestion(); } });
     $("exam-next").addEventListener("click", () => { if (current < questions.length - 1) { current++; renderQuestion(); } else openSubmitDialog(); });
     $("exam-clear").addEventListener("click", () => saveAnswer(questions[current], null, marked.has(questions[current].id)));
+    $("exam-mark-review").addEventListener("click", async () => { const q = questions[current]; const next = !marked.has(q.id); try { await request("save-answer", { question_id: q.id, selected_option_index: q.selected_option_index ?? null, marked_for_review: next }); next ? marked.add(q.id) : marked.delete(q.id); renderQuestion(); } catch (error) { showToast(error.message); } });
     $("exam-submit").addEventListener("click", openSubmitDialog);
     $("exam-cancel-submit").addEventListener("click", () => $("exam-submit-dialog").close());
     $("exam-confirm-submit").addEventListener("click", () => submitTest(false));
