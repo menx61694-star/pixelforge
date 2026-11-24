@@ -35,6 +35,7 @@
       sessionStorage.setItem(key + "_meta", JSON.stringify({
         id: attempt.id,
         test_title: test.title,
+        candidate_name: name.trim() || "Candidate",
         expires_at: attempt.expires_at,
         duration_seconds: attempt.duration_seconds,
         total_questions: attempt.total_questions
