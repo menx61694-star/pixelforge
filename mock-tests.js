@@ -64,7 +64,7 @@
       button.type="button";button.disabled=activeAttempt.status!=="in_progress";
       button.addEventListener("click",async()=>{
         try{
-          await candidateRequest("save-answer",{question_id:q.id,selected_option_index:index},activeAttempt.token);
+          await candidateRequest("save-answer",{question_id:q.id,selected_option_index:index,marked_for_review:markedForReview.has(q.id)},activeAttempt.token);
           q.selected_option_index=index;renderAttempt();
         }catch(error){alert(error.message);}
       });
@@ -78,7 +78,7 @@
     });
     const controls=el("div","attempt-controls");
     const previous=el("button","", "Previous");previous.type="button";previous.disabled=currentQuestion===0;previous.addEventListener("click",()=>{currentQuestion--;renderAttempt();});
-    const mark=el("button","",markedForReview.has(q.id)?"Unmark review":"Mark for review");mark.type="button";mark.addEventListener("click",()=>{markedForReview.has(q.id)?markedForReview.delete(q.id):markedForReview.add(q.id);renderAttempt();});
+    const mark=el("button","",markedForReview.has(q.id)?"Unmark review":"Mark for review");mark.type="button";mark.addEventListener("click",async()=>{const next=!markedForReview.has(q.id);try{await candidateRequest("save-answer",{question_id:q.id,selected_option_index:q.selected_option_index,marked_for_review:next},activeAttempt.token);next?markedForReview.add(q.id):markedForReview.delete(q.id);renderAttempt();}catch(error){alert(error.message);}});
     const next=el("button","primary",currentQuestion===activeQuestions.length-1?"Review answers":"Save & Next");next.type="button";next.addEventListener("click",()=>{if(currentQuestion<activeQuestions.length-1){currentQuestion++;renderAttempt();}else showSubmitPrompt();});
     controls.append(previous,mark,next);
     const legend=el("p","attempt-legend","Green: answered · Amber: marked for review · Blue: current");
