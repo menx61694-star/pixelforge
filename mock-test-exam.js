@@ -16,6 +16,42 @@
   let submitting = false;
   let completed = false;
   let candidateName = "Candidate";
+  let questionStartedAt = Date.now();
+  let paused = false;
+  function elapsedForCurrent() {
+    const seconds = Math.max(0, Math.floor((Date.now()-questionStartedAt)/1000));
+    questionStartedAt = Date.now();
+    return seconds;
+  }
+  function setPausedView(value) {
+    paused = value;
+    $("exam-workspace").hidden = value;
+    $("exam-paused-panel").hidden = !value;
+    $("exam-pause").textContent = value ? "Resume test" : "Pause test";
+  }
+  async function pauseOrResume() {
+    try {
+      if (!paused) {
+        const savedSeconds = elapsedForCurrent();
+        const q = questions[current];
+        if (q && savedSeconds) await request("save-answer",{question_id:q.id,selected_option_index:q.selected_option_index ?? null,marked_for_review:marked.has(q.id),time_spent_seconds:savedSeconds});
+        const payload = await request("pause-attempt");
+        attempt.status = "paused";
+        attempt.remaining_seconds = payload.remaining_seconds;
+        clearInterval(timer);
+        setPausedView(true);
+        renderTimer();
+      } else {
+        const payload = await request("resume-attempt");
+        attempt.status = "in_progress";
+        attempt.expires_at = payload.expires_at;
+        setPausedView(false);
+        questionStartedAt = Date.now();
+        renderTimer();
+        timer = setInterval(renderTimer,1000);
+      }
+    } catch(error) { showToast(error.message || "Could not change exam state."); }
+  }
 
   const $ = id => document.getElementById(id);
   const el = (tag, cls, text) => {
@@ -95,7 +131,7 @@
     $("exam-save-state").classList.add("is-saving");
     $("exam-save-state").textContent = "Saving…";
     try {
-      await request("save-answer", { question_id: q.id, selected_option_index: selected, marked_for_review: reviewFlag });
+      await request("save-answer", { question_id: q.id, selected_option_index: selected, marked_for_review: reviewFlag, time_spent_seconds:elapsedForCurrent() });
       q.selected_option_index = selected;
       renderQuestion();
       $("exam-save-state").textContent = "✓ Saved";
@@ -115,13 +151,13 @@
   }
   function renderTimer() {
     if (!attempt) return;
-    const left = Math.max(0, Date.parse(attempt.expires_at) - Date.now());
+    const left = attempt.status === "paused" ? Math.max(0, Number(attempt.remaining_seconds||0)*1000) : Math.max(0, Date.parse(attempt.expires_at) - Date.now());
     const minutes = Math.floor(left / 60000);
     const seconds = Math.floor(left % 60000 / 1000);
     $("exam-timer").textContent = String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
     $("exam-timer").classList.toggle("is-low", left <= 5 * 60000);
     $("exam-timer").classList.toggle("is-expired", left <= 0);
-    if (left <= 0 && !completed && !submitting) submitTest(true);
+    if (left <= 0 && !completed && !submitting && !paused) submitTest(true);
   }
   function openSubmitDialog() {
     const count = answeredCount();
@@ -164,7 +200,21 @@
       const card = el("div", "result-stat " + cls); card.append(el("span", "", label), el("strong", "", String(value))); stats.append(card);
     });
     const reviewHead = el("div", "result-review-heading"); reviewHead.append(el("h3", "", "Answer review"), el("span", "", result.review.length + " questions"));
-    panel.append(head, score, stats, reviewHead);
+    panel.append(head, score, stats);
+    const analysis = el("section","result-analysis");
+    const accuracy = el("p","", "Accuracy: " + (result.accuracy ?? 0) + "% · Total tracked time: " + Math.floor((result.total_time_seconds||0)/60) + "m " + ((result.total_time_seconds||0)%60) + "s · Average/question: " + (result.average_time_per_question_seconds||0) + "s");
+    analysis.append(el("h3","","Performance analysis"),accuracy);
+    const table = el("div","result-analysis-groups");
+    (result.analytics||[]).forEach(group => {
+      const row=el("article","result-analysis-row");
+      row.append(el("strong","",group.subject+" · "+group.topic),el("span","",group.correct+"/"+group.total+" correct · "+group.accuracy+"% accuracy · "+group.time_spent_seconds+"s"));
+      table.append(row);
+    });
+    analysis.append(table);
+    const weak = (result.analytics||[]).filter(x=>x.total>=2).sort((a,b)=>a.accuracy-b.accuracy).slice(0,3);
+    analysis.append(el("p","result-recommendation",weak.length ? "Focus next on: "+weak.map(x=>x.subject+" / "+x.topic).join(", ") : "Attempt more tagged questions to build a reliable topic-level improvement plan."));
+    const reviewHead = el("div", "result-review-heading"); reviewHead.append(el("h3", "", "Answer review"), el("span", "", result.review.length + " questions"));
+    panel.append(analysis,reviewHead);
     result.review.forEach((item, index) => {
       const card = el("article", "result-question");
       card.append(el("h4", "", "Q" + (index + 1) + ". " + item.question_text));
@@ -187,6 +237,8 @@
     $("exam-clear").addEventListener("click", () => saveAnswer(questions[current], null, marked.has(questions[current].id)));
     $("exam-mark-review").addEventListener("click", async () => { const q = questions[current]; const next = !marked.has(q.id); try { await request("save-answer", { question_id: q.id, selected_option_index: q.selected_option_index ?? null, marked_for_review: next }); next ? marked.add(q.id) : marked.delete(q.id); renderQuestion(); } catch (error) { showToast(error.message); } });
     $("exam-submit").addEventListener("click", openSubmitDialog);
+    $("exam-pause").addEventListener("click", pauseOrResume);
+    $("exam-resume").addEventListener("click", pauseOrResume);
     $("exam-cancel-submit").addEventListener("click", () => $("exam-submit-dialog").close());
     $("exam-confirm-submit").addEventListener("click", () => submitTest(false));
     $("exam-exit").addEventListener("click", () => $("exam-exit-dialog").showModal());
@@ -214,7 +266,7 @@
     try {
       const payload = await request("attempt-state");
       attempt = payload.attempt;
-      if (attempt.status !== "in_progress") { showError("This test attempt is no longer active."); return; }
+      if (attempt.status !== "in_progress" && attempt.status !== "paused") { showError("This test attempt is no longer active."); return; }
       questions = (payload.questions || []).map(q => ({ ...q, selected_option_index: q.selected_option_index }));
       if (!questions.length) { showError("No questions are available in this test."); return; }
       marked = new Set(questions.filter(q => q.marked_for_review).map(q => q.id));
@@ -222,8 +274,10 @@
       $("exam-subtitle").textContent = questions.length + " questions · Your answers are saved automatically";
       $("exam-workspace").hidden = false;
       renderQuestion();
+      questionStartedAt = Date.now();
+      if (attempt.status === "paused") setPausedView(true);
       renderTimer();
-      timer = setInterval(renderTimer, 1000);
+      if (attempt.status === "in_progress") timer = setInterval(renderTimer, 1000);
     } catch (error) {
       showError(error.message || "Could not load this exam. Please return to Mock Tests.");
     }
