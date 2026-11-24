@@ -110,5 +110,7 @@ test("permission mutations accept only the known permission allowlist", () => {
   assert.ok(userManagement.includes("!validPermissions.has(permission)"));
   assert.ok(userManagement.includes('"security.logs.view"'));
   assert.ok(userManagement.includes('"settings.manage"'));
+  assert.ok(userManagement.includes('"mock_tests.manage"'));
+  assert.match(userManagement, /permission === "mock_tests\.manage"[\s\S]*?reserved for Admin accounts/);
   assert.ok(userManagement.includes('"vault.publish"'));
 });

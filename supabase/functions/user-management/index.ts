@@ -75,7 +75,7 @@ const validPermissions = new Set([
   "activity.view", "analytics.view", "dashboard.view",
   "drive.delete", "drive.read", "drive.write",
   "roles.manage", "security.logs.delete", "security.logs.view",
-  "settings.manage", "settings.view", "users.manage",
+  "mock_tests.manage", "settings.manage", "settings.view", "users.manage",
   "vault.delete", "vault.publish", "vault.read", "vault.write",
 ]);
 const validStatuses = new Set(["active", "suspended"]);
@@ -196,6 +196,9 @@ Deno.serve(async (request) => {
       }
       if (role !== "admin" && permission.startsWith("settings.") && allowed) {
         return json({ error: "Site settings access is reserved for Admin accounts." }, 409, request);
+      }
+      if (role !== "admin" && permission === "mock_tests.manage" && allowed) {
+        return json({ error: "Mock Test management is reserved for Admin accounts." }, 409, request);
       }
       const { error } = await db.from("pixel_forge_role_permissions").upsert({ role, permission, allowed });
       if (error) throw error;
