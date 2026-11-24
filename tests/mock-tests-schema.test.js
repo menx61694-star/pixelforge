@@ -113,3 +113,10 @@ test("candidate API and exam UI expose pause/resume and detailed performance ana
   assert.match(exam, /Performance analysis/);
   assert.match(exam, /Accuracy:/);
 });
+
+
+test("bulk mock import accepts a variable batch size and reports the actual question count", () => {
+  assert.doesNotMatch(handler, /tests\.length !== 5/);
+  assert.match(handler, /tests\.length < 1 \|\| tests\.length > 20/);
+  assert.match(handler, /tests\.reduce\(\(total, test\) => total \+ test\.questions\.length, 0\)/);
+});
