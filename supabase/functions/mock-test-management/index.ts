@@ -155,7 +155,7 @@ Deno.serve(async (request) => {
         if (answerError) throw answerError;
         const answerMap = new Map<string, number | null>((answers ?? []).map(a => [a.question_id,a.selected_option_index] as [string, number | null]));
         const qMap = new Map<string, any>((questions ?? []).map(q => [q.id,q] as [string, any]));
-        return reply(request, { attempt: { id: attempt.id, status: attempt.status, started_at: attempt.started_at, expires_at: attempt.expires_at, total_questions: attempt.total_questions }, questions: (maps ?? []).map(m => { const q=qMap.get(m.question_id); return { id:m.question_id, question_text:q?.question_text ?? "", options:m.option_order.map(i=>q?.options?.[i] ?? ""), selected_option_index: answerMap.has(m.question_id) && answerMap.get(m.question_id)!==null ? m.option_order.indexOf(answerMap.get(m.question_id)) : null, marked_for_review: (answers ?? []).some(a=>a.question_id===m.question_id && a.marked_for_review===true), display_order:m.display_order }; }) });
+        return reply(request, { attempt: { id: attempt.id, status: attempt.status, started_at: attempt.started_at, expires_at: attempt.expires_at, total_questions: attempt.total_questions }, questions: (maps ?? []).map(m => { const q=qMap.get(m.question_id); return { id:m.question_id, question_text:q?.question_text ?? "", options:m.option_order.map((i: number)=>q?.options?.[i] ?? ""), selected_option_index: answerMap.has(m.question_id) && answerMap.get(m.question_id)!==null ? m.option_order.indexOf(answerMap.get(m.question_id)) : null, marked_for_review: (answers ?? []).some(a=>a.question_id===m.question_id && a.marked_for_review===true), display_order:m.display_order }; }) });
       }
       if (attempt.status !== "in_progress") return reply(request, { error: "This attempt has already been submitted.", status: attempt.status }, 409);
       if (Date.now() >= Date.parse(attempt.expires_at) && action === "save-answer") return reply(request, { error: "Time is over. Submit your test now." }, 409);
@@ -188,7 +188,7 @@ Deno.serve(async (request) => {
         const isCorrect=selected !== null && selected === q.correct_option_index;
         if(selected===null) unanswered++; else if(isCorrect) correct++; else incorrect++;
         const awarded=selected===null?0:(isCorrect?Number((awaitMarks=>awaitMarks)(1)):0);
-        return { question_id:q.id, question_text:q.question_text, options:m.option_order.map(i=>q.options[i]), selected_option_index:selected===null?null:m.option_order.indexOf(selected), correct_option_index:m.option_order.indexOf(q.correct_option_index), explanation:q.explanation, is_correct:isCorrect };
+        return { question_id:q.id, question_text:q.question_text, options:m.option_order.map((i: number)=>q.options[i]), selected_option_index:selected===null?null:m.option_order.indexOf(selected), correct_option_index:m.option_order.indexOf(q.correct_option_index), explanation:q.explanation, is_correct:isCorrect };
       });
       const { data: test, error: testError } = await db.from("pixel_forge_mock_tests").select("marks_per_question,negative_marks").eq("id",attempt.test_id).single();
       if(testError) throw testError;
