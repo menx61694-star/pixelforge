@@ -90,3 +90,5 @@ test("dedicated exam page provides timer, autosave, navigation, review and resul
   }
   assert.doesNotMatch(candidate + exam, /Online test-taking will be enabled in the next release/);
 });
+
+// Dedicated exam-page navigation and candidate controls are covered above.
