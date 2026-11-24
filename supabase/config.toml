@@ -12,3 +12,6 @@ verify_jwt = false
 
 [functions.site-settings]
 verify_jwt = false
+
+[functions.mock-test-management]
+verify_jwt = false
