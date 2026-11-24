@@ -159,7 +159,6 @@ jobs:
           node --check library.js
           node --check mock-tests.js
           node --check mock-test-exam.js
-          node --check mock-test-exam.js
           node --check vault-storage-utils.js
 
       - name: Run regression and analytics contract tests
