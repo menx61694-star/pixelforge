@@ -90,6 +90,43 @@ let googleDriveAccounts = [];
   let currentUserUid = null;
   let currentUserRole = null;
   let currentPermissions = new Set();
+  const currentAccountName = document.getElementById("current-account-name");
+  const currentAccountEmail = document.getElementById("current-account-email");
+  const currentAccountAvatar = document.getElementById("current-account-avatar");
+  const currentAccountDetails = document.getElementById("current-account-details");
+  const currentAccountDetailName = document.getElementById("current-account-detail-name");
+  const currentAccountDetailEmail = document.getElementById("current-account-detail-email");
+  const currentAccountRole = document.getElementById("current-account-role");
+  function updateCurrentAccountIdentity(user) {
+    const email = user?.email || "Email unavailable";
+    const displayName = user?.displayName?.trim() || (email.includes("@") ? email.split("@")[0] : "PixelForge user");
+    const initial = (displayName || email).trim().charAt(0).toUpperCase() || "?";
+    if (currentAccountName) currentAccountName.textContent = displayName;
+    if (currentAccountEmail) currentAccountEmail.textContent = email;
+    if (currentAccountAvatar) currentAccountAvatar.textContent = initial;
+    if (currentAccountDetailName) currentAccountDetailName.textContent = displayName;
+    if (currentAccountDetailEmail) currentAccountDetailEmail.textContent = email;
+    if (currentAccountRole) currentAccountRole.textContent = currentUserRole ? currentUserRole[0].toUpperCase() + currentUserRole.slice(1) : "—";
+  }
+  if (currentAccountAvatar && currentAccountDetails) {
+    currentAccountAvatar.addEventListener("click", () => {
+      const opening = currentAccountDetails.hidden;
+      currentAccountDetails.hidden = !opening;
+      currentAccountAvatar.setAttribute("aria-expanded", String(opening));
+    });
+    document.addEventListener("click", event => {
+      if (!event.target.closest("#current-account-chip")) {
+        currentAccountDetails.hidden = true;
+        currentAccountAvatar.setAttribute("aria-expanded", "false");
+      }
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        currentAccountDetails.hidden = true;
+        currentAccountAvatar.setAttribute("aria-expanded", "false");
+      }
+    });
+  }
   const usersNavLink = document.getElementById("users-nav-link");
   const settingsNavLink = document.getElementById("settings-nav-link");
   const settingsStatus = document.getElementById("settings-status");
@@ -2192,6 +2229,7 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
     const session = await managementRequest("session");
     currentUserUid = session.uid;
     currentUserRole = session.role;
+    updateCurrentAccountIdentity(user);
     currentPermissions = new Set(session.permissions || []);
     if (!currentPermissions.has("dashboard.view")) throw new Error("Dashboard access is not permitted.");
     if (usersNavLink) usersNavLink.hidden = !currentPermissions.has("users.manage");
@@ -2323,6 +2361,9 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
   auth.onAuthStateChanged(async (user) => {
     if (!user) {
       currentUserUid = null; currentUserRole = null; currentPermissions = new Set();
+      updateCurrentAccountIdentity(null);
+      if (currentAccountDetails) currentAccountDetails.hidden = true;
+      if (currentAccountAvatar) currentAccountAvatar.setAttribute("aria-expanded", "false");
       showAdminSession(false);
       return;
     }

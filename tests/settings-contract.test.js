@@ -629,3 +629,18 @@ test("workspace user assignment verifies the newly created Firebase ID token", (
   assert.match(userManagement, /targetIdentity\.uid !== uid/);
   assert.doesNotMatch(userManagement, /accounts:lookup[\s\S]{0,250}localId: \[uid\]/);
 });
+
+
+test("admin topbar identifies the signed-in account and exposes details from avatar", () => {
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  const adminCss = read("admin.css");
+  assert.match(adminHtml, /id="current-account-email"/);
+  assert.match(adminHtml, /id="current-account-avatar"/);
+  assert.match(adminHtml, /id="current-account-details"/);
+  assert.match(adminJs, /updateCurrentAccountIdentity\(user\)/);
+  assert.match(adminJs, /user\?\.email/);
+  assert.match(adminJs, /currentAccountAvatar\.addEventListener\("click"/);
+  assert.match(adminJs, /currentUserRole \? currentUserRole/);
+  assert.match(adminCss, /\.account-details\[hidden\]/);
+});

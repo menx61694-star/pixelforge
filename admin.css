@@ -340,3 +340,16 @@ button:disabled{opacity:.6;cursor:wait}
 #publish-approved-feedback{margin-left:8px}
 
 .pyq-drive-library{margin-top:18px;padding:16px;background:#fff;border:1px solid var(--line);border-radius:12px}.pyq-drive-library .file-item{grid-template-columns:minmax(0,1fr) auto}.pyq-drive-library .file-info{display:block}.pyq-drive-library .file-name{font-size:12px}.pyq-drive-library .file-actions button:last-child{background:#fff0ef;color:#b34d47}.pyq-drive-library #pyq-drive-library-status{margin-bottom:10px}
+
+.account-chip{position:relative;gap:11px}
+.account-identity{display:flex;flex-direction:column;gap:3px;min-width:0;max-width:230px}
+.account-identity strong{font-size:12px;color:#17254b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.account-identity>span{font-size:10px;color:#71809a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.account-avatar-button{border:0;cursor:pointer;font:inherit;font-size:13px;flex:0 0 34px;width:34px;height:34px}
+.account-avatar-button:focus-visible{outline:3px solid #f6b66f;outline-offset:3px}
+.account-details{position:absolute;z-index:80;right:0;top:calc(100% + 12px);width:min(290px,calc(100vw - 32px));padding:16px;display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);border-radius:13px;background:#fff;box-shadow:0 14px 38px #17254b20;color:#17254b}
+.account-details[hidden]{display:none}
+.account-details>strong{font-size:14px;overflow-wrap:anywhere}
+.account-details>span{font-size:12px;color:#65728b;overflow-wrap:anywhere}
+.account-details .account-role-line{padding-top:9px;border-top:1px solid var(--line)}
+.account-role-line b{color:#17254b}
