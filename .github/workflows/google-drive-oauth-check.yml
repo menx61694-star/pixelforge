@@ -39,6 +39,8 @@ on:
       - "supabase/phase-5-settings.sql"
       - "supabase/phase-6-homepage-content.sql"
       - "supabase/phase-7-daily-quiz.sql"
+      - "supabase/phase-22-mock-tests.sql"
+      - "tests/mock-tests-schema.test.js"
       - "supabase/phase-8-quick-tools.sql"
       - "supabase/phase-11-smart-search.sql"
       - "supabase/phase-10-announcements.sql"
@@ -58,6 +60,8 @@ on:
       - "tests/analytics-contract.test.js"
       - "tests/role-permissions.test.js"
       - "tests/settings-contract.test.js"
+      - "tests/mock-tests-schema.test.js"
+      - "tests/role-permissions.test.js"
       - "admin.html"
       - "admin.css"
       - ".github/workflows/google-drive-oauth-check.yml"
@@ -143,6 +147,7 @@ jobs:
           node --test tests/analytics-contract.test.js
           node --test tests/role-permissions.test.js
           node --test tests/settings-contract.test.js
+          node --test tests/mock-tests-schema.test.js
           node --test tests/edge-api-key-contract.test.js
           node --test tests/maintenance-mode.test.js
 
