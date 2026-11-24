@@ -353,3 +353,10 @@ button:disabled{opacity:.6;cursor:wait}
 .account-details>span{font-size:12px;color:#65728b;overflow-wrap:anywhere}
 .account-details .account-role-line{padding-top:9px;border-top:1px solid var(--line)}
 .account-role-line b{color:#17254b}
+
+.pyq-publish-tags{width:100%;min-width:0;margin:9px 0 2px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;color:#17254b;font:inherit;font-size:12px}
+.pyq-publish-tags:focus{outline:2px solid #ffb66d;outline-offset:1px}
+.pyq-drive-library .file-item{display:flex;flex-direction:column;align-items:stretch;gap:9px}
+.pyq-drive-library .file-item .file-info{min-width:0;width:100%}
+.pyq-drive-library .file-item .file-actions{display:flex;flex-wrap:wrap;gap:8px}
+.pyq-drive-library .file-item .file-actions button{min-height:38px}
