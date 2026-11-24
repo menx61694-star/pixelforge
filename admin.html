@@ -6,13 +6,13 @@
   <meta name="theme-color" content="#101d49">
   <meta name="robots" content="noindex, nofollow">
   <title>PixelForge Admin</title>
-  <link rel="stylesheet" href="admin.css?v=mock-tests-admin-1">
+  <link rel="stylesheet" href="admin.css?v=mock-tests-admin-2">
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js" defer></script>
   <script src="vault-storage-utils.js" defer></script>
-  <script src="admin.js?v=mock-tests-admin-1" defer></script>
+  <script src="admin.js?v=mock-tests-admin-2" defer></script>
 </head>
 <body>
   <main class="admin-shell">
@@ -361,7 +361,7 @@
           <section class="panel mock-question-panel" id="mock-question-panel" hidden>
             <div class="panel-heading"><div><p class="eyebrow">QUESTION BANK</p><h2 id="mock-question-heading">Questions</h2></div><button id="mock-question-new" class="refresh-button" type="button">＋ Add question</button></div>
             <p id="mock-questions-status" class="panel-copy">Add four-option MCQs and mark the correct answer.</p>
-            <div id="mock-question-list" class="mock-question-list"></div>
+            <div class="mock-test-actions"><button id="mock-question-bulk-import" class="refresh-button" type="button">＋ Bulk add questions</button><input id="mock-question-bulk-file" type="file" accept="application/json,.json" hidden></div><p class="panel-copy">Bulk JSON format: { "questions": [{ "question_text": "...", "options": ["A","B","C","D"], "correct_option_index": 0, "explanation": "..." }] }. You can also provide question_order.</p><div id="mock-question-list" class="mock-question-list"></div>
             <form id="mock-question-form" class="mock-question-form" hidden>
               <input id="mock-question-id" type="hidden">
               <div class="mock-test-fields"><div><label for="mock-question-order">Question number</label><input id="mock-question-order" type="number" min="1" max="1000" value="1" required></div></div>

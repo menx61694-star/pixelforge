@@ -1582,6 +1582,27 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
       setMockTestsStatus(error.message || "Bulk import failed.", true);
     } finally { mockBulkImportButton.disabled = false; }
   });
+  const mockQuestionBulkButton = document.getElementById("mock-question-bulk-import");
+  const mockQuestionBulkFile = document.getElementById("mock-question-bulk-file");
+  mockQuestionBulkButton?.addEventListener("click", () => {
+    if (!activeMockTestId) { setMockTestsStatus("पहले एक mock test खोलें, फिर bulk questions जोड़ें।", true); return; }
+    mockQuestionBulkFile?.click();
+  });
+  mockQuestionBulkFile?.addEventListener("change", async () => {
+    const file = mockQuestionBulkFile.files?.[0];
+    if (!file || !activeMockTestId) return;
+    mockQuestionBulkButton.disabled = true;
+    try {
+      const parsed = JSON.parse(await file.text());
+      const questions = Array.isArray(parsed) ? parsed : parsed.questions;
+      if (!Array.isArray(questions) || !questions.length) throw new Error("JSON में questions array नहीं मिली।");
+      const result = await mockTestRequest("bulk-add-questions", { method: "POST", body: { test_id: activeMockTestId, questions } });
+      mockQuestionsStatus.textContent = result.question_count + " questions bulk imported.";
+      mockQuestionBulkFile.value = "";
+      await openMockQuestions({ id: activeMockTestId, title: mockField("mock-question-heading").textContent.replace("Questions · ","") });
+    } catch (error) { mockQuestionsStatus.textContent = error.message || "Bulk question import failed."; }
+    finally { mockQuestionBulkButton.disabled = false; }
+  });
   const mockTestList = document.getElementById("mock-test-list");
   const mockTestEditor = document.getElementById("mock-test-editor-panel");
   const mockTestForm = document.getElementById("mock-test-form");
