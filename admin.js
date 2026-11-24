@@ -1682,6 +1682,28 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
         const status = document.createElement("span"); status.className = "mock-test-status status-" + test.status; status.textContent = test.status;
         main.append(title, meta, status);
         const actions = document.createElement("div"); actions.className = "mock-test-actions";
+        if (test.status === "draft") {
+          const publish = document.createElement("button");
+          publish.type = "button";
+          publish.textContent = "Publish";
+          publish.addEventListener("click", async () => {
+            publish.disabled = true;
+            try {
+              const questionPayload = await mockTestRequest("questions", { query: "&test_id=" + encodeURIComponent(test.id) });
+              if (!Array.isArray(questionPayload.questions) || questionPayload.questions.length === 0) {
+                throw new Error("Add at least one question before publishing this test.");
+              }
+              if (!confirm("Publish this mock test? It will become visible on the public Mock Tests page when its availability window permits.")) return;
+              await mockTestRequest("update-test", { method: "POST", body: { id: test.id, status: "published" } });
+              setMockTestsStatus("Mock test published successfully.");
+              await loadMockTests();
+            } catch (error) {
+              setMockTestsStatus(error.message || "Could not publish mock test.", true);
+              publish.disabled = false;
+            }
+          });
+          actions.append(publish);
+        }
         const edit = document.createElement("button"); edit.type = "button"; edit.textContent = "Edit"; edit.addEventListener("click", () => editMockTest(test));
         const questions = document.createElement("button"); questions.type = "button"; questions.textContent = "Questions"; questions.addEventListener("click", () => openMockQuestions(test));
         const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Delete"; remove.className = "danger"; remove.addEventListener("click", async () => {
