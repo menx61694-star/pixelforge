@@ -75,7 +75,7 @@ on:
     branches:
       - main
     paths:
-      - "supabase/functions/google-drive-oauth/**"
+      - "supabase/functions/mock-test-management/**"\n      - "mock-tests.js"\n      - "mock-tests.css"\n      - "supabase/phase-23-mock-attempt-map.sql"\n      - "supabase/phase-24-mock-attempt-review.sql"\n      - "tests/mock-tests-schema.test.js"\n      - "supabase/functions/google-drive-oauth/**"
       - "supabase/functions/google-drive-files/**"
       - "supabase/functions/user-management/**"
       - "supabase/functions/analytics/**"
