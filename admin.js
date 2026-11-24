@@ -2270,25 +2270,88 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
     const files = Array.from(pyqFileInput.files || []);
     if (pyqSelectedFiles) pyqSelectedFiles.textContent = files.length ? files.map(file => file.name).join(", ") : "No files selected";
   });
+  async function publishOwnerPyqDriveFile(file, category, tagsText, button) {
+    if (!currentPermissions.has("vault.publish")) {
+      pyqDriveLibraryStatus.textContent = "Your role does not have permission to publish PYQ papers.";
+      return;
+    }
+    const tags = normalizeDocumentTags(tagsText);
+    if (!tags) {
+      pyqDriveLibraryStatus.textContent = "Enter up to 10 valid search tags, separated by commas.";
+      return;
+    }
+    if (!window.confirm("Publish " + (file.name || "this PYQ PDF") + " to the public PYQ section?")) return;
+    button.disabled = true;
+    try {
+      const response = await googleDriveRequest("publish", {
+        accountId: "pixelForge-owner", method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileId: file.id, category, title: file.name || "PYQ paper",
+          mimeType: file.mimeType || "application/pdf",
+          sizeBytes: Number(file.size || 0) || null, tags
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not publish this PYQ paper.");
+      pyqDriveLibraryStatus.textContent = "Published to the public PYQ section.";
+      await loadOwnerPyqDriveLibrary();
+    } catch (error) {
+      pyqDriveLibraryStatus.textContent = "Publish failed: " + (error.message || "Unknown error");
+      button.disabled = false;
+    }
+  }
+
+  async function unpublishOwnerPyqDriveFile(file, button) {
+    if (!window.confirm("Remove this paper from the public PYQ section? The Google Drive original will remain unchanged.")) return;
+    button.disabled = true;
+    try {
+      const response = await googleDriveRequest("unpublish", {
+        accountId: "pixelForge-owner", method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileId: file.id })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not unpublish this PYQ paper.");
+      pyqDriveLibraryStatus.textContent = "Removed from the public PYQ section. Drive original is unchanged.";
+      await loadOwnerPyqDriveLibrary();
+    } catch (error) {
+      pyqDriveLibraryStatus.textContent = "Unpublish failed: " + (error.message || "Unknown error");
+      button.disabled = false;
+    }
+  }
+
   async function loadOwnerPyqDriveLibrary() {
     if (!pyqDriveLibraryList || !pyqDriveLibraryStatus) return;
     const ownerAccount = googleDriveAccounts.find(account => account.id === "pixelForge-owner" && account.connected);
     pyqDriveLibraryList.replaceChildren();
     if (!ownerAccount) { pyqDriveLibraryStatus.textContent = "Connect Owner Google Drive to manage uploaded papers."; return; }
-    pyqDriveLibraryStatus.textContent = "Loading PDFs from Owner Google Drive…";
+    pyqDriveLibraryStatus.textContent = "Loading PYQ PDFs from Owner Google Drive…";
     if (pyqDriveLibraryRefresh) pyqDriveLibraryRefresh.disabled = true;
     try {
-      const response = await googleDriveRequest("list", { accountId: "pixelForge-owner", query: { scope: "pyq" } });
+      const [response, publishedResponse] = await Promise.all([
+        googleDriveRequest("list", { accountId: "pixelForge-owner", query: { scope: "pyq" } }),
+        googleDriveRequest("published-list", { accountId: "pixelForge-owner" })
+      ]);
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || "Could not load Owner Drive files.");
-      const files = (Array.isArray(payload.files) ? payload.files : []).filter(file => (file.mimeType === "application/pdf" || (file.name || "").toLowerCase().endsWith(".pdf")) && !file.trashed).map(file => ({...file, driveAccountId:"pixelForge-owner", driveAccountName:ownerAccount.email || ownerAccount.name || "Owner Google Drive"})).sort((a,b)=>(b.modifiedTime||"").localeCompare(a.modifiedTime||""));
-      if (!files.length) { const empty=document.createElement("li");empty.className="empty-state";empty.textContent="No PDF files found in Owner Drive root.";pyqDriveLibraryList.append(empty); }
+      const publishedPayload = await publishedResponse.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not load Owner Drive PYQ files.");
+      if (!publishedResponse.ok) throw new Error(publishedPayload.error || "Could not check PYQ publishing status.");
+      const publishedById = new Map((Array.isArray(publishedPayload.documents) ? publishedPayload.documents : []).map(doc => [doc.drive_file_id, doc]));
+      const files = (Array.isArray(payload.files) ? payload.files : [])
+        .filter(file => (file.mimeType === "application/pdf" || (file.name || "").toLowerCase().endsWith(".pdf")) && !file.trashed)
+        .map(file => ({...file, driveAccountId:"pixelForge-owner", driveAccountName:ownerAccount.email || ownerAccount.name || "Owner Google Drive"}))
+        .sort((a,b)=>(b.modifiedTime||"").localeCompare(a.modifiedTime||""));
+      if (!files.length) { const empty=document.createElement("li");empty.className="empty-state";empty.textContent="No PYQ PDFs uploaded to Owner Drive yet.";pyqDriveLibraryList.append(empty); }
       files.forEach(file=>{
+        const published = publishedById.get(file.id);
         const item=document.createElement("li");item.className="file-item";
         const info=document.createElement("div");info.className="file-info";
         const name=document.createElement("div");name.className="file-name";name.textContent=file.name||"Untitled PDF";
         const meta=document.createElement("div");meta.className="file-meta";meta.textContent=(file.size?formatBytes(file.size)+" · ":"")+"Updated "+(file.modifiedTime?new Date(file.modifiedTime).toLocaleString():"date unavailable");
-        info.append(name,meta);
+        const publishState=document.createElement("div");publishState.className="file-meta";publishState.textContent=published?"Published · "+(published.category||"exam-materials"):"Not published on website";
+        publishState.style.color=published?"#16865d":"#b36a13";
+        info.append(name,meta,publishState);
         const actions=document.createElement("div");actions.className="file-actions";
         const download=document.createElement("button");download.type="button";download.textContent="Download";download.addEventListener("click",()=>downloadGoogleDriveFile(file,download));
         const rename=document.createElement("button");rename.type="button";rename.textContent="Rename";rename.addEventListener("click",async()=>{
@@ -2297,9 +2360,13 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
           catch(err){pyqDriveLibraryStatus.textContent="Rename failed: "+(err.message||"Unknown error");rename.disabled=false;}
         });
         const del=document.createElement("button");del.type="button";del.textContent="Delete";del.hidden=!currentPermissions.has("drive.delete");del.addEventListener("click",()=>deleteGoogleDriveFile(file,item,del));
-        actions.append(download,rename,del);item.append(info,actions);pyqDriveLibraryList.append(item);
+        const tagsInput=document.createElement("input");tagsInput.type="text";tagsInput.className="pyq-publish-tags";tagsInput.setAttribute("aria-label","Public search tags for "+(file.name||"PYQ PDF"));tagsInput.placeholder="Search tags, comma separated";tagsInput.value=Array.isArray(published?.tags)&&published.tags.length?published.tags.join(", "):"PYQ";
+        const publish=document.createElement("button");publish.type="button";publish.textContent=published?"Unpublish":"Publish";publish.hidden=!currentPermissions.has("vault.publish");publish.className=published?"unpublish-button":"publish-button";
+        if(published)publish.addEventListener("click",()=>unpublishOwnerPyqDriveFile(file,publish));
+        else publish.addEventListener("click",()=>publishOwnerPyqDriveFile(file,"exam-materials",tagsInput.value,publish));
+        actions.append(download,rename,publish,del);item.append(info,tagsInput,actions);pyqDriveLibraryList.append(item);
       });
-      pyqDriveLibraryStatus.textContent="Showing "+files.length+" PDF file(s) from Owner Drive root. Rename and delete affect the Drive originals.";
+      pyqDriveLibraryStatus.textContent="Showing "+files.length+" PYQ PDF(s). "+files.filter(file=>publishedById.has(file.id)).length+" published on the public website.";
     } catch(error) {pyqDriveLibraryStatus.textContent="Could not load PYQ Drive library: "+(error.message||"Unknown error"); }
     finally { if(pyqDriveLibraryRefresh)pyqDriveLibraryRefresh.disabled=false; }
   }
