@@ -317,11 +317,14 @@ Deno.serve(async (request) => {
     }
 
     if (request.method === "GET" && action === "list") {
+      const scope = url.searchParams.get("scope");
       const query = new URLSearchParams({
-        q: "trashed = false",
+        q: scope === "pyq"
+          ? "trashed = false and (appProperties has { key='pixelForgeUploadType' and value='pyq' } or name contains 'PYQ-')"
+          : "trashed = false",
         pageSize: "100",
         orderBy: "modifiedTime desc",
-        fields: "files(id,name,mimeType,size,modifiedTime,webViewLink),nextPageToken",
+        fields: "files(id,name,mimeType,size,modifiedTime,webViewLink,appProperties),nextPageToken",
       });
       const response = await fetch("https://www.googleapis.com/drive/v3/files?" + query, { headers: googleHeaders });
       const payload = await response.json();
@@ -369,7 +372,8 @@ Deno.serve(async (request) => {
           code: "DUPLICATE_FILE_NAME"
         }, 409, request);
       }
-      const metadata = { name, mimeType, ...(parentFolderId ? { parents: [parentFolderId] } : {}) };
+      const isPyq = input.isPyq === true;
+      const metadata = { name, mimeType, ...(parentFolderId ? { parents: [parentFolderId] } : {}), ...(isPyq ? { appProperties: { pixelForgeUploadType: "pyq" } } : {}) };
       const response = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name,mimeType,size,modifiedTime,webViewLink", {
         method: "POST",
         headers: {
