@@ -129,6 +129,7 @@ let googleDriveAccounts = [];
   }
   const usersNavLink = document.getElementById("users-nav-link");
   const settingsNavLink = document.getElementById("settings-nav-link");
+  const mockTestsNavLink = document.getElementById("mock-tests-nav-link");
   const settingsStatus = document.getElementById("settings-status");
   const settingsAuditStatus = document.getElementById("settings-audit-status");
   const settingsAuditBody = document.getElementById("settings-audit-body");
@@ -296,7 +297,7 @@ let googleDriveAccounts = [];
   const createUserButton = document.getElementById("create-user-button");
 
   const sidebarLinks = Array.from(document.querySelectorAll(".sidebar .nav-link"));
-  const dashboardPages = ["overview", "recent-activity", "documents", "pyq-upload", "google-drive", "analytics", "security-logs", "users", "settings"]
+  const dashboardPages = ["overview", "recent-activity", "documents", "pyq-upload", "google-drive", "analytics", "security-logs", "users", "mock-tests", "settings"]
     .map(id => document.getElementById(id))
     .filter(Boolean);
   function syncSidebarNavigation() {
@@ -308,6 +309,7 @@ let googleDriveAccounts = [];
     if (activePage === "analytics" && currentPermissions.has("analytics.view")) loadAnalyticsDashboard();
     if (activePage === "security-logs" && currentPermissions.has("security.logs.view")) loadSecurityLogs();
     if (activePage === "settings" && currentPermissions.has("settings.view")) loadSettings();
+    if (activePage === "mock-tests" && currentPermissions.has("mock_tests.manage")) loadMockTests();
     sidebarLinks.forEach(link => {
       const isActive = link.getAttribute("href") === "#" + activePage;
       link.classList.toggle("active", isActive);
@@ -1561,6 +1563,176 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
 
 
 
+  const mockTestsStatus = document.getElementById("mock-tests-status");
+  const mockTestList = document.getElementById("mock-test-list");
+  const mockTestEditor = document.getElementById("mock-test-editor-panel");
+  const mockTestForm = document.getElementById("mock-test-form");
+  const mockQuestionPanel = document.getElementById("mock-question-panel");
+  const mockQuestionForm = document.getElementById("mock-question-form");
+  const mockQuestionList = document.getElementById("mock-question-list");
+  const mockTestFormStatus = document.getElementById("mock-test-form-status");
+  const mockQuestionsStatus = document.getElementById("mock-questions-status");
+  let activeMockTestId = null;
+  let mockTestsLoaded = false;
+  async function mockTestRequest(action, options = {}) {
+    const user = auth.currentUser;
+    if (!user || !currentPermissions.has("mock_tests.manage")) throw new Error("Mock Test management permission is required.");
+    const headers = { "apikey": SUPABASE_PUBLISHABLE_KEY, "Authorization": "Bearer " + await user.getIdToken() };
+    if (options.body) headers["Content-Type"] = "application/json";
+    const response = await fetch(SUPABASE_URL + "/functions/v1/mock-test-management?action=" + encodeURIComponent(action) + (options.query || ""), {
+      method: options.method || "GET", headers, body: options.body ? JSON.stringify(options.body) : undefined
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Mock Test request failed.");
+    return payload;
+  }
+  const mockField = id => document.getElementById(id);
+  function localDateTime(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().slice(0,16);
+  }
+  function isoDateTime(value) { return value ? new Date(value).toISOString() : null; }
+  function setMockTestsStatus(message, error = false) {
+    if (mockTestsStatus) { mockTestsStatus.textContent = message; mockTestsStatus.style.color = error ? "#a23c32" : ""; }
+  }
+  function resetMockTestForm() {
+    if (!mockTestForm) return;
+    mockTestForm.reset(); mockField("mock-test-id").value = "";
+    mockField("mock-test-duration").value = "60"; mockField("mock-test-marks").value = "1"; mockField("mock-test-negative").value = "0";
+    mockField("mock-test-editor-title").textContent = "Create mock test";
+    mockField("mock-test-save").textContent = "Save test";
+    mockTestFormStatus.textContent = "";
+  }
+  function editMockTest(test) {
+    mockField("mock-test-id").value = test.id;
+    mockField("mock-test-title").value = test.title || "";
+    mockField("mock-test-description").value = test.description || "";
+    mockField("mock-test-instructions").value = test.instructions || "";
+    mockField("mock-test-duration").value = Math.round(test.duration_seconds / 60);
+    mockField("mock-test-marks").value = test.marks_per_question;
+    mockField("mock-test-negative").value = test.negative_marks;
+    mockField("mock-test-status").value = test.status;
+    mockField("mock-test-start").value = localDateTime(test.starts_at);
+    mockField("mock-test-end").value = localDateTime(test.ends_at);
+    mockField("mock-test-shuffle-questions").checked = !!test.shuffle_questions;
+    mockField("mock-test-shuffle-options").checked = !!test.shuffle_options;
+    mockField("mock-test-editor-title").textContent = "Edit mock test";
+    mockField("mock-test-save").textContent = "Update test";
+    mockTestEditor.hidden = false; mockTestFormStatus.textContent = "";
+    mockTestEditor.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  async function loadMockTests() {
+    if (!currentPermissions.has("mock_tests.manage") || !mockTestList) return;
+    setMockTestsStatus("Loading mock tests…");
+    try {
+      const payload = await mockTestRequest("list");
+      const tests = payload.tests || [];
+      mockTestsLoaded = true;
+      mockTestList.replaceChildren();
+      if (!tests.length) {
+        const empty = document.createElement("p"); empty.className = "empty-state"; empty.textContent = "No mock tests yet. Create your first test."; mockTestList.append(empty);
+      }
+      tests.forEach(test => {
+        const card = document.createElement("article"); card.className = "mock-test-card";
+        const main = document.createElement("div"); main.className = "mock-test-card-main";
+        const title = document.createElement("strong"); title.textContent = test.title;
+        const meta = document.createElement("p"); meta.textContent = Math.round(test.duration_seconds / 60) + " min · " + test.marks_per_question + " marks/question · Negative " + test.negative_marks;
+        const status = document.createElement("span"); status.className = "mock-test-status status-" + test.status; status.textContent = test.status;
+        main.append(title, meta, status);
+        const actions = document.createElement("div"); actions.className = "mock-test-actions";
+        const edit = document.createElement("button"); edit.type = "button"; edit.textContent = "Edit"; edit.addEventListener("click", () => editMockTest(test));
+        const questions = document.createElement("button"); questions.type = "button"; questions.textContent = "Questions"; questions.addEventListener("click", () => openMockQuestions(test));
+        const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Delete"; remove.className = "danger"; remove.addEventListener("click", async () => {
+          if (!confirm("Delete this mock test? Tests with candidate attempts cannot be deleted; archive those instead.")) return;
+          remove.disabled = true;
+          try { await mockTestRequest("delete-test", { method: "POST", body: { id: test.id } }); if (activeMockTestId === test.id) mockQuestionPanel.hidden = true; await loadMockTests(); }
+          catch (error) { setMockTestsStatus(error.message, true); remove.disabled = false; }
+        });
+        actions.append(edit, questions, remove); card.append(main, actions); mockTestList.append(card);
+      });
+      setMockTestsStatus(tests.length + " mock test(s) loaded.");
+    } catch (error) { setMockTestsStatus(error.message || "Could not load mock tests.", true); }
+  }
+  async function openMockQuestions(test) {
+    activeMockTestId = test.id;
+    mockQuestionPanel.hidden = false; mockField("mock-question-heading").textContent = "Questions · " + test.title;
+    mockQuestionForm.hidden = true; mockQuestionsStatus.textContent = "Loading question bank…";
+    mockQuestionList.replaceChildren();
+    try {
+      const payload = await mockTestRequest("questions", { query: "&test_id=" + encodeURIComponent(test.id) });
+      const questions = payload.questions || [];
+      if (!questions.length) mockQuestionList.textContent = "No questions added yet.";
+      questions.forEach(question => {
+        const card = document.createElement("article"); card.className = "mock-question-card";
+        const title = document.createElement("strong"); title.textContent = question.question_order + ". " + question.question_text;
+        const options = document.createElement("p"); options.textContent = question.options.map((v,i) => String.fromCharCode(65+i) + ". " + v).join(" · ");
+        const answer = document.createElement("small"); answer.textContent = "Correct: " + String.fromCharCode(65 + question.correct_option_index) + (question.explanation ? " · " + question.explanation : "");
+        const actions = document.createElement("div"); actions.className = "mock-test-actions";
+        const edit = document.createElement("button"); edit.type = "button"; edit.textContent = "Edit"; edit.addEventListener("click", () => editMockQuestion(question));
+        const del = document.createElement("button"); del.type = "button"; del.textContent = "Delete"; del.className = "danger"; del.addEventListener("click", async () => {
+          if (!confirm("Delete this question?")) return;
+          try { await mockTestRequest("delete-question", { method: "POST", body: { id: question.id, test_id: activeMockTestId } }); await openMockQuestions({ id: activeMockTestId, title: mockField("mock-question-heading").textContent.replace("Questions · ","") }); }
+          catch (error) { mockQuestionsStatus.textContent = error.message; }
+        });
+        actions.append(edit, del); card.append(title, options, answer, actions); mockQuestionList.append(card);
+      });
+      mockQuestionsStatus.textContent = questions.length + " question(s) in this test.";
+      mockQuestionPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (error) { mockQuestionsStatus.textContent = error.message || "Could not load questions."; }
+  }
+  function resetMockQuestionForm() {
+    mockQuestionForm.reset(); mockField("mock-question-id").value = ""; mockField("mock-question-order").value = "1"; mockQuestionForm.hidden = true;
+  }
+  function editMockQuestion(question) {
+    mockField("mock-question-id").value = question.id; mockField("mock-question-order").value = question.question_order;
+    mockField("mock-question-text").value = question.question_text;
+    question.options.forEach((value,index) => mockField("mock-option-" + index).value = value);
+    mockField("mock-question-correct").value = String(question.correct_option_index);
+    mockField("mock-question-explanation").value = question.explanation || "";
+    mockQuestionForm.hidden = false; mockQuestionForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  mockField("mock-test-new")?.addEventListener("click", () => { resetMockTestForm(); mockTestEditor.hidden = false; mockQuestionPanel.hidden = true; mockTestEditor.scrollIntoView({ behavior: "smooth" }); });
+  mockField("mock-test-cancel")?.addEventListener("click", () => { mockTestEditor.hidden = true; resetMockTestForm(); });
+  mockTestForm?.addEventListener("submit", async event => {
+    event.preventDefault(); const button = mockField("mock-test-save"); button.disabled = true; mockTestFormStatus.textContent = "Saving…";
+    try {
+      const id = mockField("mock-test-id").value;
+      const body = {
+        id: id || undefined, title: mockField("mock-test-title").value.trim(),
+        description: mockField("mock-test-description").value, instructions: mockField("mock-test-instructions").value,
+        duration_seconds: Number(mockField("mock-test-duration").value) * 60,
+        marks_per_question: Number(mockField("mock-test-marks").value), negative_marks: Number(mockField("mock-test-negative").value),
+        status: mockField("mock-test-status").value,
+        starts_at: isoDateTime(mockField("mock-test-start").value), ends_at: isoDateTime(mockField("mock-test-end").value),
+        shuffle_questions: mockField("mock-test-shuffle-questions").checked, shuffle_options: mockField("mock-test-shuffle-options").checked
+      };
+      await mockTestRequest(id ? "update-test" : "create-test", { method: "POST", body });
+      mockTestFormStatus.textContent = "Saved successfully."; mockTestEditor.hidden = true; resetMockTestForm(); await loadMockTests();
+    } catch (error) { mockTestFormStatus.textContent = error.message || "Could not save test."; }
+    finally { button.disabled = false; }
+  });
+  mockField("mock-question-new")?.addEventListener("click", () => { resetMockQuestionForm(); mockQuestionForm.hidden = false; mockField("mock-question-order").value = String(mockQuestionList.children.length + 1); });
+  mockField("mock-question-cancel")?.addEventListener("click", resetMockQuestionForm);
+  mockQuestionForm?.addEventListener("submit", async event => {
+    event.preventDefault(); const button = mockQuestionForm.querySelector('button[type="submit"]'); button.disabled = true; mockQuestionsStatus.textContent = "Saving question…";
+    try {
+      const body = {
+        id: mockField("mock-question-id").value || undefined, test_id: activeMockTestId,
+        question_order: Number(mockField("mock-question-order").value), question_text: mockField("mock-question-text").value,
+        options: [0,1,2,3].map(index => mockField("mock-option-" + index).value),
+        correct_option_index: Number(mockField("mock-question-correct").value),
+        explanation: mockField("mock-question-explanation").value
+      };
+      await mockTestRequest("save-question", { method: "POST", body });
+      resetMockQuestionForm();
+      await openMockQuestions({ id: activeMockTestId, title: mockField("mock-question-heading").textContent.replace("Questions · ","") });
+    } catch (error) { mockQuestionsStatus.textContent = error.message || "Could not save question."; }
+    finally { button.disabled = false; }
+  });
+
   async function settingsRequest(action, options = {}) {
     const user = auth.currentUser;
     if (!user || !currentPermissions.has(options.method === "POST" ? "settings.manage" : "settings.view")) {
@@ -2234,6 +2406,7 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
     if (!currentPermissions.has("dashboard.view")) throw new Error("Dashboard access is not permitted.");
     if (usersNavLink) usersNavLink.hidden = !currentPermissions.has("users.manage");
     if (settingsNavLink) settingsNavLink.hidden = !currentPermissions.has("settings.view");
+    if (mockTestsNavLink) mockTestsNavLink.hidden = !currentPermissions.has("mock_tests.manage");
     if (analyticsNavLink) analyticsNavLink.hidden = !currentPermissions.has("analytics.view");
     if (securityLogsNavLink) securityLogsNavLink.hidden = !currentPermissions.has("security.logs.view");
     if (deleteSecurityLogsButton) deleteSecurityLogsButton.hidden = !currentPermissions.has("security.logs.delete");
