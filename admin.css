@@ -360,3 +360,32 @@ button:disabled{opacity:.6;cursor:wait}
 .pyq-drive-library .file-item .file-info{min-width:0;width:100%}
 .pyq-drive-library .file-item .file-actions{display:flex;flex-wrap:wrap;gap:8px}
 .pyq-drive-library .file-item .file-actions button{min-height:38px}
+
+
+/* Phase 4 — Online Mock Test administration */
+.mock-tests-panel,.mock-test-editor-panel,.mock-question-panel{margin-bottom:16px}
+.mock-test-list,.mock-question-list{display:grid;gap:10px;margin-top:14px}
+.mock-test-card,.mock-question-card{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:15px;border:1px solid var(--line);border-radius:11px;background:#fff}
+.mock-test-card-main{display:grid;gap:5px;min-width:0}
+.mock-test-card-main>strong,.mock-question-card>strong{color:var(--ink);font-size:13px;overflow-wrap:anywhere}
+.mock-test-card-main p,.mock-question-card p{margin:0;color:var(--muted);font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+.mock-test-status{width:max-content;padding:4px 8px;border-radius:20px;background:#edf1f8;color:#52617d;font-size:10px;font-weight:750;text-transform:capitalize}
+.mock-test-status.status-published{background:#e8f7ef;color:#13764f}
+.mock-test-status.status-archived{background:#fff0ef;color:#a23c32}
+.mock-test-actions,.mock-test-form-actions{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.mock-test-actions button,.mock-test-form-actions button{min-height:34px;padding:0 11px;border:0;border-radius:7px;background:#edf1f8;color:#30416e;font:inherit;font-size:11px;font-weight:750;cursor:pointer}
+.mock-test-actions button.danger{background:#fff0ef;color:#a23c32}
+.mock-test-actions button:disabled,.mock-test-form-actions button:disabled{opacity:.5;cursor:not-allowed}
+.mock-test-form,.mock-question-form{display:grid;gap:10px;margin-top:14px}
+.mock-test-form>label,.mock-question-form>label,.mock-test-fields label,.mock-question-options label{color:var(--muted);font-size:11px;font-weight:750}
+.mock-test-form input:not([type=checkbox]),.mock-test-form textarea,.mock-test-form select,.mock-question-form input:not([type=hidden]),.mock-question-form textarea,.mock-question-form select{width:100%;min-height:38px;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-size:12px}
+.mock-test-fields,.mock-question-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.mock-test-fields>div,.mock-question-options>div{display:grid;gap:6px;min-width:0}
+.mock-test-toggles{display:flex;gap:18px;flex-wrap:wrap}
+.mock-test-toggles label{display:flex;align-items:center;gap:7px;color:var(--ink);font-size:11px}
+.mock-test-toggles input{accent-color:#169b69}
+.mock-test-form-actions button[type=submit],.mock-question-form button[type=submit]{background:#ff861c;color:#fff}
+.mock-question-card{display:grid;gap:8px}
+.mock-question-card small{color:#13764f;font-size:10px;line-height:1.5}
+.mock-question-card .mock-test-actions{justify-content:flex-end}
+@media(max-width:650px){.mock-test-card{flex-direction:column}.mock-test-actions{width:100%}.mock-test-actions button{flex:1}.mock-test-fields,.mock-question-options{grid-template-columns:1fr}}
