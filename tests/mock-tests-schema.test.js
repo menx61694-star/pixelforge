@@ -92,3 +92,5 @@ test("dedicated exam page provides timer, autosave, navigation, review and resul
 });
 
 // Dedicated exam-page navigation and candidate controls are covered above.
+
+// CI trigger after assertion correction.
