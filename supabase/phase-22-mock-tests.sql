@@ -41,7 +41,6 @@ create table if not exists public.pixel_forge_mock_questions (
       cardinality(options) = 4
       and array_position(options, null) is null
       and array_length(options, 1) = 4
-      and (select true)
     ),
   constraint pixel_forge_mock_questions_order_unique unique (test_id, question_order)
 );
