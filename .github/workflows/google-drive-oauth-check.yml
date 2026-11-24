@@ -18,6 +18,7 @@ on:
       - "supabase/functions/user-management/**"
       - "supabase/functions/analytics/**"
       - "supabase/functions/site-settings/**"
+      - "supabase/functions/mock-test-management/**"
       - "maintenance-mode.js"
       - "index.html"
       - "seo.js"
@@ -40,6 +41,10 @@ on:
       - "supabase/phase-6-homepage-content.sql"
       - "supabase/phase-7-daily-quiz.sql"
       - "supabase/phase-22-mock-tests.sql"
+      - "supabase/phase-23-mock-attempt-map.sql"
+      - "supabase/phase-24-mock-attempt-review.sql"
+      - "mock-tests.js"
+      - "mock-tests.css"
       - "tests/mock-tests-schema.test.js"
       - "supabase/phase-8-quick-tools.sql"
       - "supabase/phase-11-smart-search.sql"
@@ -140,6 +145,7 @@ jobs:
           node --check seo.js
           node --check layout.js
           node --check library.js
+          node --check mock-tests.js
           node --check vault-storage-utils.js
 
       - name: Run regression and analytics contract tests
@@ -159,3 +165,4 @@ jobs:
           deno check supabase/functions/user-management/index.ts
           deno check supabase/functions/analytics/index.ts
           deno check supabase/functions/site-settings/index.ts
+          deno check supabase/functions/mock-test-management/index.ts
