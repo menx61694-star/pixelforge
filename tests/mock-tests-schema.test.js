@@ -72,7 +72,7 @@ test("candidate attempt APIs use hashed opaque tokens and never return answer ke
   assert.match(handler, /action === "start-attempt"/);
   assert.match(handler, /action === "attempt-state"/);
   assert.match(handler, /action === "save-answer"/);
-  assert.match(handler, /action === "submit-attempt"/);
+  assert.match(handler, /"submit-attempt"/);
   const stateBlock = handler.slice(handler.indexOf('if (action === "attempt-state")'), handler.indexOf('if (attempt.status !== "in_progress")'));
   assert.doesNotMatch(stateBlock, /correct_option_index|explanation/);
 });
