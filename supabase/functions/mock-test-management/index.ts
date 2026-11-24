@@ -161,6 +161,43 @@ Deno.serve(async (request) => {
       }
       return reply(request, { deleted: true });
     }
+    if (action === "bulk-import") {
+      const tests = input.tests;
+      if (!Array.isArray(tests) || tests.length !== 5) return reply(request, { error: "Exactly five mock tests are required." }, 400);
+      const expected = [25,5,30,8,16,8,8,8,4,8];
+      const created: string[] = [];
+      for (const [testIndex, test] of tests.entries()) {
+        if (!test || typeof test.title !== "string" || !Array.isArray(test.questions) || test.questions.length !== 120) {
+          return reply(request, { error: "Each mock must contain exactly 120 questions." }, 400);
+        }
+        const counts = expected.map((count, sectionIndex) => test.questions.filter((q: any) => q.section_index === sectionIndex).length);
+        if (counts.some((count, i) => count !== expected[i])) return reply(request, { error: "Mock " + (testIndex + 1) + " does not match the official section-wise question distribution." }, 400);
+        for (const [questionIndex, q] of test.questions.entries()) {
+          if (!q || typeof q.question_text !== "string" || !q.question_text.trim() || !Array.isArray(q.options) || q.options.length !== 4 || q.options.some((v: unknown) => typeof v !== "string" || !v.trim()) || !Number.isInteger(q.correct_option_index) || q.correct_option_index < 0 || q.correct_option_index > 3 || typeof q.explanation !== "string") {
+            return reply(request, { error: "Invalid MCQ at mock " + (testIndex + 1) + ", question " + (questionIndex + 1) + "." }, 400);
+          }
+        }
+      }
+      for (const test of tests) {
+        const { data: createdTest, error: testError } = await db.from("pixel_forge_mock_tests").insert({
+          title: test.title, description: test.description ?? "", instructions: test.instructions ?? "",
+          duration_seconds: 7200, marks_per_question: 3, negative_marks: 1, status: "draft",
+          shuffle_questions: false, shuffle_options: false, created_by: actor.uid
+        }).select("id").single();
+        if (testError) throw testError;
+        created.push(createdTest.id);
+        const rows = test.questions.map((q: any, index: number) => ({
+          test_id: createdTest.id, question_order: index + 1, question_text: q.question_text,
+          options: q.options, correct_option_index: q.correct_option_index, explanation: q.explanation
+        }));
+        const { error: questionError } = await db.from("pixel_forge_mock_questions").insert(rows);
+        if (questionError) {
+          await db.from("pixel_forge_mock_tests").delete().eq("id", createdTest.id);
+          throw questionError;
+        }
+      }
+      return reply(request, { imported: true, test_ids: created, test_count: created.length, question_count: 600 }, 201);
+    }
     if (action === "save-question") {
       const testId = input.test_id;
       const questionId = input.id;
