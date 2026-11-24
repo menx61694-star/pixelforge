@@ -653,7 +653,7 @@ test("Owner Drive PYQ library exposes publish state and public publish/unpublish
   assert.match(adminJs, /publishOwnerPyqDriveFile/);
   assert.match(adminJs, /unpublishOwnerPyqDriveFile/);
   assert.match(adminJs, /textContent=published\?"Unpublish":"Publish"/);
-  assert.match(adminJs, /category:"exam-materials"/);
+  assert.match(adminJs, /publishOwnerPyqDriveFile\(file,"exam-materials",tagsInput\.value,publish\)/);
   assert.match(adminJs, /tagsInput\.value/);
   assert.match(driveFiles, /action === "published-list"/);
   assert.match(driveFiles, /\["publish", "unpublish"\]/);
