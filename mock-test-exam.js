@@ -202,7 +202,6 @@
     [["Correct", result.correct_count, "correct"], ["Incorrect", result.incorrect_count, "incorrect"], ["Unanswered", result.unanswered_count, "unanswered"]].forEach(([label, value, cls]) => {
       const card = el("div", "result-stat " + cls); card.append(el("span", "", label), el("strong", "", String(value))); stats.append(card);
     });
-    const reviewHead = el("div", "result-review-heading"); reviewHead.append(el("h3", "", "Answer review"), el("span", "", result.review.length + " questions"));
     panel.append(head, score, stats);
     const analysis = el("section","result-analysis");
     const accuracy = el("p","", "Accuracy: " + (result.accuracy ?? 0) + "% · Total tracked time: " + Math.floor((result.total_time_seconds||0)/60) + "m " + ((result.total_time_seconds||0)%60) + "s · Average/question: " + (result.average_time_per_question_seconds||0) + "s");
