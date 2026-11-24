@@ -135,7 +135,7 @@ Deno.serve(async (request) => {
       if (mapError) { await db.from("pixel_forge_mock_attempts").delete().eq("id", attempt.id); throw mapError; }
       return reply(request, { attempt: { ...attempt, test_title: test.title, duration_seconds: test.duration_seconds, marks_per_question: test.marks_per_question, negative_marks: test.negative_marks }, attempt_token: rawToken }, 201);
     }
-    if (["attempt-state","save-answer","submit-attempt"].includes(action)) {
+    if (["attempt-state","save-answer","submit-attempt","pause-attempt","resume-attempt"].includes(action)) {
       if (!attemptToken || attemptToken.length > 200) return reply(request, { error: "Attempt session is missing. Reopen the test." }, 401);
       const db = dbAdmin();
       const { data: attempt, error: attemptError } = await db.from("pixel_forge_mock_attempts")
@@ -148,16 +148,36 @@ Deno.serve(async (request) => {
         if (mapError) throw mapError;
         const ids = (maps ?? []).map(m => m.question_id);
         const { data: questions, error: qError } = await db.from("pixel_forge_mock_questions")
-          .select("id,question_text,options").in("id", ids);
+          .select("id,question_text,options,subject,topic").in("id", ids);
         if (qError) throw qError;
         const { data: answers, error: answerError } = await db.from("pixel_forge_mock_attempt_answers")
           .select("question_id,selected_option_index,marked_for_review").eq("attempt_id", attempt.id);
         if (answerError) throw answerError;
         const answerMap = new Map<string, number | null>((answers ?? []).map(a => [a.question_id,a.selected_option_index] as [string, number | null]));
         const qMap = new Map<string, any>((questions ?? []).map(q => [q.id,q] as [string, any]));
-        return reply(request, { attempt: { id: attempt.id, status: attempt.status, started_at: attempt.started_at, expires_at: attempt.expires_at, total_questions: attempt.total_questions }, questions: (maps ?? []).map(m => { const q=qMap.get(m.question_id); return { id:m.question_id, question_text:q?.question_text ?? "", options:m.option_order.map((i: number)=>q?.options?.[i] ?? ""), selected_option_index: answerMap.has(m.question_id) && answerMap.get(m.question_id)!==null ? m.option_order.indexOf(answerMap.get(m.question_id)) : null, marked_for_review: (answers ?? []).some(a=>a.question_id===m.question_id && a.marked_for_review===true), display_order:m.display_order }; }) });
+        return reply(request, { attempt: { id: attempt.id, status: attempt.status, started_at: attempt.started_at, expires_at: attempt.expires_at, remaining_seconds: attempt.status === "paused" ? attempt.remaining_seconds : Math.max(0, Math.ceil((Date.parse(attempt.expires_at)-Date.now())/1000)), total_questions: attempt.total_questions }, questions: (maps ?? []).map(m => { const q=qMap.get(m.question_id); return { id:m.question_id, question_text:q?.question_text ?? "", options:m.option_order.map((i: number)=>q?.options?.[i] ?? ""), subject:q?.subject ?? "Uncategorized", topic:q?.topic ?? "General", selected_option_index: answerMap.has(m.question_id) && answerMap.get(m.question_id)!==null ? m.option_order.indexOf(answerMap.get(m.question_id)) : null, marked_for_review: (answers ?? []).some(a=>a.question_id===m.question_id && a.marked_for_review===true), display_order:m.display_order }; }) });
       }
-      if (attempt.status !== "in_progress") return reply(request, { error: "This attempt has already been submitted.", status: attempt.status }, 409);
+      if (action === "pause-attempt") {
+        if (attempt.status !== "in_progress") return reply(request, { error: "Only a running attempt can be paused.", status: attempt.status }, 409);
+        const remaining = Math.max(0, Math.ceil((Date.parse(attempt.expires_at)-Date.now())/1000));
+        if (!remaining) return reply(request, { error: "Time is over; this attempt cannot be paused." }, 409);
+        const { data, error } = await db.from("pixel_forge_mock_attempts").update({ status:"paused", remaining_seconds:remaining }).eq("id",attempt.id).eq("status","in_progress").select("id").maybeSingle();
+        if (error) throw error;
+        if (!data) return reply(request,{error:"Attempt state changed. Refresh the exam."},409);
+        return reply(request,{paused:true,remaining_seconds:remaining});
+      }
+      if (action === "resume-attempt") {
+        if (attempt.status !== "paused") return reply(request, { error: "This attempt is not paused.", status: attempt.status }, 409);
+        const remaining = Math.max(0, Number(attempt.remaining_seconds ?? 0));
+        if (!remaining) return reply(request,{error:"No remaining exam time."},409);
+        const now = new Date();
+        const expires = new Date(now.getTime()+remaining*1000).toISOString();
+        const { data, error } = await db.from("pixel_forge_mock_attempts").update({ status:"in_progress", expires_at:expires, resumed_at:now.toISOString(), remaining_seconds:null }).eq("id",attempt.id).eq("status","paused").select("id").maybeSingle();
+        if (error) throw error;
+        if (!data) return reply(request,{error:"Attempt state changed. Refresh the exam."},409);
+        return reply(request,{resumed:true,expires_at:expires,remaining_seconds:remaining});
+      }
+      if (attempt.status !== "in_progress") return reply(request, { error: "This attempt is paused or already submitted.", status: attempt.status }, 409);
       if (Date.now() >= Date.parse(attempt.expires_at) && action === "save-answer") return reply(request, { error: "Time is over. Submit your test now." }, 409);
       if (action === "save-answer") {
         const input = await request.json() as Record<string, unknown>;
@@ -167,7 +187,7 @@ Deno.serve(async (request) => {
         if (mapError) throw mapError;
         if (!map) return reply(request, { error: "Question does not belong to this attempt." }, 403);
         const selected = input.selected_option_index === null ? null : map.option_order[Number(input.selected_option_index)];
-        const { error } = await db.from("pixel_forge_mock_attempt_answers").upsert({ attempt_id:attempt.id, question_id:input.question_id, selected_option_index:selected, marked_for_review:input.marked_for_review===true, is_correct:null, awarded_marks:null, answered_at:new Date().toISOString() }, { onConflict:"attempt_id,question_id" });
+        const { error } = await db.from("pixel_forge_mock_attempt_answers").upsert({ attempt_id:attempt.id, question_id:input.question_id, selected_option_index:selected, marked_for_review:input.marked_for_review===true, time_spent_seconds:Math.min(14400,Math.max(0,Math.floor(Number(input.time_spent_seconds)||0))), is_correct:null, awarded_marks:null, answered_at:new Date().toISOString() }, { onConflict:"attempt_id,question_id" });
         if (error) throw error;
         return reply(request, { saved:true });
       }
@@ -176,11 +196,12 @@ Deno.serve(async (request) => {
       const { data: maps, error: mapError } = await db.from("pixel_forge_mock_attempt_question_map").select("question_id,display_order,option_order").eq("attempt_id",attempt.id).order("display_order");
       if (mapError) throw mapError;
       const ids = (maps ?? []).map(m=>m.question_id);
-      const { data: questions, error: qError } = await db.from("pixel_forge_mock_questions").select("id,question_text,options,correct_option_index,explanation").in("id",ids);
+      const { data: questions, error: qError } = await db.from("pixel_forge_mock_questions").select("id,question_text,options,correct_option_index,explanation,subject,topic").in("id",ids);
       if (qError) throw qError;
-      const { data: answers, error: aError } = await db.from("pixel_forge_mock_attempt_answers").select("question_id,selected_option_index").eq("attempt_id",attempt.id);
+      const { data: answers, error: aError } = await db.from("pixel_forge_mock_attempt_answers").select("question_id,selected_option_index,time_spent_seconds").eq("attempt_id",attempt.id);
       if (aError) throw aError;
       const answerMap = new Map<string, number | null>((answers ?? []).map(a=>[a.question_id,a.selected_option_index] as [string, number | null]));
+      const timeMap = new Map<string, number>((answers ?? []).map(a=>[a.question_id,Number(a.time_spent_seconds)||0] as [string,number]));
       const questionMap = new Map<string, any>((questions ?? []).map(q=>[q.id,q] as [string, any]));
       let correct=0, incorrect=0, unanswered=0;
       const review = (maps ?? []).map(m=>{
@@ -188,17 +209,28 @@ Deno.serve(async (request) => {
         const isCorrect=selected !== null && selected === q.correct_option_index;
         if(selected===null) unanswered++; else if(isCorrect) correct++; else incorrect++;
         const awarded=selected===null?0:(isCorrect?Number((awaitMarks=>awaitMarks)(1)):0);
-        return { question_id:q.id, question_text:q.question_text, options:m.option_order.map((i: number)=>q.options[i]), selected_option_index:selected===null?null:m.option_order.indexOf(selected), correct_option_index:m.option_order.indexOf(q.correct_option_index), explanation:q.explanation, is_correct:isCorrect };
+        return { question_id:q.id, question_text:q.question_text, subject:q.subject ?? "Uncategorized", topic:q.topic ?? "General", time_spent_seconds:timeMap.get(q.id) ?? 0, options:m.option_order.map((i: number)=>q.options[i]), selected_option_index:selected===null?null:m.option_order.indexOf(selected), correct_option_index:m.option_order.indexOf(q.correct_option_index), explanation:q.explanation, is_correct:isCorrect };
       });
       const { data: test, error: testError } = await db.from("pixel_forge_mock_tests").select("marks_per_question,negative_marks").eq("id",attempt.test_id).single();
       if(testError) throw testError;
       const score=correct*Number(test.marks_per_question)-incorrect*Number(test.negative_marks);
+      const analyticsMap = new Map<string,{subject:string,topic:string,total:number,correct:number,incorrect:number,unanswered:number,time_spent_seconds:number}>();
+      for (const item of review) {
+        const key = item.subject + "|" + item.topic;
+        const group = analyticsMap.get(key) ?? {subject:item.subject,topic:item.topic,total:0,correct:0,incorrect:0,unanswered:0,time_spent_seconds:0};
+        group.total++; group.time_spent_seconds += item.time_spent_seconds;
+        if (item.selected_option_index === null) group.unanswered++; else if(item.is_correct) group.correct++; else group.incorrect++;
+        analyticsMap.set(key,group);
+      }
+      const analytics = [...analyticsMap.values()].map(group=>({...group,accuracy:group.correct+group.incorrect ? Math.round(group.correct/(group.correct+group.incorrect)*100) : 0}));
+      const totalTimeSeconds = review.reduce((sum,item)=>sum+item.time_spent_seconds,0);
+      const accuracy = correct+incorrect ? Math.round(correct/(correct+incorrect)*100) : 0;
       const { error: updateAnswersError } = await db.from("pixel_forge_mock_attempt_answers").upsert((maps ?? []).map(m=>({attempt_id:attempt.id,question_id:m.question_id,selected_option_index:answerMap.get(m.question_id) ?? null,is_correct:answerMap.get(m.question_id)!==null && answerMap.get(m.question_id)===questionMap.get(m.question_id).correct_option_index,awarded_marks:answerMap.get(m.question_id)===null || answerMap.get(m.question_id)===undefined?0:(answerMap.get(m.question_id)===questionMap.get(m.question_id).correct_option_index?Number(test.marks_per_question):-Number(test.negative_marks))})),{onConflict:"attempt_id,question_id"});
       if(updateAnswersError) throw updateAnswersError;
       const { data: finalized, error: finalizeError } = await db.from("pixel_forge_mock_attempts").update({status:expired?"expired":"submitted",submitted_at:now.toISOString(),correct_count:correct,incorrect_count:incorrect,unanswered_count:unanswered,score}).eq("id",attempt.id).eq("status","in_progress").select("id").maybeSingle();
       if(finalizeError) throw finalizeError;
       if(!finalized) return reply(request,{error:"This attempt was already submitted."},409);
-      return reply(request,{result:{status:expired?"expired":"submitted",correct_count:correct,incorrect_count:incorrect,unanswered_count:unanswered,score,max_score:attempt.max_score,review}});
+      return reply(request,{result:{status:expired?"expired":"submitted",correct_count:correct,incorrect_count:incorrect,unanswered_count:unanswered,score,max_score:attempt.max_score,accuracy,total_time_seconds:totalTimeSeconds,average_time_per_question_seconds:Math.round(totalTimeSeconds/Math.max(1,review.length)),analytics,review}});
     }
     // Public listing exposes only published test metadata. Question answer keys
     // and attempt records remain inaccessible to anonymous visitors.
@@ -295,7 +327,9 @@ Deno.serve(async (request) => {
         created.push(createdTest.id);
         const rows = test.questions.map((q: any, index: number) => ({
           test_id: createdTest.id, question_order: index + 1, question_text: q.question_text,
-          options: q.options, correct_option_index: q.correct_option_index, explanation: q.explanation
+          options: q.options, correct_option_index: q.correct_option_index, explanation: q.explanation,
+          subject: typeof q.subject === "string" && q.subject.trim() ? q.subject.trim().slice(0,100) : "Uncategorized",
+          topic: typeof q.topic === "string" && q.topic.trim() ? q.topic.trim().slice(0,120) : "General"
         }));
         const { error: questionError } = await db.from("pixel_forge_mock_questions").insert(rows);
         if (questionError) {
@@ -323,7 +357,7 @@ Deno.serve(async (request) => {
         }
         const order = q.question_order === undefined ? index + 1 : Number(q.question_order);
         if (!Number.isInteger(order) || order < 1 || order > 1000) return reply(request, { error: "Invalid question_order at row " + (index + 1) + "." }, 400);
-        rows.push({ test_id: testId, question_order: order, question_text: q.question_text.trim(), options: q.options.map((v: string) => v.trim()), correct_option_index: q.correct_option_index, explanation: q.explanation ?? "" });
+        rows.push({ test_id: testId, question_order: order, question_text: q.question_text.trim(), options: q.options.map((v: string) => v.trim()), correct_option_index: q.correct_option_index, explanation: q.explanation ?? "", subject:typeof q.subject==="string" && q.subject.trim()?q.subject.trim().slice(0,100):"Uncategorized", topic:typeof q.topic==="string" && q.topic.trim()?q.topic.trim().slice(0,120):"General" });
       }
       const { data, error } = await db.from("pixel_forge_mock_questions").upsert(rows, { onConflict: "test_id,question_order" }).select("id");
       if (error) throw error;
@@ -342,7 +376,7 @@ Deno.serve(async (request) => {
       if (!Number.isInteger(order) || order < 1 || order > 1000) return reply(request, { error: "Question order must be 1–1000." }, 400);
       if (!Number.isInteger(correct) || correct < 0 || correct > 3) return reply(request, { error: "Select the correct option." }, 400);
       if (typeof input.explanation !== "string" || input.explanation.length > 3000) return reply(request, { error: "Explanation is too long." }, 400);
-      const row = { test_id: testId, question_order: order, question_text: text, options: options.map((v: string) => v.trim()), correct_option_index: correct, explanation: input.explanation, updated_at: new Date().toISOString() };
+      const row = { test_id: testId, question_order: order, question_text: text, options: options.map((v: string) => v.trim()), correct_option_index: correct, explanation: input.explanation, subject:typeof input.subject==="string" && input.subject.trim()?input.subject.trim().slice(0,100):"Uncategorized", topic:typeof input.topic==="string" && input.topic.trim()?input.topic.trim().slice(0,120):"General", updated_at: new Date().toISOString() };
       let query;
       if (validId(questionId)) query = db.from("pixel_forge_mock_questions").update(row).eq("id", questionId).eq("test_id", testId);
       else query = db.from("pixel_forge_mock_questions").insert(row);
