@@ -187,7 +187,11 @@ Deno.serve(async (request) => {
         if (mapError) throw mapError;
         if (!map) return reply(request, { error: "Question does not belong to this attempt." }, 403);
         const selected = input.selected_option_index === null ? null : map.option_order[Number(input.selected_option_index)];
-        const { error } = await db.from("pixel_forge_mock_attempt_answers").upsert({ attempt_id:attempt.id, question_id:input.question_id, selected_option_index:selected, marked_for_review:input.marked_for_review===true, time_spent_seconds:Math.min(14400,Math.max(0,Math.floor(Number(input.time_spent_seconds)||0))), is_correct:null, awarded_marks:null, answered_at:new Date().toISOString() }, { onConflict:"attempt_id,question_id" });
+        const addedTime = Math.min(14400,Math.max(0,Math.floor(Number(input.time_spent_seconds)||0)));
+        const { data: priorAnswer, error: priorError } = await db.from("pixel_forge_mock_attempt_answers").select("time_spent_seconds").eq("attempt_id",attempt.id).eq("question_id",input.question_id).maybeSingle();
+        if (priorError) throw priorError;
+        const cumulativeTime = Math.min(14400,(Number(priorAnswer?.time_spent_seconds)||0)+addedTime);
+        const { error } = await db.from("pixel_forge_mock_attempt_answers").upsert({ attempt_id:attempt.id, question_id:input.question_id, selected_option_index:selected, marked_for_review:input.marked_for_review===true, time_spent_seconds:cumulativeTime, is_correct:null, awarded_marks:null, answered_at:new Date().toISOString() }, { onConflict:"attempt_id,question_id" });
         if (error) throw error;
         return reply(request, { saved:true });
       }
