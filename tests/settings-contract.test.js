@@ -658,3 +658,17 @@ test("Owner Drive PYQ library exposes publish state and public publish/unpublish
   assert.match(driveFiles, /action === "published-list"/);
   assert.match(driveFiles, /\["publish", "unpublish"\]/);
 });
+
+
+test("public PYQ page offers an inline preview for published PDFs", () => {
+  const pyqHtml = read("pyq.html");
+  const pyqJs = read("pyq.js");
+  const pyqCss = read("pyq.css");
+  assert.match(pyqHtml, /id="pyq-preview-dialog"/);
+  assert.match(pyqHtml, /id="pyq-preview-frame"/);
+  assert.match(pyqJs, /Preview PDF/);
+  assert.match(pyqJs, /openPreview\(p\)/);
+  assert.match(pyqJs, /previewFrame\.src=paper\.url/);
+  assert.match(pyqJs, /previewFrame\.src="about:blank"/);
+  assert.match(pyqCss, /\.pyq-preview-dialog/);
+});
