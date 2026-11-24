@@ -12,7 +12,7 @@ function headers(request: Request) {
   const origin = request.headers.get("Origin") ?? "";
   return {
     ...(ALLOWED_ORIGINS.has(origin) ? { "Access-Control-Allow-Origin": origin } : {}),
-    "Access-Control-Allow-Headers": "authorization, apikey, content-type",
+    "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-mock-attempt-token",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Vary": "Origin",
   };
@@ -151,23 +151,23 @@ Deno.serve(async (request) => {
           .select("id,question_text,options").in("id", ids);
         if (qError) throw qError;
         const { data: answers, error: answerError } = await db.from("pixel_forge_mock_attempt_answers")
-          .select("question_id,selected_option_index").eq("attempt_id", attempt.id);
+          .select("question_id,selected_option_index,marked_for_review").eq("attempt_id", attempt.id);
         if (answerError) throw answerError;
         const answerMap = new Map((answers ?? []).map(a => [a.question_id,a.selected_option_index]));
         const qMap = new Map((questions ?? []).map(q => [q.id,q]));
-        return reply(request, { attempt: { id: attempt.id, status: attempt.status, started_at: attempt.started_at, expires_at: attempt.expires_at, total_questions: attempt.total_questions }, questions: (maps ?? []).map(m => { const q=qMap.get(m.question_id); return { id:m.question_id, question_text:q?.question_text ?? "", options:m.option_order.map(i=>q?.options?.[i] ?? ""), selected_option_index: answerMap.has(m.question_id) && answerMap.get(m.question_id)!==null ? m.option_order.indexOf(answerMap.get(m.question_id)) : null, display_order:m.display_order }; }) });
+        return reply(request, { attempt: { id: attempt.id, status: attempt.status, started_at: attempt.started_at, expires_at: attempt.expires_at, total_questions: attempt.total_questions }, questions: (maps ?? []).map(m => { const q=qMap.get(m.question_id); return { id:m.question_id, question_text:q?.question_text ?? "", options:m.option_order.map(i=>q?.options?.[i] ?? ""), selected_option_index: answerMap.has(m.question_id) && answerMap.get(m.question_id)!==null ? m.option_order.indexOf(answerMap.get(m.question_id)) : null, marked_for_review: (answers ?? []).some(a=>a.question_id===m.question_id && a.marked_for_review===true), display_order:m.display_order }; }) });
       }
       if (attempt.status !== "in_progress") return reply(request, { error: "This attempt has already been submitted.", status: attempt.status }, 409);
       if (Date.now() >= Date.parse(attempt.expires_at) && action === "save-answer") return reply(request, { error: "Time is over. Submit your test now." }, 409);
       if (action === "save-answer") {
         const input = await request.json() as Record<string, unknown>;
-        if (!validId(input.question_id) || !(input.selected_option_index === null || Number.isInteger(input.selected_option_index) && Number(input.selected_option_index)>=0 && Number(input.selected_option_index)<=3))
+        if (!validId(input.question_id) || !(input.selected_option_index === null || Number.isInteger(input.selected_option_index) && Number(input.selected_option_index)>=0 && Number(input.selected_option_index)<=3) || (input.marked_for_review !== undefined && typeof input.marked_for_review !== "boolean"))
           return reply(request, { error: "Invalid answer selection." }, 400);
         const { data: map, error: mapError } = await db.from("pixel_forge_mock_attempt_question_map").select("option_order").eq("attempt_id",attempt.id).eq("question_id",input.question_id).maybeSingle();
         if (mapError) throw mapError;
         if (!map) return reply(request, { error: "Question does not belong to this attempt." }, 403);
         const selected = input.selected_option_index === null ? null : map.option_order[Number(input.selected_option_index)];
-        const { error } = await db.from("pixel_forge_mock_attempt_answers").upsert({ attempt_id:attempt.id, question_id:input.question_id, selected_option_index:selected, is_correct:null, awarded_marks:null, answered_at:new Date().toISOString() }, { onConflict:"attempt_id,question_id" });
+        const { error } = await db.from("pixel_forge_mock_attempt_answers").upsert({ attempt_id:attempt.id, question_id:input.question_id, selected_option_index:selected, marked_for_review:input.marked_for_review===true, is_correct:null, awarded_marks:null, answered_at:new Date().toISOString() }, { onConflict:"attempt_id,question_id" });
         if (error) throw error;
         return reply(request, { saved:true });
       }
