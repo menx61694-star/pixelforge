@@ -41,7 +41,7 @@
         <a class="nav-link active" href="#overview"><span class="nav-icon">▦</span> Overview</a>
         <a class="nav-link" href="#recent-activity"><span class="nav-icon">◷</span> Recent activity</a>
         <a class="nav-link" href="#documents"><span class="nav-icon">▤</span> Private vault</a>
-        <a class="nav-link" href="#pyq-upload" data-permission="vault.publish"><span class="nav-icon">✎</span> Add PYQ</a>
+        <a class="nav-link" href="#pyq-upload" data-permission="drive.write"><span class="nav-icon">✎</span> Add PYQ</a>
         <a class="nav-link" href="#google-drive" id="google-drive-nav-link" hidden><span class="nav-icon">G</span> Google Drive</a>
         <a class="nav-link" href="#analytics" id="analytics-nav-link" data-permission="analytics.view" hidden><span class="nav-icon">▥</span> Analytics</a>
         <a class="nav-link" href="#security-logs" id="security-logs-nav-link" data-permission="security.logs.view" hidden><span class="nav-icon">⌑</span> Security logs</a>
@@ -173,6 +173,7 @@
                 <button id="pyq-upload-button" type="submit">Upload PYQ papers to Drive <span>→</span></button>
               </form>
               <p id="pyq-upload-status" class="vault-status" role="status" aria-live="polite">Ready to upload papers.</p>
+              <section class="pyq-drive-library panel" aria-labelledby="pyq-drive-library-heading"><div class="panel-heading"><div><p class="eyebrow">OWNER DRIVE</p><h3 id="pyq-drive-library-heading">Uploaded PYQ papers</h3></div><button id="pyq-drive-refresh" type="button" class="refresh-button">↻ Refresh</button></div><p id="pyq-drive-library-status" class="vault-status" role="status" aria-live="polite">Connect Owner Drive to list papers.</p><ul id="pyq-drive-library-list" class="file-list"></ul></section>
               <p class="privacy-hint"><span>●</span> Destination: Owner Google Drive → My Drive (Root). Public website publishing is separate.</p>
             </article>
           </section>

@@ -287,6 +287,7 @@ test("User Feedback is moderated, privacy-conscious and controlled from Admin Se
   const adminHtml = read("admin.html");
   const adminJs = read("admin.js");
   const edge = read("supabase/functions/site-settings/index.ts");
+  const driveFiles = read("supabase/functions/google-drive-files/index.ts");
   const migration = read("supabase/phase-13-user-feedback.sql");
   const homepage = read("index.html");
   const publicScript = read("script.js");
@@ -596,4 +597,18 @@ test("Public Contact form delivers messages to a private admin inbox", () => {
   assert.match(adminJs, /Reply by email/);
   assert.match(migration, /enable row level security/);
   assert.match(migration, /revoke all on public\.pixel_forge_contact_messages from anon, authenticated/);
+});
+
+test("PYQ uploads are listed from Owner Drive with rename and delete management", () => {
+  const adminHtml = read("admin.html");
+  const adminJs = read("admin.js");
+  const driveFiles = read("supabase/functions/google-drive-files/index.ts");
+  assert.match(adminHtml, /pyq-drive-library-list/);
+  assert.match(adminHtml, /href="#pyq-upload" data-permission="drive.write"/);
+  assert.match(adminJs, /loadOwnerPyqDriveLibrary/);
+  assert.match(adminJs, /PYQ-/);
+  assert.match(adminJs, /googleDriveRequest\("rename"/);
+  assert.match(adminJs, /del\.hidden=!currentPermissions\.has\("drive\.delete"\)/);
+  assert.match(driveFiles, /action === "rename"/);
+  assert.match(driveFiles, /method: "PATCH"/);
 });

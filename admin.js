@@ -459,6 +459,7 @@ function setDriveFilesStatus(message, isError = false) {
         await loadGoogleDriveFolders();
         setDriveFilesStatus("Connect Google Drive to list or upload files.");
       }
+      if (pyqDriveLibraryList) await loadOwnerPyqDriveLibrary();
     } catch (error) {
       if (driveStatusStat) driveStatusStat.textContent = "Unknown";
       if (driveStatusNote) driveStatusNote.textContent = "Status check failed";
@@ -2223,10 +2224,48 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
   const pyqSelectedFiles = document.getElementById("pyq-selected-files");
   const pyqUploadButton = document.getElementById("pyq-upload-button");
   const pyqUploadStatus = document.getElementById("pyq-upload-status");
+  const pyqDriveLibraryList = document.getElementById("pyq-drive-library-list");
+  const pyqDriveLibraryStatus = document.getElementById("pyq-drive-library-status");
+  const pyqDriveLibraryRefresh = document.getElementById("pyq-drive-refresh");
   if (pyqFileInput) pyqFileInput.addEventListener("change", () => {
     const files = Array.from(pyqFileInput.files || []);
     if (pyqSelectedFiles) pyqSelectedFiles.textContent = files.length ? files.map(file => file.name).join(", ") : "No files selected";
   });
+  async function loadOwnerPyqDriveLibrary() {
+    if (!pyqDriveLibraryList || !pyqDriveLibraryStatus) return;
+    const ownerAccount = googleDriveAccounts.find(account => account.id === "pixelForge-owner" && account.connected);
+    pyqDriveLibraryList.replaceChildren();
+    if (!ownerAccount) { pyqDriveLibraryStatus.textContent = "Connect Owner Google Drive to manage uploaded papers."; return; }
+    pyqDriveLibraryStatus.textContent = "Loading PDFs from Owner Google Drive…";
+    if (pyqDriveLibraryRefresh) pyqDriveLibraryRefresh.disabled = true;
+    try {
+      const response = await googleDriveRequest("list", { accountId: "pixelForge-owner" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not load Owner Drive files.");
+      const files = (Array.isArray(payload.files) ? payload.files : []).filter(file => (file.mimeType === "application/pdf" || (file.name || "").toLowerCase().endsWith(".pdf")) && !file.trashed).map(file => ({...file, driveAccountId:"pixelForge-owner", driveAccountName:ownerAccount.email || ownerAccount.name || "Owner Google Drive"})).sort((a,b)=>(b.modifiedTime||"").localeCompare(a.modifiedTime||""));
+      if (!files.length) { const empty=document.createElement("li");empty.className="empty-state";empty.textContent="No PDF files found in Owner Drive root.";pyqDriveLibraryList.append(empty); }
+      files.forEach(file=>{
+        const item=document.createElement("li");item.className="file-item";
+        const info=document.createElement("div");info.className="file-info";
+        const name=document.createElement("div");name.className="file-name";name.textContent=file.name||"Untitled PDF";
+        const meta=document.createElement("div");meta.className="file-meta";meta.textContent=(file.size?formatBytes(file.size)+" · ":"")+"Updated "+(file.modifiedTime?new Date(file.modifiedTime).toLocaleString():"date unavailable");
+        info.append(name,meta);
+        const actions=document.createElement("div");actions.className="file-actions";
+        const download=document.createElement("button");download.type="button";download.textContent="Download";download.addEventListener("click",()=>downloadGoogleDriveFile(file,download));
+        const rename=document.createElement("button");rename.type="button";rename.textContent="Rename";rename.addEventListener("click",async()=>{
+          const next=window.prompt("Enter new PDF filename:",file.name||"");if(next===null)return;const trimmed=next.trim();if(!trimmed||trimmed.length>180){pyqDriveLibraryStatus.textContent="Filename must be 1–180 characters.";return;}rename.disabled=true;
+          try{const resp=await googleDriveRequest("rename",{accountId:"pixelForge-owner",method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:file.id,name:trimmed})});const data=await resp.json().catch(()=>({}));if(!resp.ok)throw new Error(data.error||"Rename failed.");pyqDriveLibraryStatus.textContent="Renamed successfully.";await loadOwnerPyqDriveLibrary();}
+          catch(err){pyqDriveLibraryStatus.textContent="Rename failed: "+(err.message||"Unknown error");rename.disabled=false;}
+        });
+        const del=document.createElement("button");del.type="button";del.textContent="Delete";del.hidden=!currentPermissions.has("drive.delete");del.addEventListener("click",()=>deleteGoogleDriveFile(file,item,del));
+        actions.append(download,rename,del);item.append(info,actions);pyqDriveLibraryList.append(item);
+      });
+      pyqDriveLibraryStatus.textContent="Showing "+files.length+" PDF file(s) from Owner Drive root. Rename and delete affect the Drive originals.";
+    } catch(error) {pyqDriveLibraryStatus.textContent="Could not load PYQ Drive library: "+(error.message||"Unknown error"); }
+    finally { if(pyqDriveLibraryRefresh)pyqDriveLibraryRefresh.disabled=false; }
+  }
+  if (pyqDriveLibraryRefresh) pyqDriveLibraryRefresh.addEventListener("click",loadOwnerPyqDriveLibrary);
+
   if (pyqUploadForm) pyqUploadForm.addEventListener("submit", async event => {
     event.preventDefault();
     if (!currentPermissions.has("drive.write") || !currentPermissions.has("drive.read") || !auth.currentUser) {
@@ -2262,7 +2301,7 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
       const file = files[index];
       try {
         const metadataPrefix = [exam, year, subject, pyqTags.value.trim()].filter(Boolean).join("-");
-        const name = safeFileName(metadataPrefix + "-" + file.name);
+        const name = safeFileName("PYQ-" + metadataPrefix + "-" + file.name);
         const renamedFile = new File([file], name, { type: file.type, lastModified: file.lastModified });
         await uploadGoogleDriveSingleFile(renamedFile, index + 1, files.length, "pixelForge-owner", "", pyqUploadStatus);
         uploaded++;
@@ -2271,6 +2310,7 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
       }
     }
     if (pyqUploadStatus) pyqUploadStatus.textContent = "Uploaded " + uploaded + "/" + files.length + " paper(s) to Owner Google Drive → My Drive (Root)." + (errors.length ? " Errors: " + errors.join(" · ") : "");
+    await loadOwnerPyqDriveLibrary();
     pyqUploadForm.reset();
     if (pyqSelectedFiles) pyqSelectedFiles.textContent = "No files selected";
     pyqUploadButton.disabled = false;

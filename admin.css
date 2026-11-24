@@ -338,3 +338,5 @@ button:disabled{opacity:.6;cursor:wait}
 
 .inbox-action-status{margin:8px 0 0;font-size:12px;color:#a23c32;min-height:1em;line-height:1.5}
 #publish-approved-feedback{margin-left:8px}
+
+.pyq-drive-library{margin-top:18px;padding:16px;background:#fff;border:1px solid var(--line);border-radius:12px}.pyq-drive-library .file-item{grid-template-columns:minmax(0,1fr) auto}.pyq-drive-library .file-info{display:block}.pyq-drive-library .file-name{font-size:12px}.pyq-drive-library .file-actions button:last-child{background:#fff0ef;color:#b34d47}.pyq-drive-library #pyq-drive-library-status{margin-bottom:10px}
