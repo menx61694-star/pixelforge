@@ -306,7 +306,7 @@ Deno.serve(async (request) => {
     }
     if (action === "bulk-import") {
       const tests = input.tests;
-      if (!Array.isArray(tests) || tests.length !== 5) return reply(request, { error: "Exactly five mock tests are required." }, 400);
+      if (!Array.isArray(tests) || tests.length < 1 || tests.length > 20) return reply(request, { error: "Upload between 1 and 20 full mock tests per batch." }, 400);
       const expected = [25,5,30,8,16,8,8,8,4,8];
       const created: string[] = [];
       for (const [testIndex, test] of tests.entries()) {
@@ -341,7 +341,7 @@ Deno.serve(async (request) => {
           throw questionError;
         }
       }
-      return reply(request, { imported: true, test_ids: created, test_count: created.length, question_count: 600 }, 201);
+      return reply(request, { imported: true, test_ids: created, test_count: created.length, question_count: tests.reduce((total, test) => total + test.questions.length, 0) }, 201);
     }
     if (action === "bulk-add-questions") {
       const testId = input.test_id;
