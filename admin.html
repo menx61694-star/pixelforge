@@ -6,13 +6,13 @@
   <meta name="theme-color" content="#101d49">
   <meta name="robots" content="noindex, nofollow">
   <title>PixelForge Admin</title>
-  <link rel="stylesheet" href="admin.css?v=drive-folder-ui-1">
+  <link rel="stylesheet" href="admin.css?v=mock-tests-admin-1">
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js" defer></script>
   <script src="vault-storage-utils.js" defer></script>
-  <script src="admin.js?v=drive-multi-view-3" defer></script>
+  <script src="admin.js?v=mock-tests-admin-1" defer></script>
 </head>
 <body>
   <main class="admin-shell">
@@ -46,6 +46,7 @@
         <a class="nav-link" href="#analytics" id="analytics-nav-link" data-permission="analytics.view" hidden><span class="nav-icon">▥</span> Analytics</a>
         <a class="nav-link" href="#security-logs" id="security-logs-nav-link" data-permission="security.logs.view" hidden><span class="nav-icon">⌑</span> Security logs</a>
         <a class="nav-link" href="#users" id="users-nav-link" hidden><span class="nav-icon">♙</span> Users &amp; roles</a>
+        <a class="nav-link" href="#mock-tests" id="mock-tests-nav-link" data-permission="mock_tests.manage" hidden><span class="nav-icon">▣</span> Mock Tests</a>
         <a class="nav-link" href="#settings" id="settings-nav-link" data-permission="settings.view" hidden><span class="nav-icon">⚙</span> Settings</a>
         <div class="sidebar-bottom">
           <div class="secure-card"><span class="secure-icon">✓</span><div><strong>Private by design</strong><small>Role-based document access</small></div></div>
@@ -331,6 +332,52 @@
           </section>
         </div>
 
+
+        <div class="dashboard-content dashboard-page" id="mock-tests" hidden>
+          <section class="panel mock-tests-panel">
+            <div class="panel-heading"><div><p class="eyebrow">ASSESSMENT MANAGEMENT</p><h2>Online Mock Tests</h2></div><button id="mock-test-new" class="refresh-button" type="button">＋ Create test</button></div>
+            <p id="mock-tests-status" class="panel-copy" role="status" aria-live="polite">Manage tests and their question banks.</p>
+            <div id="mock-test-list" class="mock-test-list"><p class="empty-state">Loading mock tests…</p></div>
+          </section>
+          <section class="panel mock-test-editor-panel" id="mock-test-editor-panel" hidden>
+            <div class="panel-heading"><div><p class="eyebrow">TEST CONFIGURATION</p><h2 id="mock-test-editor-title">Create mock test</h2></div><button id="mock-test-cancel" class="refresh-button" type="button">Close</button></div>
+            <form id="mock-test-form" class="mock-test-form">
+              <input id="mock-test-id" type="hidden">
+              <label for="mock-test-title">Test title</label><input id="mock-test-title" type="text" maxlength="120" minlength="3" required>
+              <label for="mock-test-description">Description</label><textarea id="mock-test-description" rows="2" maxlength="1000"></textarea>
+              <label for="mock-test-instructions">Instructions</label><textarea id="mock-test-instructions" rows="3" maxlength="3000"></textarea>
+              <div class="mock-test-fields">
+                <div><label for="mock-test-duration">Duration (minutes)</label><input id="mock-test-duration" type="number" min="1" max="240" value="60" required></div>
+                <div><label for="mock-test-marks">Marks per question</label><input id="mock-test-marks" type="number" min="0.01" max="100" step="0.01" value="1" required></div>
+                <div><label for="mock-test-negative">Negative marks</label><input id="mock-test-negative" type="number" min="0" max="100" step="0.01" value="0" required></div>
+                <div><label for="mock-test-status">Status</label><select id="mock-test-status"><option value="draft">Draft</option><option value="published">Published</option><option value="archived">Archived</option></select></div>
+                <div><label for="mock-test-start">Available from (optional)</label><input id="mock-test-start" type="datetime-local"></div>
+                <div><label for="mock-test-end">Available until (optional)</label><input id="mock-test-end" type="datetime-local"></div>
+              </div>
+              <div class="mock-test-toggles"><label><input id="mock-test-shuffle-questions" type="checkbox"> Shuffle questions</label><label><input id="mock-test-shuffle-options" type="checkbox"> Shuffle options</label></div>
+              <div class="mock-test-form-actions"><button id="mock-test-save" type="submit">Save test</button><span id="mock-test-form-status" role="status"></span></div>
+            </form>
+          </section>
+          <section class="panel mock-question-panel" id="mock-question-panel" hidden>
+            <div class="panel-heading"><div><p class="eyebrow">QUESTION BANK</p><h2 id="mock-question-heading">Questions</h2></div><button id="mock-question-new" class="refresh-button" type="button">＋ Add question</button></div>
+            <p id="mock-questions-status" class="panel-copy">Add four-option MCQs and mark the correct answer.</p>
+            <div id="mock-question-list" class="mock-question-list"></div>
+            <form id="mock-question-form" class="mock-question-form" hidden>
+              <input id="mock-question-id" type="hidden">
+              <div class="mock-test-fields"><div><label for="mock-question-order">Question number</label><input id="mock-question-order" type="number" min="1" max="1000" value="1" required></div></div>
+              <label for="mock-question-text">Question</label><textarea id="mock-question-text" rows="3" maxlength="3000" required></textarea>
+              <div class="mock-question-options">
+                <div><label for="mock-option-0">Option A</label><input id="mock-option-0" maxlength="500" required></div>
+                <div><label for="mock-option-1">Option B</label><input id="mock-option-1" maxlength="500" required></div>
+                <div><label for="mock-option-2">Option C</label><input id="mock-option-2" maxlength="500" required></div>
+                <div><label for="mock-option-3">Option D</label><input id="mock-option-3" maxlength="500" required></div>
+              </div>
+              <label for="mock-question-correct">Correct option</label><select id="mock-question-correct"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select>
+              <label for="mock-question-explanation">Explanation (optional)</label><textarea id="mock-question-explanation" rows="2" maxlength="3000"></textarea>
+              <div class="mock-test-form-actions"><button type="submit">Save question</button><button id="mock-question-cancel" class="refresh-button" type="button">Cancel</button></div>
+            </form>
+          </section>
+        </div>
 
         <div class="dashboard-content dashboard-page" id="settings" hidden>
           <section class="panel settings-panel">
