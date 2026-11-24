@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101d49">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Online Examination — PixelForge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="mock-test-exam.css">
+  <script src="mock-test-exam.js" defer></script>
+</head>
+<body class="exam-body">
+  <main class="exam-shell">
+    <header class="exam-topbar">
+      <a class="exam-brand" href="mock-tests.html" aria-label="PixelForge Mock Tests"><span class="exam-brand-mark">P</span><span>PIXELFORGE <small>EXAM PORTAL</small></span></a>
+      <div class="exam-top-title"><span class="exam-live-dot"></span><span>Examination in progress</span></div>
+      <div class="exam-top-actions"><button id="exam-fullscreen" class="exam-icon-button" type="button" title="Toggle fullscreen" aria-label="Toggle fullscreen">⛶</button><button id="exam-exit" class="exam-exit-button" type="button">Exit test</button></div>
+    </header>
+    <section class="exam-testbar">
+      <div><p class="exam-kicker">ONLINE ASSESSMENT</p><h1 id="exam-title">Loading your test…</h1><p id="exam-subtitle" class="exam-subtitle">Your answers are saved automatically.</p></div>
+      <div class="exam-clock"><span class="exam-clock-label">TIME LEFT</span><strong id="exam-timer">--:--</strong><span id="exam-clock-note">Timer continues if you change questions</span></div>
+    </section>
+    <div id="exam-error" class="exam-error" role="alert" hidden></div>
+    <section class="exam-workspace" id="exam-workspace" hidden>
+      <div class="exam-main-column">
+        <div class="exam-question-toolbar"><span id="exam-question-count">QUESTION 1 OF 1</span><span id="exam-save-state" class="exam-save-state"><i></i> Answers save automatically</span></div>
+        <article class="exam-question-card">
+          <div class="exam-question-heading"><span id="exam-question-number" class="exam-question-number">01</span><span class="exam-question-label">QUESTION</span></div>
+          <h2 id="exam-question-text"></h2>
+          <div id="exam-options" class="exam-options"></div>
+        </article>
+        <div class="exam-bottom-controls">
+          <div class="exam-question-actions"><button id="exam-mark-review" class="exam-secondary-button" type="button">☆ Mark for review</button><button id="exam-clear" class="exam-secondary-button" type="button">Clear response</button></div>
+          <div class="exam-navigation"><button id="exam-prev" class="exam-secondary-button" type="button">← Previous</button><button id="exam-next" class="exam-primary-button" type="button">Save &amp; Next →</button></div>
+        </div>
+        <div class="exam-mobile-palette"><button id="exam-mobile-palette-toggle" class="exam-secondary-button" type="button">☷ Question palette</button></div>
+      </div>
+      <aside class="exam-sidebar">
+        <section class="exam-sidebar-card exam-candidate-card"><div class="exam-candidate-avatar">P</div><div><strong id="exam-candidate-name">Candidate</strong><span>Candidate workspace</span></div></section>
+        <section class="exam-sidebar-card"><div class="exam-sidebar-heading"><h2>Question palette</h2><span id="exam-palette-count">0 questions</span></div><div class="exam-legend"><span><i class="legend-answered"></i> Answered</span><span><i class="legend-current"></i> Current</span><span><i class="legend-review"></i> Review</span><span><i class="legend-unanswered"></i> Not answered</span></div><div id="exam-palette" class="exam-palette"></div><div class="exam-sidebar-divider"></div><div class="exam-progress-row"><span>Completion</span><strong id="exam-progress-text">0%</strong></div><div class="exam-progress-track"><span id="exam-progress-fill"></span></div><p id="exam-progress-detail" class="exam-progress-detail">0 of 0 answered</p><button id="exam-submit" class="exam-submit-button" type="button">Submit test <span>→</span></button></section>
+        <p class="exam-sidebar-note">Your responses are saved as you work. You can move between questions using the palette.</p>
+      </aside>
+    </section>
+    <section id="exam-result" class="exam-result" hidden></section>
+    <footer class="exam-footer"><span>PixelForge Online Assessment</span><span>Do not refresh or close this tab during your test.</span></footer>
+  </main>
+  <dialog id="exam-submit-dialog" class="exam-dialog"><div class="exam-dialog-icon">✓</div><p class="exam-kicker">FINAL CHECK</p><h2>Submit your test?</h2><p id="exam-submit-summary">Review your answers before submitting. You cannot change them afterwards.</p><div class="exam-dialog-actions"><button id="exam-cancel-submit" class="exam-secondary-button" type="button">Continue test</button><button id="exam-confirm-submit" class="exam-primary-button" type="button">Submit now</button></div></dialog>
+  <dialog id="exam-exit-dialog" class="exam-dialog"><div class="exam-dialog-icon">!</div><p class="exam-kicker">LEAVE EXAM?</p><h2>Exit this test?</h2><p>Your attempt will remain in progress until its timer expires. You can return only if the attempt session remains available in this browser.</p><div class="exam-dialog-actions"><button id="exam-cancel-exit" class="exam-secondary-button" type="button">Stay here</button><button id="exam-confirm-exit" class="exam-primary-button" type="button">Exit test</button></div></dialog>
+</body>
+</html>

@@ -58,6 +58,7 @@ const migration = fs.readFileSync(path.join(root, "supabase/phase-23-mock-attemp
 const reviewMigration = fs.readFileSync(path.join(root, "supabase/phase-24-mock-attempt-review.sql"), "utf8");
 const handler = fs.readFileSync(path.join(root, "supabase/functions/mock-test-management/index.ts"), "utf8");
 const candidate = fs.readFileSync(path.join(root, "mock-tests.js"), "utf8");
+const exam = fs.readFileSync(path.join(root, "mock-test-exam.js"), "utf8");
 
 test("attempt question map stores private order and option permutation with RLS", () => {
   assert.match(migration, /pixel_forge_mock_attempt_question_map/);
@@ -77,9 +78,19 @@ test("candidate attempt APIs use hashed opaque tokens and never return answer ke
   assert.doesNotMatch(stateBlock, /correct_option_index|explanation/);
 });
 
-test("candidate interface provides timer, answer saving, navigation, review and result review", () => {
-  for (const feature of ["setInterval(showTimer", "save-answer", "Mark for review", "Previous", "Review answers", "renderResult", "correct_option_index"]) {
-    assert.ok(candidate.includes(feature), "Missing candidate feature: " + feature);
-  }
-  assert.doesNotMatch(candidate, /Online test-taking will be enabled in the next release/);
+test("mock listing starts each published test in a separate exam page", () => {
+  assert.ok(candidate.includes("mock-test-exam.html?attempt="));
+  assert.ok(candidate.includes("sessionStorage.setItem"));
+  assert.doesNotMatch(candidate, /mock-attempt-panel/);
 });
+
+test("dedicated exam page provides timer, autosave, navigation, review and result review", () => {
+  for (const feature of ["setInterval(renderTimer", "save-answer", "exam-palette", "exam-prev", "exam-next", "exam-submit", "renderResult", "correct_option_index"]) {
+    assert.ok(exam.includes(feature), "Missing exam feature: " + feature);
+  }
+  assert.doesNotMatch(candidate + exam, /Online test-taking will be enabled in the next release/);
+});
+
+// Dedicated exam-page navigation and candidate controls are covered above.
+
+// CI trigger after assertion correction.
