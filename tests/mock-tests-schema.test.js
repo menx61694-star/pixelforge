@@ -53,3 +53,33 @@ test("Mock Test management permission is admin-only in the existing role registr
   assert.match(sql, /\('editor', 'mock_tests\.manage', false\)/);
   assert.match(sql, /\('viewer', 'mock_tests\.manage', false\)/);
 });
+
+const migration = fs.readFileSync(path.join(root, "supabase/phase-23-mock-attempt-map.sql"), "utf8");
+const reviewMigration = fs.readFileSync(path.join(root, "supabase/phase-24-mock-attempt-review.sql"), "utf8");
+const handler = fs.readFileSync(path.join(root, "supabase/functions/mock-test-management/index.ts"), "utf8");
+const candidate = fs.readFileSync(path.join(root, "mock-tests.js"), "utf8");
+
+test("attempt question map stores private order and option permutation with RLS", () => {
+  assert.match(migration, /pixel_forge_mock_attempt_question_map/);
+  assert.match(migration, /option_order smallint\[\] not null/);
+  assert.match(migration, /revoke all .* from public, anon, authenticated/);
+  assert.match(reviewMigration, /marked_for_review boolean not null default false/);
+});
+
+test("candidate attempt APIs use hashed opaque tokens and never return answer keys before submit", () => {
+  assert.match(handler, /crypto\.subtle\.digest\("SHA-256"/);
+  assert.match(handler, /attempt_token_hash/);
+  assert.match(handler, /action === "start-attempt"/);
+  assert.match(handler, /action === "attempt-state"/);
+  assert.match(handler, /action === "save-answer"/);
+  assert.match(handler, /action === "submit-attempt"/);
+  const stateBlock = handler.slice(handler.indexOf('if (action === "attempt-state")'), handler.indexOf('if (attempt.status !== "in_progress")'));
+  assert.doesNotMatch(stateBlock, /correct_option_index|explanation/);
+});
+
+test("candidate interface provides timer, answer saving, navigation, review and result review", () => {
+  for (const feature of ["setInterval(showTimer", "save-answer", "Mark for review", "Previous", "Review answers", "renderResult", "correct_option_index"]) {
+    assert.ok(candidate.includes(feature), "Missing candidate feature: " + feature);
+  }
+  assert.doesNotMatch(candidate, /Online test-taking will be enabled in the next release/);
+});
