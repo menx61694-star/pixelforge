@@ -1571,7 +1571,7 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
     const file = mockBulkImportFile.files?.[0];
     if (!file) return;
     mockBulkImportButton.disabled = true;
-    setMockTestsStatus("Validating and importing five full-length mock tests…");
+    setMockTestsStatus("Validating and importing full-length mock tests…");
     try {
       const payload = JSON.parse(await file.text());
       const result = await mockTestRequest("bulk-import", { method: "POST", body: payload });
