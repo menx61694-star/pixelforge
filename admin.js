@@ -661,11 +661,11 @@ function setDriveFilesStatus(message, isError = false) {
     }
   }
 
-  async function uploadGoogleDriveSingleFile(file, fileIndex, fileCount, accountId, folderId, statusElement = null) {
+  async function uploadGoogleDriveSingleFile(file, fileIndex, fileCount, accountId, folderId, statusElement = null, isPyq = false) {
     setDriveFilesStatus("Preparing Google Drive upload (" + fileIndex + "/" + fileCount + "): " + file.name);
     const sessionResponse = await googleDriveRequest("create-upload-session", {
       accountId, method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: file.name, mimeType: file.type, size: file.size, parentFolderId: folderId || null })
+      body: JSON.stringify({ name: file.name, mimeType: file.type, size: file.size, parentFolderId: folderId || null, isPyq })
     });
     const session = await sessionResponse.json();
     if (!sessionResponse.ok || !session.uploadUrl) throw new Error(session.error || "Could not start upload.");
@@ -2239,7 +2239,7 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
     pyqDriveLibraryStatus.textContent = "Loading PDFs from Owner Google Drive…";
     if (pyqDriveLibraryRefresh) pyqDriveLibraryRefresh.disabled = true;
     try {
-      const response = await googleDriveRequest("list", { accountId: "pixelForge-owner" });
+      const response = await googleDriveRequest("list", { accountId: "pixelForge-owner", query: { scope: "pyq" } });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Could not load Owner Drive files.");
       const files = (Array.isArray(payload.files) ? payload.files : []).filter(file => (file.mimeType === "application/pdf" || (file.name || "").toLowerCase().endsWith(".pdf")) && !file.trashed).map(file => ({...file, driveAccountId:"pixelForge-owner", driveAccountName:ownerAccount.email || ownerAccount.name || "Owner Google Drive"})).sort((a,b)=>(b.modifiedTime||"").localeCompare(a.modifiedTime||""));
@@ -2303,7 +2303,7 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
         const metadataPrefix = [exam, year, subject, pyqTags.value.trim()].filter(Boolean).join("-");
         const name = safeFileName("PYQ-" + metadataPrefix + "-" + file.name);
         const renamedFile = new File([file], name, { type: file.type, lastModified: file.lastModified });
-        await uploadGoogleDriveSingleFile(renamedFile, index + 1, files.length, "pixelForge-owner", "", pyqUploadStatus);
+        await uploadGoogleDriveSingleFile(renamedFile, index + 1, files.length, "pixelForge-owner", "", pyqUploadStatus, true);
         uploaded++;
       } catch (error) {
         errors.push(file.name + ": " + (error.message || "Upload failed"));

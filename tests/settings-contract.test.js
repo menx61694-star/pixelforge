@@ -611,4 +611,9 @@ test("PYQ uploads are listed from Owner Drive with rename and delete management"
   assert.match(adminJs, /del\.hidden=!currentPermissions\.has\("drive\.delete"\)/);
   assert.match(driveFiles, /action === "rename"/);
   assert.match(driveFiles, /method: "PATCH"/);
+  assert.match(adminJs, /query: \{ scope: "pyq" \}/);
+  assert.match(adminJs, /pyqUploadStatus, true\)/);
+  assert.match(driveFiles, /pixelForgeUploadType: "pyq"/);
+  assert.match(driveFiles, /appProperties has \{ key=/);
+  assert.match(driveFiles, /name contains 'PYQ-'/);
 });
