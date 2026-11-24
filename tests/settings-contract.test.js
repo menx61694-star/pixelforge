@@ -644,3 +644,17 @@ test("admin topbar identifies the signed-in account and exposes details from ava
   assert.match(adminJs, /currentUserRole \? currentUserRole/);
   assert.match(adminCss, /\.account-details\[hidden\]/);
 });
+
+
+test("Owner Drive PYQ library exposes publish state and public publish/unpublish actions", () => {
+  const adminJs = read("admin.js");
+  const driveFiles = read("supabase/functions/google-drive-files/index.ts");
+  assert.match(adminJs, /googleDriveRequest\("published-list"/);
+  assert.match(adminJs, /publishOwnerPyqDriveFile/);
+  assert.match(adminJs, /unpublishOwnerPyqDriveFile/);
+  assert.match(adminJs, /textContent=published\?"Unpublish":"Publish"/);
+  assert.match(adminJs, /category:"exam-materials"/);
+  assert.match(adminJs, /tagsInput\.value/);
+  assert.match(driveFiles, /action === "published-list"/);
+  assert.match(driveFiles, /\["publish", "unpublish"\]/);
+});
