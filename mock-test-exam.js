@@ -29,12 +29,15 @@
     $("exam-paused-panel").hidden = !value;
     $("exam-pause").textContent = value ? "Resume test" : "Pause test";
   }
+  async function persistQuestionTime() {
+    const q=questions[current], seconds=elapsedForCurrent();
+    if (!q || !seconds) return;
+    await request("save-answer",{question_id:q.id,selected_option_index:q.selected_option_index ?? null,marked_for_review:marked.has(q.id),time_spent_seconds:seconds});
+  }
   async function pauseOrResume() {
     try {
       if (!paused) {
-        const savedSeconds = elapsedForCurrent();
-        const q = questions[current];
-        if (q && savedSeconds) await request("save-answer",{question_id:q.id,selected_option_index:q.selected_option_index ?? null,marked_for_review:marked.has(q.id),time_spent_seconds:savedSeconds});
+        await persistQuestionTime();
         const payload = await request("pause-attempt");
         attempt.status = "paused";
         attempt.remaining_seconds = payload.remaining_seconds;
@@ -232,8 +235,8 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
   function bindEvents() {
-    $("exam-prev").addEventListener("click", () => { if (current > 0) { current--; renderQuestion(); } });
-    $("exam-next").addEventListener("click", () => { if (current < questions.length - 1) { current++; renderQuestion(); } else openSubmitDialog(); });
+    $("exam-prev").addEventListener("click", async () => { if (current > 0) { await persistQuestionTime(); current--; renderQuestion(); } });
+    $("exam-next").addEventListener("click", async () => { await persistQuestionTime(); if (current < questions.length - 1) { current++; renderQuestion(); } else openSubmitDialog(); });
     $("exam-clear").addEventListener("click", () => saveAnswer(questions[current], null, marked.has(questions[current].id)));
     $("exam-mark-review").addEventListener("click", async () => { const q = questions[current]; const next = !marked.has(q.id); try { await request("save-answer", { question_id: q.id, selected_option_index: q.selected_option_index ?? null, marked_for_review: next }); next ? marked.add(q.id) : marked.delete(q.id); renderQuestion(); } catch (error) { showToast(error.message); } });
     $("exam-submit").addEventListener("click", openSubmitDialog);
