@@ -2168,7 +2168,8 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
       const temporaryPassword = crypto.randomUUID() + "Aa1!";
       const credential = await provisionerAuth.createUserWithEmailAndPassword(email, temporaryPassword);
       createdUser = credential.user;
-      await managementRequest("assign", { method: "POST", body: { uid: createdUser.uid, email, role } });
+      const targetIdToken = await createdUser.getIdToken();
+      await managementRequest("assign", { method: "POST", body: { uid: createdUser.uid, email, role, idToken: targetIdToken } });
       await provisionerAuth.sendPasswordResetEmail(email);
       await provisionerAuth.signOut();
       userCreateForm.reset();

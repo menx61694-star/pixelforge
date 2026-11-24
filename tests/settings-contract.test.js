@@ -617,3 +617,15 @@ test("PYQ uploads are listed from Owner Drive with rename and delete management"
   assert.match(driveFiles, /appProperties has \{ key=/);
   assert.match(driveFiles, /name contains 'PYQ-'/);
 });
+
+
+test("workspace user assignment verifies the newly created Firebase ID token", () => {
+  const adminJs = read("admin.js");
+  const userManagement = read("supabase/functions/user-management/index.ts");
+  assert.match(adminJs, /createdUser\.getIdToken\(\)/);
+  assert.match(adminJs, /idToken: targetIdToken/);
+  assert.match(userManagement, /const targetIdToken = typeof input\.idToken === "string"/);
+  assert.match(userManagement, /lookupFirebaseUser\(targetIdToken\)/);
+  assert.match(userManagement, /targetIdentity\.uid !== uid/);
+  assert.doesNotMatch(userManagement, /accounts:lookup[\s\S]{0,250}localId: \[uid\]/);
+});
