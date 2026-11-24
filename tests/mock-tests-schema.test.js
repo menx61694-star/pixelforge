@@ -79,7 +79,7 @@ test("candidate attempt APIs use hashed opaque tokens and never return answer ke
 });
 
 test("mock listing starts each published test in a separate exam page", () => {
-  assert.match(candidate, /mock-test-exam\\.html\\?attempt=/);
+  assert.ok(candidate.includes("mock-test-exam.html?attempt="));
   assert.match(candidate, /sessionStorage\\.setItem/);
   assert.doesNotMatch(candidate, /mock-attempt-panel/);
 });
