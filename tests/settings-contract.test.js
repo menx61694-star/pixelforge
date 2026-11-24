@@ -672,3 +672,21 @@ test("public PYQ page offers an inline preview for published PDFs", () => {
   assert.match(pyqJs, /previewFrame\.src="about:blank"/);
   assert.match(pyqCss, /\.pyq-preview-dialog/);
 });
+
+
+test("public PYQ page supports year subject search and sorting", () => {
+  const pyqHtml = read("pyq.html");
+  const pyqJs = read("pyq.js");
+  const pyqCss = read("pyq.css");
+  assert.match(pyqHtml, /id="pyq-year-filter"/);
+  assert.match(pyqHtml, /id="pyq-subject-filter"/);
+  assert.match(pyqHtml, /id="pyq-sort"/);
+  assert.match(pyqJs, /function populateAdvancedFilters/);
+  assert.match(pyqJs, /p\.search\.includes\(q\)/);
+  assert.match(pyqJs, /subjectFilter\.value/);
+  assert.match(pyqJs, /sort==="year-desc"/);
+  assert.match(pyqJs, /sort==="title-asc"/);
+  assert.match(pyqJs, /sortSelect\.addEventListener\("change",render\)/);
+  assert.match(pyqJs, /yearFilter\.value="all";subjectFilter\.value="all"/);
+  assert.match(pyqCss, /\.pyq-advanced-controls/);
+});
