@@ -1564,6 +1564,24 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
 
 
   const mockTestsStatus = document.getElementById("mock-tests-status");
+  const mockBulkImportButton = document.getElementById("mock-test-bulk-import");
+  const mockBulkImportFile = document.getElementById("mock-test-bulk-file");
+  mockBulkImportButton?.addEventListener("click", () => mockBulkImportFile?.click());
+  mockBulkImportFile?.addEventListener("change", async () => {
+    const file = mockBulkImportFile.files?.[0];
+    if (!file) return;
+    mockBulkImportButton.disabled = true;
+    setMockTestsStatus("Validating and importing five full-length mock tests…");
+    try {
+      const payload = JSON.parse(await file.text());
+      const result = await mockTestRequest("bulk-import", { method: "POST", body: payload });
+      setMockTestsStatus(result.test_count + " draft tests and " + result.question_count + " questions imported.");
+      mockBulkImportFile.value = "";
+      await loadMockTests();
+    } catch (error) {
+      setMockTestsStatus(error.message || "Bulk import failed.", true);
+    } finally { mockBulkImportButton.disabled = false; }
+  });
   const mockTestList = document.getElementById("mock-test-list");
   const mockTestEditor = document.getElementById("mock-test-editor-panel");
   const mockTestForm = document.getElementById("mock-test-form");
