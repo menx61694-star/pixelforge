@@ -690,3 +690,22 @@ test("public PYQ page supports year subject search and sorting", () => {
   assert.match(pyqJs, /yearFilter\.value="all";subjectFilter\.value="all"/);
   assert.match(pyqCss, /\.pyq-advanced-controls/);
 });
+
+
+test("public PYQ page supports browser-local bookmarks and recently viewed papers", () => {
+  const pyqHtml = read("pyq.html");
+  const pyqJs = read("pyq.js");
+  const pyqCss = read("pyq.css");
+  assert.match(pyqHtml, /id="pyq-personal-tabs"/);
+  assert.match(pyqHtml, /data-scope="bookmarked"/);
+  assert.match(pyqHtml, /data-scope="recent"/);
+  assert.match(pyqJs, /pixelforge_pyq_bookmarks_v1/);
+  assert.match(pyqJs, /pixelforge_pyq_recent_v1/);
+  assert.match(pyqJs, /function recordViewed\(paper\)/);
+  assert.match(pyqJs, /saveBookmarks\(\)/);
+  assert.match(pyqJs, /personalScope==="bookmarked"/);
+  assert.match(pyqJs, /personalScope==="recent"/);
+  assert.match(pyqJs, /recordViewed\(p\)/);
+  assert.match(pyqCss, /\.pyq-bookmark-button/);
+  assert.match(pyqCss, /\.pyq-personal-tabs/);
+});
