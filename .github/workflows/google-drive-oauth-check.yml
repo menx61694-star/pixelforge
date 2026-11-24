@@ -45,6 +45,9 @@ on:
       - "supabase/phase-24-mock-attempt-review.sql"
       - "mock-tests.js"
       - "mock-tests.css"
+      - "mock-test-exam.html"
+      - "mock-test-exam.js"
+      - "mock-test-exam.css"
       - "tests/mock-tests-schema.test.js"
       - "supabase/phase-8-quick-tools.sql"
       - "supabase/phase-11-smart-search.sql"
@@ -78,6 +81,9 @@ on:
       - "supabase/functions/mock-test-management/**"
       - "mock-tests.js"
       - "mock-tests.css"
+      - "mock-test-exam.html"
+      - "mock-test-exam.js"
+      - "mock-test-exam.css"
       - "supabase/phase-23-mock-attempt-map.sql"
       - "supabase/phase-24-mock-attempt-review.sql"
       - "tests/mock-tests-schema.test.js"
@@ -151,7 +157,9 @@ jobs:
           node --check seo.js
           node --check layout.js
           node --check library.js
-          node --check mock-tests.js\n          node --check mock-test-exam.js
+          node --check mock-tests.js
+          node --check mock-test-exam.js
+          node --check mock-test-exam.js
           node --check vault-storage-utils.js
 
       - name: Run regression and analytics contract tests
