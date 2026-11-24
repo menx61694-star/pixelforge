@@ -110,8 +110,6 @@ Deno.serve(async (request) => {
 
     const actor = await requireMockAdmin(request);
     if (!actor) return reply(request, { error: "Active administrator permission mock_tests.manage is required." }, 403);
-    const url = new URL(request.url);
-    const action = url.searchParams.get("action") ?? "";
     const db = actor.db;
     const input = request.method === "POST" ? await request.json() as Record<string, unknown> : {};
 
