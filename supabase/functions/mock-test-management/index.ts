@@ -88,6 +88,26 @@ Deno.serve(async (request) => {
   if (!ALLOWED_ORIGINS.has(origin)) return reply(request, { error: "Origin is not allowed." }, 403);
   if (request.method !== "GET" && request.method !== "POST") return reply(request, { error: "Method not allowed." }, 405);
   try {
+    const url = new URL(request.url);
+    const action = url.searchParams.get("action") ?? "";
+
+    // Public listing exposes only published test metadata. Question answer keys
+    // and attempt records remain inaccessible to anonymous visitors.
+    if (request.method === "GET" && action === "public-list") {
+      const db = dbAdmin();
+      const now = Date.now();
+      const { data, error } = await db.from("pixel_forge_mock_tests")
+        .select("id,title,description,instructions,duration_seconds,marks_per_question,negative_marks,starts_at,ends_at,created_at")
+        .eq("status", "published")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      const tests = (data ?? []).filter((test) =>
+        (!test.starts_at || Date.parse(test.starts_at) <= now) &&
+        (!test.ends_at || Date.parse(test.ends_at) > now)
+      );
+      return reply(request, { tests });
+    }
+
     const actor = await requireMockAdmin(request);
     if (!actor) return reply(request, { error: "Active administrator permission mock_tests.manage is required." }, 403);
     const url = new URL(request.url);

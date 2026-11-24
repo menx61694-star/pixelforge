@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101d49">
+  <meta name="description" content="Explore published online mock tests on PixelForge.">
+  <title>Online Mock Tests — PixelForge</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23101d49'/%3E%3Cpath d='M17 46V17h17c10 0 15 5 15 13S44 43 34 43H27v3z' fill='%23ff861c'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="mock-tests.css">
+  <script src="maintenance-mode.js" defer></script>
+  <script src="mock-tests.js" defer></script>
+  <script src="nav-responsive.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html"><span class="brand-mark">P</span><span>PIXELFORGE</span></a>
+    <button class="menu-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+    <nav class="nav" aria-label="Main navigation">
+      <a href="index.html">Home</a><a href="index.html#discover">Discover</a><a class="active" href="mock-tests.html" aria-current="page">Mock Tests</a><a href="pyq.html">PYQ</a><a href="library.html">Document Library</a><a href="index.html#about">About</a><a href="index.html#contact">Contact</a>
+    </nav>
+  </header>
+  <main class="mock-page">
+    <section class="mock-hero">
+      <p class="eyebrow dark">PREPARE WITH CONFIDENCE</p>
+      <h1>Online <em>Mock Tests.</em></h1>
+      <p>Find a published test, review its instructions and get ready to practice.</p>
+      <div class="mock-hero-meta"><span>✦ Exam-focused practice</span><span>◷ Timed assessments</span><span>✓ Instant access to published tests</span></div>
+    </section>
+    <section class="mock-list-section" aria-labelledby="mock-list-heading">
+      <div class="mock-list-heading"><div><p class="eyebrow dark">AVAILABLE NOW</p><h2 id="mock-list-heading">Published tests</h2></div><button id="mock-refresh" class="mock-refresh" type="button">↻ Refresh</button></div>
+      <p id="mock-list-status" class="mock-list-status" role="status" aria-live="polite">Loading published tests…</p>
+      <div id="mock-test-grid" class="mock-test-grid"></div>
+    </section>
+  </main>
+  <footer class="footer footer-v2"><a class="brand footer-brand" href="index.html"><span class="brand-mark">P</span><span>PIXELFORGE</span></a><span>© <span id="year"></span> PixelForge. Built for curious minds.</span><a href="index.html">Back to home ↑</a></footer>
+</body>
+</html>
