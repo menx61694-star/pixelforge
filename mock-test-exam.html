@@ -21,9 +21,10 @@
     </header>
     <section class="exam-testbar">
       <div><p class="exam-kicker">ONLINE ASSESSMENT</p><h1 id="exam-title">Loading your test…</h1><p id="exam-subtitle" class="exam-subtitle">Your answers are saved automatically.</p></div>
-      <div class="exam-clock"><span class="exam-clock-label">TIME LEFT</span><strong id="exam-timer">--:--</strong><span id="exam-clock-note">Timer continues if you change questions</span></div>
+      <div class="exam-clock"><span class="exam-clock-label">TIME LEFT</span><strong id="exam-timer">--:--</strong><span id="exam-clock-note">Timer pauses only when you pause the exam</span><button id="exam-pause" class="exam-secondary-button" type="button">Pause test</button></div>
     </section>
     <div id="exam-error" class="exam-error" role="alert" hidden></div>
+    <section id="exam-paused-panel" class="exam-paused-panel" hidden><h2>Test paused</h2><p>Your remaining time is محفوظ and the server timer is stopped. Resume when you are ready.</p><button id="exam-resume" class="exam-primary-button" type="button">Resume test</button></section>
     <section class="exam-workspace" id="exam-workspace" hidden>
       <div class="exam-main-column">
         <div class="exam-question-toolbar"><span id="exam-question-count">QUESTION 1 OF 1</span><span id="exam-save-state" class="exam-save-state"><i></i> Answers save automatically</span></div>

@@ -43,6 +43,8 @@ on:
       - "supabase/phase-22-mock-tests.sql"
       - "supabase/phase-23-mock-attempt-map.sql"
       - "supabase/phase-24-mock-attempt-review.sql"
+      - "supabase/phase-25-mock-pause-analytics.sql"
+      - "supabase/phase-25-mock-pause-analytics.sql"
       - "mock-tests.js"
       - "mock-tests.css"
       - "mock-test-exam.html"

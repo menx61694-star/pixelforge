@@ -94,3 +94,22 @@ test("dedicated exam page provides timer, autosave, navigation, review and resul
 // Dedicated exam-page navigation and candidate controls are covered above.
 
 // CI trigger after assertion correction.
+
+test("Phase 25 schema supports server-authoritative pause/resume and topic timing analytics", () => {
+  const phase25 = fs.readFileSync(path.join(root, "supabase/phase-25-mock-pause-analytics.sql"), "utf8");
+  assert.match(phase25, /'paused'/);
+  assert.match(phase25, /remaining_seconds/);
+  assert.match(phase25, /subject text/);
+  assert.match(phase25, /topic text/);
+  assert.match(phase25, /time_spent_seconds/);
+});
+test("candidate API and exam UI expose pause/resume and detailed performance analysis", () => {
+  assert.match(handler, /action === "pause-attempt"/);
+  assert.match(handler, /action === "resume-attempt"/);
+  assert.match(handler, /remaining_seconds/);
+  assert.match(handler, /average_time_per_question_seconds/);
+  assert.match(handler, /analytics/);
+  assert.match(exam, /pauseOrResume/);
+  assert.match(exam, /Performance analysis/);
+  assert.match(exam, /Accuracy:/);
+});

@@ -4,3 +4,5 @@
 @media(min-width:701px){.exam-sidebar{display:grid!important}}
 
 .exam-question-actions{display:flex;gap:9px;flex-wrap:wrap}@media(max-width:700px){.exam-question-actions{display:grid;grid-template-columns:1fr 1fr}.exam-question-actions button{padding:10px 9px;font-size:.78rem}}
+
+.exam-paused-panel{max-width:620px;margin:48px auto;padding:42px;text-align:center;background:#fff;border:1px solid var(--exam-line);border-radius:18px;box-shadow:0 12px 35px rgba(25,42,80,.06)}.exam-paused-panel h2{color:var(--exam-navy);margin:0 0 10px}.exam-paused-panel p{color:#68748a;line-height:1.6;margin:0 0 22px}.result-analysis{padding:22px 0;border-top:1px solid var(--exam-line);border-bottom:1px solid var(--exam-line);margin:18px 0 25px}.result-analysis h3{color:var(--exam-navy);margin:0 0 12px}.result-analysis-row{display:flex;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--exam-line);border-radius:9px;margin:8px 0}.result-analysis-row strong{color:#263453}.result-analysis-row span{color:#68748a;font-size:.8rem}.result-recommendation{padding:12px;background:#f5f7fc;border-radius:9px;color:#465573;font-size:.86rem}
