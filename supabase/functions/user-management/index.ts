@@ -120,14 +120,14 @@ Deno.serve(async (request) => {
         return json({ error: "Valid Firebase UID, email and role are required." }, 400, request);
       }
       if (uid === OWNER_UID) return json({ error: "The owner account is protected." }, 403, request);
-      const lookup = await fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(required("FIREBASE_WEB_API_KEY"))}`,
-        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ localId: [uid] }) },
-      );
-      if (!lookup.ok) return json({ error: "Firebase user was not found. Create the account first." }, 404, request);
-      const account = (await lookup.json()).users?.[0];
-      if (!account || String(account.email ?? "").toLowerCase() !== email || account.disabled === true) {
-        return json({ error: "Firebase account email does not match or the account is disabled." }, 400, request);
+      const targetIdToken = typeof input.idToken === "string" ? input.idToken.trim() : "";
+      if (!targetIdToken || targetIdToken.length > 8192) {
+        return json({ error: "The new Firebase account ID token is missing. Retry user creation." }, 400, request);
+      }
+      const targetIdentity = await lookupFirebaseUser(targetIdToken);
+      if (!targetIdentity || targetIdentity.uid !== uid ||
+          String(targetIdentity.email ?? "").toLowerCase() !== email) {
+        return json({ error: "The newly created Firebase account could not be verified. Check that the Admin Firebase project configuration matches the website, then retry." }, 400, request);
       }
       const { error } = await db.from("pixel_forge_users").upsert({
         uid, email, role, status: "active", created_by: actor.uid, updated_at: new Date().toISOString(),
