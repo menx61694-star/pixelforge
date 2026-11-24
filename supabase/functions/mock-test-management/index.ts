@@ -198,6 +198,30 @@ Deno.serve(async (request) => {
       }
       return reply(request, { imported: true, test_ids: created, test_count: created.length, question_count: 600 }, 201);
     }
+    if (action === "bulk-add-questions") {
+      const testId = input.test_id;
+      const questions = input.questions;
+      if (!validId(testId)) return reply(request, { error: "Valid test_id is required." }, 400);
+      if (!Array.isArray(questions) || questions.length < 1 || questions.length > 500) return reply(request, { error: "Upload between 1 and 500 questions per batch." }, 400);
+      const { data: testExists, error: testLookupError } = await db.from("pixel_forge_mock_tests").select("id").eq("id", testId).maybeSingle();
+      if (testLookupError) throw testLookupError;
+      if (!testExists) return reply(request, { error: "Mock test was not found." }, 404);
+      const rows = [];
+      for (const [index, q] of questions.entries()) {
+        if (!q || typeof q.question_text !== "string" || !q.question_text.trim() || q.question_text.length > 3000 ||
+            !Array.isArray(q.options) || q.options.length !== 4 || q.options.some((v: unknown) => typeof v !== "string" || !v.trim() || v.length > 500) ||
+            !Number.isInteger(q.correct_option_index) || q.correct_option_index < 0 || q.correct_option_index > 3 ||
+            (q.explanation !== undefined && (typeof q.explanation !== "string" || q.explanation.length > 3000))) {
+          return reply(request, { error: "Invalid question at row " + (index + 1) + ". Each row needs question_text, four options, correct_option_index (0–3), and optional explanation." }, 400);
+        }
+        const order = q.question_order === undefined ? index + 1 : Number(q.question_order);
+        if (!Number.isInteger(order) || order < 1 || order > 1000) return reply(request, { error: "Invalid question_order at row " + (index + 1) + "." }, 400);
+        rows.push({ test_id: testId, question_order: order, question_text: q.question_text.trim(), options: q.options.map((v: string) => v.trim()), correct_option_index: q.correct_option_index, explanation: q.explanation ?? "" });
+      }
+      const { data, error } = await db.from("pixel_forge_mock_questions").upsert(rows, { onConflict: "test_id,question_order" }).select("id");
+      if (error) throw error;
+      return reply(request, { imported: true, question_count: data?.length ?? rows.length }, 201);
+    }
     if (action === "save-question") {
       const testId = input.test_id;
       const questionId = input.id;
