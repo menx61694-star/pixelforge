@@ -102,4 +102,11 @@ jobs:
             --header "Origin: https://pixelforge.jo3.org" \
             "https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/analytics?action=summary")
           test "$ANALYTICS_STATUS" = "401" || { cat /tmp/analytics-summary-response.json; echo "::error::Expected analytics summary to reject unauthenticated access with HTTP 401, got $ANALYTICS_STATUS"; exit 1; }
+          MOCK_PREFLIGHT_STATUS=$(curl --silent --show-error --output /tmp/mock-test-preflight-response.txt --write-out "%{http_code}" \
+            --request OPTIONS \
+            --header "Origin: https://pixelforge.jo3.org" \
+            --header "Access-Control-Request-Method: POST" \
+            --header "Access-Control-Request-Headers: authorization, apikey, content-type" \
+            "https://zeueivmdzhkhonkyllij.supabase.co/functions/v1/mock-test-management?action=list")
+          test "$MOCK_PREFLIGHT_STATUS" = "200" || { cat /tmp/mock-test-preflight-response.txt; echo "::error::Expected mock-test-management preflight to return HTTP 200, got $MOCK_PREFLIGHT_STATUS"; exit 1; }
           echo "Authenticated endpoints reject anonymous requests, public Drive listing is available, and analytics summary and site settings require Firebase authentication."
