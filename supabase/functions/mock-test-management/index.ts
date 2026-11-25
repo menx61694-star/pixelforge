@@ -307,14 +307,11 @@ Deno.serve(async (request) => {
     if (action === "bulk-import") {
       const tests = input.tests;
       if (!Array.isArray(tests) || tests.length < 1 || tests.length > 20) return reply(request, { error: "Upload between 1 and 20 full mock tests per batch." }, 400);
-      const expected = [25,5,30,8,16,8,8,8,4,8];
       const created: string[] = [];
       for (const [testIndex, test] of tests.entries()) {
-        if (!test || typeof test.title !== "string" || !Array.isArray(test.questions) || test.questions.length !== 120) {
-          return reply(request, { error: "Each mock must contain exactly 120 questions." }, 400);
+        if (!test || typeof test.title !== "string" || !test.title.trim() || !Array.isArray(test.questions) || test.questions.length < 1) {
+          return reply(request, { error: "Each mock must have a title and at least one question." }, 400);
         }
-        const counts = expected.map((count, sectionIndex) => test.questions.filter((q: any) => q.section_index === sectionIndex).length);
-        if (counts.some((count, i) => count !== expected[i])) return reply(request, { error: "Mock " + (testIndex + 1) + " does not match the official section-wise question distribution." }, 400);
         for (const [questionIndex, q] of test.questions.entries()) {
           if (!q || typeof q.question_text !== "string" || !q.question_text.trim() || !Array.isArray(q.options) || q.options.length !== 4 || q.options.some((v: unknown) => typeof v !== "string" || !v.trim()) || !Number.isInteger(q.correct_option_index) || q.correct_option_index < 0 || q.correct_option_index > 3 || typeof q.explanation !== "string") {
             return reply(request, { error: "Invalid MCQ at mock " + (testIndex + 1) + ", question " + (questionIndex + 1) + "." }, 400);
@@ -335,10 +332,15 @@ Deno.serve(async (request) => {
           subject: typeof q.subject === "string" && q.subject.trim() ? q.subject.trim().slice(0,100) : "Uncategorized",
           topic: typeof q.topic === "string" && q.topic.trim() ? q.topic.trim().slice(0,120) : "General"
         }));
-        const { error: questionError } = await db.from("pixel_forge_mock_questions").insert(rows);
-        if (questionError) {
-          await db.from("pixel_forge_mock_tests").delete().eq("id", createdTest.id);
-          throw questionError;
+        // Insert in bounded chunks so large tests are not constrained by a fixed question count
+        // or a single oversized PostgREST request.
+        for (let offset = 0; offset < rows.length; offset += 500) {
+          const { error: questionError } = await db.from("pixel_forge_mock_questions").insert(rows.slice(offset, offset + 500));
+          if (questionError) {
+            await db.from("pixel_forge_mock_questions").delete().eq("test_id", createdTest.id);
+            await db.from("pixel_forge_mock_tests").delete().eq("id", createdTest.id);
+            throw questionError;
+          }
         }
       }
       return reply(request, { imported: true, test_ids: created, test_count: created.length, question_count: tests.reduce((total, test) => total + test.questions.length, 0) }, 201);
