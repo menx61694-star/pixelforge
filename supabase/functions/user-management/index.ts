@@ -79,6 +79,7 @@ const validPermissions = new Set([
   "vault.delete", "vault.publish", "vault.read", "vault.write",
 ]);
 const validStatuses = new Set(["active", "suspended"]);
+const blockedStudentEmailDomains = new Set(["mailinator.com", "guerrillamail.com", "guerrillamail.net", "10minutemail.com", "temp-mail.org", "tempmail.com", "yopmail.com", "getnada.com", "throwawaymail.com", "dispostable.com"]);
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: cors(request) });
@@ -118,6 +119,10 @@ Deno.serve(async (request) => {
         if (fullName.length < 2 || fullName.length > 120) return json({ error: "Name must be 2–120 characters." }, 400, request);
         const email = String(identity.email || "").trim().toLowerCase();
         if (!email) return json({ error: "A verified email address is required." }, 400, request);
+        const emailDomain = email.split("@")[1] || "";
+        if ([...blockedStudentEmailDomains].some((domain) => emailDomain === domain || emailDomain.endsWith("." + domain))) {
+          return json({ error: "Temporary email addresses are not accepted. Use your regular email address." }, 400, request);
+        }
         const { data: existing, error: existingError } = await studentDb.from("pixel_forge_students")
           .select("uid,email,full_name,status,created_at").eq("uid", identity.uid).maybeSingle();
         if (existingError) throw existingError;
@@ -130,7 +135,8 @@ Deno.serve(async (request) => {
         const turnstileSecret = required("TURNSTILE_SECRET_KEY");
         const verificationBody = new URLSearchParams({ secret: turnstileSecret, response: turnstileToken });
         const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-real-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "";
-        if (clientIp) verificationBody.set("remoteip", clientIp);
+        if (!clientIp) return json({ error: "Signup protection is temporarily unavailable. Please try again later." }, 503, request);
+        verificationBody.set("remoteip", clientIp);
         const turnstileResponse = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
           method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: verificationBody,
         });
@@ -142,7 +148,7 @@ Deno.serve(async (request) => {
           const digest = await crypto.subtle.digest("SHA-256", bytes);
           return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
         };
-        const ipHash = await hash(clientIp || identity.uid);
+        const ipHash = await hash(clientIp);
         const emailHash = await hash(email);
         const { data: limit, error: limitError } = await studentDb.rpc("pixel_forge_check_student_signup_limit", { p_ip_hash: ipHash, p_email_hash: emailHash });
         if (limitError) throw limitError;
