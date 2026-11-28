@@ -49,7 +49,7 @@ async function lookupFirebaseUser(idToken: string) {
   const claims = JSON.parse(atob(normalized + "=".repeat((4 - normalized.length % 4) % 4)));
   if (claims.iss !== "https://securetoken.google.com/" + FIREBASE_PROJECT_ID ||
       claims.aud !== FIREBASE_PROJECT_ID || claims.sub !== user.localId) return null;
-  return { uid: user.localId as string, email: user.email as string };
+  return { uid: user.localId as string, email: user.email as string, emailVerified: user.emailVerified === true, displayName: user.displayName as string | undefined };
 }
 async function authenticate(request: Request) {
   const token = request.headers.get("Authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
@@ -91,25 +91,57 @@ Deno.serve(async (request) => {
 
     // Student self-service identity is intentionally independent of pixel_forge_users.
     if (action === "student-register" || (request.method === "GET" && action === "student-session")) {
-      const token = request.headers.get("Authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
+      const token = request.headers.get("Authorization")?.match(/^Bearer\\s+(.+)$/i)?.[1];
       if (!token) return json({ error: "Sign in to continue." }, 401, request);
       const identity = await lookupFirebaseUser(token);
       if (!identity) return json({ error: "Your Firebase session is invalid or expired." }, 401, request);
       const studentDb = dbAdmin();
       if (action === "student-register" && request.method === "POST") {
+        if (!identity.emailVerified) return json({ error: "Verify your email address before activating your student account." }, 403, request);
         const studentInput = await request.json();
-        const fullName = typeof studentInput.full_name === "string" ? studentInput.full_name.trim() : "";
+        if (typeof studentInput.website === "string" && studentInput.website.trim()) return json({ error: "Registration could not be completed." }, 400, request);
+        const fullName = String(identity.displayName || studentInput.full_name || "").trim();
         if (fullName.length < 2 || fullName.length > 120) return json({ error: "Name must be 2–120 characters." }, 400, request);
         const email = String(identity.email || "").trim().toLowerCase();
         if (!email) return json({ error: "A verified email address is required." }, 400, request);
+        const { data: existing, error: existingError } = await studentDb.from("pixel_forge_students")
+          .select("uid,email,full_name,status,created_at").eq("uid", identity.uid).maybeSingle();
+        if (existingError) throw existingError;
+        if (existing) {
+          if (existing.status !== "active") return json({ error: "This student account is suspended. Contact the website administrator." }, 403, request);
+          return json({ student: existing }, 200, request);
+        }
+        const turnstileToken = typeof studentInput.turnstile_token === "string" ? studentInput.turnstile_token : "";
+        if (!turnstileToken) return json({ error: "Complete the anti-bot verification and try again." }, 400, request);
+        const turnstileSecret = required("TURNSTILE_SECRET_KEY");
+        const verificationBody = new URLSearchParams({ secret: turnstileSecret, response: turnstileToken });
+        const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-real-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "";
+        if (clientIp) verificationBody.set("remoteip", clientIp);
+        const turnstileResponse = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+          method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: verificationBody,
+        });
+        const turnstileResult = await turnstileResponse.json();
+        if (!turnstileResponse.ok || turnstileResult.success !== true) return json({ error: "Anti-bot verification failed. Please try again." }, 403, request);
+        const hashSecret = required("STUDENT_RATE_LIMIT_HASH_SECRET");
+        const hash = async (value: string) => {
+          const bytes = new TextEncoder().encode(hashSecret + ":" + value);
+          const digest = await crypto.subtle.digest("SHA-256", bytes);
+          return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+        };
+        const ipHash = await hash(clientIp || identity.uid);
+        const emailHash = await hash(email);
+        const { data: limit, error: limitError } = await studentDb.rpc("pixel_forge_check_student_signup_limit", { p_ip_hash: ipHash, p_email_hash: emailHash });
+        if (limitError) throw limitError;
+        if (!limit?.allowed) return json({ error: "Too many signup attempts. Please try again later." }, 429, request);
         const { data, error } = await studentDb.from("pixel_forge_students")
-          .upsert({ uid: identity.uid, email, full_name: fullName, updated_at: new Date().toISOString() }, { onConflict: "uid" })
+          .insert({ uid: identity.uid, email, full_name: fullName })
           .select("uid,email,full_name,status,created_at").single();
         if (error) throw error;
         if (data.status !== "active") return json({ error: "This student account is suspended. Contact the website administrator." }, 403, request);
         return json({ student: data }, 201, request);
       }
       if (action === "student-session" && request.method === "GET") {
+        if (!identity.emailVerified) return json({ error: "Verify your email address before signing in." }, 403, request);
         const { data, error } = await studentDb.from("pixel_forge_students")
           .select("uid,email,full_name,status,created_at").eq("uid", identity.uid).maybeSingle();
         if (error) throw error;
