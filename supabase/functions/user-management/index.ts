@@ -88,6 +88,37 @@ Deno.serve(async (request) => {
   try {
     const url = new URL(request.url);
     const action = url.searchParams.get("action") ?? "";
+
+    // Student self-service identity is intentionally independent of pixel_forge_users.
+    if (action === "student-register" || (request.method === "GET" && action === "student-session")) {
+      const token = request.headers.get("Authorization")?.match(/^Bearer\\s+(.+)$/i)?.[1];
+      if (!token) return json({ error: "Sign in to continue." }, 401, request);
+      const identity = await lookupFirebaseUser(token);
+      if (!identity) return json({ error: "Your Firebase session is invalid or expired." }, 401, request);
+      const studentDb = dbAdmin();
+      if (action === "student-register" && request.method === "POST") {
+        const studentInput = await request.json();
+        const fullName = typeof studentInput.full_name === "string" ? studentInput.full_name.trim() : "";
+        if (fullName.length < 2 || fullName.length > 120) return json({ error: "Name must be 2–120 characters." }, 400, request);
+        const email = String(identity.email || "").trim().toLowerCase();
+        if (!email) return json({ error: "A verified email address is required." }, 400, request);
+        const { data, error } = await studentDb.from("pixel_forge_students")
+          .upsert({ uid: identity.uid, email, full_name: fullName, updated_at: new Date().toISOString() }, { onConflict: "uid" })
+          .select("uid,email,full_name,status,created_at").single();
+        if (error) throw error;
+        if (data.status !== "active") return json({ error: "This student account is suspended. Contact the website administrator." }, 403, request);
+        return json({ student: data }, 201, request);
+      }
+      if (action === "student-session" && request.method === "GET") {
+        const { data, error } = await studentDb.from("pixel_forge_students")
+          .select("uid,email,full_name,status,created_at").eq("uid", identity.uid).maybeSingle();
+        if (error) throw error;
+        if (!data || data.status !== "active") return json({ error: "No active student profile was found." }, 403, request);
+        return json({ student: data }, 200, request);
+      }
+      return json({ error: "Method not allowed." }, 405, request);
+    }
+
     if (request.method === "GET" && action === "session") {
       const identity = await authenticate(request);
       if (!identity) return json({ error: "This account has no active PixelForge access." }, 403, request);
@@ -101,6 +132,26 @@ Deno.serve(async (request) => {
     if (!actor) return json({ error: "Active administrator access is required." }, 403, request);
     const db = dbAdmin();
     const input = request.method === "POST" ? await request.json() : {};
+
+    if (request.method === "GET" && action === "list-students") {
+      const { data: students, error } = await db.from("pixel_forge_students")
+        .select("uid,email,full_name,status,created_at,updated_at")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return json({ students: students ?? [] }, 200, request);
+    }
+
+    if (action === "set-student-status") {
+      const uid = typeof input.uid === "string" ? input.uid.trim() : "";
+      const status = typeof input.status === "string" ? input.status : "";
+      if (!uid || !["active", "suspended"].includes(status)) return json({ error: "Valid student and status are required." }, 400, request);
+      const { data: student, error: lookupError } = await db.from("pixel_forge_students").select("uid").eq("uid", uid).maybeSingle();
+      if (lookupError) throw lookupError;
+      if (!student) return json({ error: "Student account was not found." }, 404, request);
+      const { error } = await db.from("pixel_forge_students").update({ status, updated_at: new Date().toISOString() }).eq("uid", uid);
+      if (error) throw error;
+      return json({ updated: true }, 200, request);
+    }
 
     if (request.method === "GET" && action === "list") {
       const [{ data: users, error: usersError }, { data: permissions, error: permissionsError }] = await Promise.all([
