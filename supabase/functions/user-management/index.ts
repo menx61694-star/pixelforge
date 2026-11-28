@@ -91,7 +91,7 @@ Deno.serve(async (request) => {
 
     // Student self-service identity is intentionally independent of pixel_forge_users.
     if (action === "student-register" || (request.method === "GET" && action === "student-session")) {
-      const token = request.headers.get("Authorization")?.match(/^Bearer\\s+(.+)$/i)?.[1];
+      const token = request.headers.get("Authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
       if (!token) return json({ error: "Sign in to continue." }, 401, request);
       const identity = await lookupFirebaseUser(token);
       if (!identity) return json({ error: "Your Firebase session is invalid or expired." }, 401, request);
