@@ -100,16 +100,6 @@ Deno.serve(async (request) => {
       const verification = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: verificationBody });
       const result = await verification.json();
       if (!verification.ok || result.success !== true) return json({ error: "Anti-bot verification failed. Please try again." }, 403, request);
-      const pepper = required("STUDENT_RATE_LIMIT_HASH_SECRET");
-      const hash = async (value: string) => {
-        const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pepper + ":" + value));
-        return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
-      };
-      const ipHash = await hash(clientIp || "unknown-client");
-      const emailHash = await hash(email);
-      const { data: limit, error } = await dbAdmin().rpc("pixel_forge_check_student_signup_limit", { p_ip_hash: ipHash, p_email_hash: emailHash });
-      if (error) throw error;
-      if (!limit?.allowed) return json({ error: "Too many signup attempts. Please try again later." }, 429, request);
       return json({ allowed: true }, 200, request);
     }
 
