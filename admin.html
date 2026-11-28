@@ -46,6 +46,7 @@
         <a class="nav-link" href="#analytics" id="analytics-nav-link" data-permission="analytics.view" hidden><span class="nav-icon">▥</span> Analytics</a>
         <a class="nav-link" href="#security-logs" id="security-logs-nav-link" data-permission="security.logs.view" hidden><span class="nav-icon">⌑</span> Security logs</a>
         <a class="nav-link" href="#users" id="users-nav-link" hidden><span class="nav-icon">♙</span> Users &amp; roles</a>
+        <a class="nav-link" href="#students" id="students-nav-link" hidden><span class="nav-icon">♧</span> Students</a>
         <a class="nav-link" href="#mock-tests" id="mock-tests-nav-link" data-permission="mock_tests.manage" hidden><span class="nav-icon">▣</span> Mock Tests</a>
         <a class="nav-link" href="#settings" id="settings-nav-link" data-permission="settings.view" hidden><span class="nav-icon">⚙</span> Settings</a>
         <div class="sidebar-bottom">
@@ -543,6 +544,15 @@ unit-converter</textarea>
             <div class="panel-heading"><div><p class="eyebrow">CHANGE HISTORY</p><h2>Settings audit log</h2></div></div>
             <p id="settings-audit-status" class="panel-copy">Loading recent changes…</p>
             <div class="users-table-wrap"><table class="users-table"><thead><tr><th>Setting</th><th>Previous value</th><th>New value</th><th>Actor</th><th>Time (UTC)</th></tr></thead><tbody id="settings-audit-body"><tr><td colspan="5" class="empty-state">Loading audit history…</td></tr></tbody></table></div>
+          </section>
+        </div>
+
+        <div class="dashboard-content dashboard-page" id="students" hidden>
+          <section class="panel users-panel">
+            <div class="panel-heading"><div><p class="eyebrow">STUDENT ACCOUNTS</p><h2>Student Management</h2></div><button id="refresh-students" class="refresh-button" type="button">↻ Refresh</button></div>
+            <p class="panel-copy">Public student registrations are listed here. These accounts are separate from Admin, Editor and Viewer workspace roles.</p>
+            <p id="students-status" class="vault-status" role="status" aria-live="polite">Load student registrations to view them here.</p>
+            <div class="users-table-wrap"><table class="users-table"><thead><tr><th>Name</th><th>Email</th><th>Registered</th><th>Status</th><th>Actions</th></tr></thead><tbody id="students-table-body"><tr><td colspan="5" class="empty-state">Loading student accounts…</td></tr></tbody></table></div>
           </section>
         </div>
 
