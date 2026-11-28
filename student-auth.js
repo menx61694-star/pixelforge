@@ -56,6 +56,7 @@
       try {
         const payload=await api("student-session");const student=payload.student;
         $("student-name-display").textContent=student.full_name;
+        if($("student-name-display-copy")) $("student-name-display-copy").textContent=student.full_name;
         $("student-email-display").textContent=student.email;
         $("student-created-display").textContent=new Date(student.created_at).toLocaleDateString("en-IN",{day:"2-digit",month:"long",year:"numeric"});
         dashboard.hidden=false;
