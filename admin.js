@@ -128,6 +128,7 @@ let googleDriveAccounts = [];
     });
   }
   const usersNavLink = document.getElementById("users-nav-link");
+  const studentsNavLink = document.getElementById("students-nav-link");
   const settingsNavLink = document.getElementById("settings-nav-link");
   const mockTestsNavLink = document.getElementById("mock-tests-nav-link");
   const settingsStatus = document.getElementById("settings-status");
@@ -297,19 +298,20 @@ let googleDriveAccounts = [];
   const createUserButton = document.getElementById("create-user-button");
 
   const sidebarLinks = Array.from(document.querySelectorAll(".sidebar .nav-link"));
-  const dashboardPages = ["overview", "recent-activity", "documents", "pyq-upload", "google-drive", "analytics", "security-logs", "users", "mock-tests", "settings"]
+  const dashboardPages = ["overview", "recent-activity", "documents", "pyq-upload", "google-drive", "analytics", "security-logs", "users", "students", "mock-tests", "settings"]
     .map(id => document.getElementById(id))
     .filter(Boolean);
   function syncSidebarNavigation() {
     const requestedPage = (window.location.hash || "#overview").slice(1);
     let activePage = dashboardPages.some(page => page.id === requestedPage) ? requestedPage : "overview";
-    const pagePermissions = { overview: "dashboard.view", "recent-activity": "activity.view", documents: "vault.read", "pyq-upload": "drive.write", "google-drive": "drive.read", analytics: "analytics.view", "security-logs": "security.logs.view", users: "users.manage", "mock-tests": "mock_tests.manage", settings: "settings.view" };
+    const pagePermissions = { overview: "dashboard.view", "recent-activity": "activity.view", documents: "vault.read", "pyq-upload": "drive.write", "google-drive": "drive.read", analytics: "analytics.view", "security-logs": "security.logs.view", users: "users.manage", students: "users.manage", "mock-tests": "mock_tests.manage", settings: "settings.view" };
     if (currentUserUid && !currentPermissions.has(pagePermissions[activePage])) activePage = "overview";
     dashboardPages.forEach(page => { page.hidden = page.id !== activePage; });
     if (activePage === "analytics" && currentPermissions.has("analytics.view")) loadAnalyticsDashboard();
     if (activePage === "security-logs" && currentPermissions.has("security.logs.view")) loadSecurityLogs();
     if (activePage === "settings" && currentPermissions.has("settings.view")) loadSettings();
     if (activePage === "mock-tests" && currentPermissions.has("mock_tests.manage")) loadMockTests();
+    if (activePage === "students" && currentPermissions.has("users.manage")) loadStudentAccounts();
     sidebarLinks.forEach(link => {
       const isActive = link.getAttribute("href") === "#" + activePage;
       link.classList.toggle("active", isActive);
@@ -2394,6 +2396,31 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
     });
   }
 
+  async function loadStudentAccounts() {
+    if (!currentPermissions.has("users.manage")) return;
+    const body = document.getElementById("students-table-body");
+    const status = document.getElementById("students-status");
+    if (!body || !status) return;
+    status.textContent = "Loading student registrations…";
+    try {
+      const payload = await managementRequest("list-students");
+      const students = payload.students || [];
+      body.replaceChildren();
+      if (!students.length) {
+        const row=document.createElement("tr"), cell=document.createElement("td"); cell.colSpan=5; cell.className="empty-state"; cell.textContent="No student accounts registered yet."; row.append(cell); body.append(row);
+      }
+      students.forEach(student => {
+        const row=document.createElement("tr");
+        [student.full_name,student.email,new Date(student.created_at).toLocaleString("en-IN",{dateStyle:"medium",timeStyle:"short"}),student.status].forEach(value=>{const cell=document.createElement("td");cell.textContent=String(value||"—");row.append(cell);});
+        const actions=document.createElement("td"); const toggle=document.createElement("button"); toggle.type="button"; toggle.className=student.status==="active"?"danger":""; toggle.textContent=student.status==="active"?"Suspend":"Reactivate";
+        toggle.addEventListener("click",async()=>{toggle.disabled=true;try{await managementRequest("set-student-status",{method:"POST",body:{uid:student.uid,status:student.status==="active"?"suspended":"active"}});await loadStudentAccounts();}catch(error){status.textContent=error.message||"Could not update student.";status.style.color="#a23c32";toggle.disabled=false;}});
+        actions.append(toggle);row.append(actions);body.append(row);
+      });
+      status.textContent=students.length+" student account(s) registered.";
+      status.style.color="#53617b";
+    } catch(error) { status.textContent=error.message||"Could not load student accounts.";status.style.color="#a23c32"; }
+  }
+
   function renderPermissions(permissions) {
     if (!permissionsTableBody) return;
     permissionsTableBody.replaceChildren();
@@ -2466,6 +2493,7 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
     currentPermissions = new Set(session.permissions || []);
     if (!currentPermissions.has("dashboard.view")) throw new Error("Dashboard access is not permitted.");
     if (usersNavLink) usersNavLink.hidden = !currentPermissions.has("users.manage");
+    if (studentsNavLink) studentsNavLink.hidden = !currentPermissions.has("users.manage");
     if (settingsNavLink) settingsNavLink.hidden = !currentPermissions.has("settings.view");
     if (mockTestsNavLink) mockTestsNavLink.hidden = !currentPermissions.has("mock_tests.manage");
     if (analyticsNavLink) analyticsNavLink.hidden = !currentPermissions.has("analytics.view");
@@ -2484,7 +2512,7 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
     });
     showAdminSession(true);
     if (currentPermissions.has("drive.read")) refreshGoogleDriveStatus();
-    if (currentPermissions.has("users.manage")) loadUsersAndPermissions();
+    if (currentPermissions.has("users.manage")) { loadUsersAndPermissions(); loadStudentAccounts(); }
     if (currentPermissions.has("analytics.view")) loadOverviewAnalytics();
   }
 
@@ -2658,6 +2686,8 @@ const googleDriveResult = new URLSearchParams(window.location.search).get("googl
   if (userCreateForm) userCreateForm.addEventListener("submit", createWorkspaceUser);
   const refreshUsersButton = document.getElementById("refresh-users");
   if (refreshUsersButton) refreshUsersButton.addEventListener("click", loadUsersAndPermissions);
+  const refreshStudentsButton = document.getElementById("refresh-students");
+  if (refreshStudentsButton) refreshStudentsButton.addEventListener("click", loadStudentAccounts);
 
   auth.onAuthStateChanged(async (user) => {
     if (!user) {
