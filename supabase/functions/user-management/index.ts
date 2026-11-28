@@ -89,6 +89,30 @@ Deno.serve(async (request) => {
     const url = new URL(request.url);
     const action = url.searchParams.get("action") ?? "";
 
+    if (action === "student-signup-preflight" && request.method === "POST") {
+      const input = await request.json();
+      const email = typeof input.email === "string" ? input.email.trim().toLowerCase() : "";
+      const token = typeof input.turnstile_token === "string" ? input.turnstile_token : "";
+      if (!/^\\S+@\\S+\\.\\S+$/.test(email) || !token || (typeof input.website === "string" && input.website.trim())) return json({ error: "Complete the signup details and anti-bot verification." }, 400, request);
+      const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-real-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "";
+      const verificationBody = new URLSearchParams({ secret: required("TURNSTILE_SECRET_KEY"), response: token });
+      if (clientIp) verificationBody.set("remoteip", clientIp);
+      const verification = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: verificationBody });
+      const result = await verification.json();
+      if (!verification.ok || result.success !== true) return json({ error: "Anti-bot verification failed. Please try again." }, 403, request);
+      const pepper = required("STUDENT_RATE_LIMIT_HASH_SECRET");
+      const hash = async (value: string) => {
+        const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pepper + ":" + value));
+        return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+      };
+      const ipHash = await hash(clientIp || "unknown-client");
+      const emailHash = await hash(email);
+      const { data: limit, error } = await dbAdmin().rpc("pixel_forge_check_student_signup_limit", { p_ip_hash: ipHash, p_email_hash: emailHash });
+      if (error) throw error;
+      if (!limit?.allowed) return json({ error: "Too many signup attempts. Please try again later." }, 429, request);
+      return json({ allowed: true }, 200, request);
+    }
+
     // Student self-service identity is intentionally independent of pixel_forge_users.
     if (action === "student-register" || (request.method === "GET" && action === "student-session")) {
       const token = request.headers.get("Authorization")?.match(/^Bearer\\s+(.+)$/i)?.[1];
