@@ -94,7 +94,7 @@ Deno.serve(async (request) => {
       const input = await request.json();
       const email = typeof input.email === "string" ? input.email.trim().toLowerCase() : "";
       const token = typeof input.turnstile_token === "string" ? input.turnstile_token : "";
-      if (!/^\\S+@\\S+\\.\\S+$/.test(email) || !token || (typeof input.website === "string" && input.website.trim())) return json({ error: "Complete the signup details and anti-bot verification." }, 400, request);
+      if (!/^\S+@\S+\.\S+$/.test(email) || !token || (typeof input.website === "string" && input.website.trim())) return json({ error: "Complete the signup details and anti-bot verification." }, 400, request);
       const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-real-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "";
       const verificationBody = new URLSearchParams({ secret: required("TURNSTILE_SECRET_KEY"), response: token });
       if (clientIp) verificationBody.set("remoteip", clientIp);
